@@ -1,0 +1,11 @@
+{
+  "mode": "mock",
+  "leaseMs": 3000,
+  "display": {"headless": false, "fullscreen": false, "width": 1560, "height": 720, "rotation": 0, "font": "", "fontSize": 52},
+  "audio": {"wavInput": ""},
+  "servo": {
+    "calibrated": true, "address": 64, "frequency": 50, "stepUs": 20,
+    "left": {"channel": 0, "minUs": 1400, "neutralUs": 1500, "maxUs": 1600, "inverted": false},
+    "right": {"channel": 1, "minUs": 1400, "neutralUs": 1500, "maxUs": 1600, "inverted": true}
+  }
+}

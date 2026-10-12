@@ -1,0 +1,17 @@
+[Unit]
+Description=DeskPet screen, USB audio and ear controller
+PartOf=graphical-session.target
+After=graphical-session-pre.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/deskpet-hardware --config %h/.config/deskpet-hardware/config.json --socket %t/deskpet-hardware.sock
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=5
+KillSignal=SIGTERM
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=graphical-session.target

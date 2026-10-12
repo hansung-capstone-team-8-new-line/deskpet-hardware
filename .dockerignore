@@ -1,0 +1,8 @@
+build*/
+.deps/
+.venv/
+out/
+swift/.build/
+**/__pycache__/
+*.wav
+*.bmp

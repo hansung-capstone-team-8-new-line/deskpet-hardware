@@ -1,0 +1,12 @@
+/build*/
+/.deps/
+/.venv/
+/out/
+/config/local*.json
+*.wav
+*.bmp
+*.sock
+__pycache__/
+swift/.build/
+swift/.swiftpm/
+.DS_Store
