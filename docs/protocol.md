@@ -72,7 +72,7 @@ PCM `format`은 `{"encoding":"s16le","sampleRate":16000,"channels":1}`입니다.
 
 ## Swift 연결 예시
 
-팀 패키지에 로컬 의존성을 추가합니다.
+팀 패키지에 로컬 의존성을 추가합니다. 다음은 팀 프로젝트와 `deskpet-hardware` 저장소가 같은 상위 폴더에 있는 예시이며 실제 폴더 배치에 맞춰 경로를 조정합니다.
 
 ```swift
 .package(name: "DeskPetHardware", path: "../deskpet-hardware/swift")

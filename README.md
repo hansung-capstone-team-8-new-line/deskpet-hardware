@@ -4,6 +4,39 @@ Jetson Orin Nano 8GB, Waveshare 6.25인치 HDMI LCD, USB TO AUDIO, PCA9685와 SG
 
 STT·LLM·TTS는 팀 파이프라인에서 연결합니다. 이 패키지는 PCM 녹음·재생, 표정·한글 화면, 귀 동작과 장치 오류 보고를 담당합니다. 터치 입력은 사용하지 않습니다.
 
+이 저장소는 **뉴라인 팀 조직의 하드웨어 전용 소스 저장소**입니다. 이후 코드 수정·커밋·PR은 여기에서 진행합니다. 팀 위키 `knowledge`에는 설계·인터페이스·검증 문서와 이 저장소 링크를 유지합니다. 초기 구현 커밋 `d81c287`의 코드 이력을 이어갑니다.
+
+- 저장소: [hansung-capstone-team-8-new-line/deskpet-hardware](https://github.com/hansung-capstone-team-8-new-line/deskpet-hardware)
+- 팀 문서: [하드웨어 문서 목차](https://github.com/hansung-capstone-team-8-new-line/knowledge/blob/master/wiki/topics/deskpet-hardware.md)
+- 접근: 비공개 저장소입니다. 해당 조직의 권한이 있는 GitHub 계정으로 로그인하세요.
+
+```sh
+git clone https://github.com/hansung-capstone-team-8-new-line/deskpet-hardware.git
+cd deskpet-hardware
+```
+
+아래 실행 명령은 이 저장소 루트에서 사용합니다.
+
+## 문서와 원본 코드
+
+[구현 개요](https://github.com/hansung-capstone-team-8-new-line/knowledge/blob/master/wiki/deskpet-hardware-runtime.md)에서 전체 구조를 읽고, 출력 모델 담당자는 [표정 명세](https://github.com/hansung-capstone-team-8-new-line/knowledge/blob/master/wiki/deskpet-display-interface.md) → [화면 연결 예제](https://github.com/hansung-capstone-team-8-new-line/knowledge/blob/master/wiki/deskpet-display-integration.md) 순서로 확인하세요.
+
+| 작업 | 원본 파일 |
+| --- | --- |
+| 표정·눈·입·한글 수정 | [display.cpp](src/display.cpp) |
+| 입력 필드·Swift 타입 확인 | [Contracts.swift](swift/Sources/DeskPetHardware/Contracts.swift) |
+| Swift에서 화면·음성·귀 호출 | [Adapters.swift](swift/Sources/DeskPetHardware/Adapters.swift) |
+| 전체 호출 흐름 예제 | [Swift 데모](swift/Sources/DeskPetHardwareDemo/main.swift) |
+| 연결·패킷·결과 이벤트 | [Client.swift](swift/Sources/DeskPetHardware/Client.swift), [server.cpp](src/server.cpp), [protocol.cpp](src/protocol.cpp) |
+| 장치 작업 실행·취소 | [runtime.cpp](src/runtime.cpp) |
+| 실제 USB 오디오·귀 드라이버 | [audio_alsa.cpp](src/audio_alsa.cpp), [motion_linux.cpp](src/motion_linux.cpp) |
+| 모의 장치·설정 | [audio.cpp](src/audio.cpp), [motion.cpp](src/motion.cpp), [config.cpp](src/config.cpp) |
+| 기본 설정 파일 | [모의 실행](config/mock.json), [Jetson](config/jetson.json) |
+| 실행·보정·설치 | [deskpetctl.py](tools/deskpetctl.py), [install-jetson.sh](tools/install-jetson.sh) |
+| 검사 수정 | [통합](tests/integration.py), [화면](tests/visual.py), [C++](tests/core.cpp), [Swift](swift/Tests/DeskPetHardwareTests/WireTests.swift) |
+
+원본 코드를 고친 뒤 이 저장소에서 커밋합니다. `build/`, `out/`, Swift 빌드 캐시, WAV·BMP, 로컬 보정 설정은 `.gitignore`로 제외합니다. 저장소를 분리하면서 하드웨어 실행 로직과 설정 예제는 변경하지 않았으며, 문서와 연결 경로만 독립 저장소에 맞췄습니다.
+
 ## 지금 실행하기
 
 macOS에서 화면까지 보려면 CMake, SDL2, SDL2_ttf가 필요합니다.
@@ -91,4 +124,4 @@ docker build --platform linux/arm64 -f deploy/Dockerfile.check -t deskpet-check 
 docker run --rm --platform linux/arm64 -v "$PWD:/work:ro" deskpet-check
 ```
 
-코드 구조는 `src/`의 장치·서버 구현, `swift/`의 연결 모듈, `tools/`의 시험·설치 도구, `config/`의 모드별 설정으로 나뉩니다. 기존 지식 보관함과 구매 문서는 변경하지 않습니다.
+코드 구조는 `src/`의 장치·서버 구현, `swift/`의 연결 모듈, `tools/`의 시험·설치 도구, `config/`의 모드별 설정으로 나뉩니다. [위키 검증 기록](https://github.com/hansung-capstone-team-8-new-line/knowledge/blob/master/wiki/deskpet-hardware-validation.md)에서 소프트웨어 검사와 실물 확인 항목을 확인하세요.
