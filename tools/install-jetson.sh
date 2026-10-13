@@ -16,7 +16,7 @@ fi
 task_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 sudo apt-get update
 sudo apt-get install -y build-essential cmake pkg-config libsdl2-dev libsdl2-ttf-dev \
-  libasound2-dev libgpiod-dev gpiod i2c-tools alsa-utils fonts-noto-cjk python3
+  libasound2-dev libsoxr-dev i2c-tools alsa-utils fonts-noto-cjk python3
 cmake -S "$task_root" -B "$task_root/build-jetson" -DCMAKE_BUILD_TYPE=Release -DDESKPET_LINUX=ON
 cmake --build "$task_root/build-jetson" -j 2
 ctest --test-dir "$task_root/build-jetson" --output-on-failure
@@ -26,7 +26,6 @@ sudo usermod -aG deskpet-hw,audio "$(id -un)"
 sudo install -m 0644 "$task_root/deploy/99-deskpet-hardware.rules" /etc/udev/rules.d/99-deskpet-hardware.rules
 sudo udevadm control --reload-rules
 sudo udevadm trigger --subsystem-match=i2c-dev
-sudo udevadm trigger --subsystem-match=gpio
 mkdir -p "$HOME/.config/deskpet-hardware" "$HOME/.config/systemd/user"
 if [[ ! -e "$HOME/.config/deskpet-hardware/config.json" ]]; then
   install -m 0600 "$task_root/config/jetson.json" "$HOME/.config/deskpet-hardware/config.json"

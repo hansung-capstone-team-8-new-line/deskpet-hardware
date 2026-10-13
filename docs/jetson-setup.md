@@ -4,8 +4,8 @@
 
 - Jetson Orin Nano 8GB 정품 개발자 키트, P3768 캐리어
 - JetPack 6.x / Ubuntu 22.04 ARM64
-- Waveshare 6.25inch 720×1560 HDMI LCD, SKU 26757
-- Waveshare USB TO AUDIO, SKU 18833, 내장 마이크·외부 스피커 출력
+- Elecrow RC070S 7인치 1024×600 HDMI LCD
+- ReSpeaker Lite, USB 마이크·모노 스피커 출력
 - PCA9685, SG90 위치제어 서보 2개, 독립 5V 5A 서보 전원
 
 7.x/Ubuntu 24.04나 다른 캐리어 보드에서의 호환성은 검증하지 않았습니다. 설치기는 OS·펌웨어·핀mux를 자동 변경하지 않습니다.
@@ -16,34 +16,24 @@
 
 | 연결 | 설정·동작 |
 | --- | --- |
-| Jetson DisplayPort → DP-HDMI 변환기 → LCD HDMI | LCD가 720×1560 모드로 잡히는지 먼저 확인 |
-| LCD 전원 USB-C | 제조사 전원 요구를 충족하는 연결 사용. 터치 이벤트는 코드에서 무시 |
-| Jetson USB → USB TO AUDIO | 내장 마이크로 입력, 이 모듈의 스피커 단자로 출력 |
+| Jetson DisplayPort → DP-HDMI 변환기 → LCD HDMI | LCD가 1024×600 가로 모드로 잡히는지 먼저 확인 |
+| LCD 전원 micro USB | 제조사 전원 요구를 충족하는 연결 사용. 터치 이벤트는 코드에서 무시 |
+| Jetson USB → ReSpeaker Lite | 내장 마이크로 입력, 이 모듈의 스피커 단자로 출력 |
 | USB 오디오의 스피커 단자 → 4Ω 3W 스피커 | 실물의 좌우 채널 및 +/− 표기를 확인. 증폭 출력의 어느 쪽도 GND에 연결하지 않음 |
 | Jetson 헤더 물리 1번 3.3V → PCA9685 VCC | I2C 풀업도 3.3V로 유지. 서보 전원 V+와 구분 |
 | Jetson 물리 3번 SDA·5번 SCL → PCA9685 SDA·SCL | 실제 Linux I2C 어댑터는 doctor로 식별 |
 | PCA9685 채널 0·1 → 좌우 SG90 신호 | 채널 및 좌우 반전은 설정으로 변경 가능 |
 | 독립 5V → 퓨즈 → PCA9685 서보 V+ | 보드의 5V 출력으로 서보 전원을 공급하지 않음 |
 | Jetson·PCA9685·서보 전원 GND | 공통 접지. 독립 전원의 +극과 Jetson의 +극은 연결하지 않음 |
-| PCA9685 OE | HIGH=출력 비활성, LOW=활성. 아래의 버퍼·풀업 회로 사용 |
+| PCA9685 OE | GND 고정. GPIO·버퍼 없이 아래 FULL_OFF 방식 사용 |
 
 전해 콘덴서는 서보 전원 쪽에 배치하고 극성을 확인합니다. USB 오디오와 화면의 스피커 단자는 서로 다른 출력입니다. 본 코드는 **USB 오디오**를 사용하며 HDMI 오디오로 자동 전환하지 않습니다.
 
-### OE 제어 제안
+### OE=GND와 PWM 정지
 
-공식 P3768의 **헤더 물리 7번**은 NVIDIA GPIO 표에서 `tegra234-gpio`의 `PAC.06`에 해당합니다. 기본 설정은 이 이름으로 라인을 찾으며 Linux의 가변 gpiochip 번호나 Raspberry Pi BCM 번호를 사용하지 않습니다.
+현재 KiCad 수정안 A는 OE를 GND에 고정한다. GPIO 7/16번, HC125, OE 풀업을 추가하지 않는다. I2C 초기화 첫 쓰기와 정상 종료·취소·연결 만료·검출한 오류에서는 `ALL_LED_OFF_H=0x10`으로 모든 PWM을 끈다. 중립값을 미리 쓸 때 각 채널 FULL_OFF를 유지하고 명시적 enable에서 CH0/CH1만 해제한다. 정지 쓰기가 실패하면 `SERVO_STOP_UNCONFIRMED`다.
 
-구매 목록의 74HC125 DIP14를 **3.3V**로 공급하는 비반전 버퍼로 사용합니다.
-
-- IC 14번 VCC → 3.3V, IC 7번 GND → 공통 GND, VCC-GND 사이 100nF.
-- 첫 채널 IC 1번 `/OE` → GND, IC 2번 A → Jetson 헤더 물리 7번.
-- A 입력을 220kΩ으로 3.3V에 풀업. IC 3번 Y → PCA9685 OE.
-- PCA9685 OE를 10kΩ으로 **PCA9685 로직 3.3V**에 풀업.
-- 미사용 버퍼 채널의 입력·활성 핀은 데이터시트에 따라 고정합니다.
-
-실물 모듈에서 OE가 GND에 고정돼 있지 않은지 확인하세요. GPIO 출력 기능과 pinmux는 [NVIDIA 헤더 설정 문서](https://docs.nvidia.com/jetson/archives/r36.4.4/DeveloperGuide/HR/ConfiguringTheJetsonExpansionHeaders.html)를 기준으로 확인합니다. `doctor`의 라인 발견만으로 전기적인 출력 설정까지 검증된 것은 아닙니다.
-
-프로그램은 OE를 HIGH로 요청한 뒤 PCA9685를 초기화하고, 보정 또는 명시적 활성화 때만 LOW로 내립니다. 정상 종료·연결 만료·검출한 오류에서는 HIGH로 복귀합니다. **프로세스 강제 종료·커널 정지 시에는 GPIO 출력이 유지될 수 있습니다. 풀업만으로 이 경우를 해결했다고 보장하지 않습니다.** 수신 장치가 없는 SG90의 실제 위치·전원 차단은 소프트웨어로 확인할 수 없습니다. 조립 중에는 독립 서보 전원을 끌 수 있게 두고 이 조건을 실측하세요.
+OE가 상시 활성인 회로이므로 프로세스 강제 종료·커널 정지·I2C 단절에서 PWM 차단을 보장할 수 없다. 독립 서보 전원 차단 수단을 확보하고 전원 순서·부팅·재시작을 실측한다. `motion.commanded`는 위치 센서 확인이 아니다. 현재 회로는 [위키 회로도](https://github.com/hansung-capstone-team-8-new-line/knowledge/blob/master/wiki/deskpet-wiring-schematic.md)를 따른다.
 
 ## 설치
 
@@ -60,10 +50,11 @@ deskpet-hardware doctor
 
 1. `audio.captureDevice`·`audio.playbackDevice`: doctor에 나온 USB 카드의 `plughw:CARD=<실제 카드 ID>,DEV=0` 이름. 두 장치를 모두 해당 USB 카드로 지정합니다. 동일 이름의 USB 장치가 여러 개면 장치 식별을 먼저 해결합니다.
 2. `servo.i2cDevice`: 물리 3·5번에 연결된 어댑터의 `/dev/i2c-N`. 번호만 추측하거나 모든 버스에 쓰지 않습니다.
-3. `servo.gpioChipLabel`·`gpioLine`: 실물 P3768과 GPIO 설정 확인 결과.
-4. `display.rotation`: OS가 기본 세로 720×1560이면 90, OS에서 이미 가로로 회전했다면 0. OS 회전과 앱 회전을 중복 적용하지 않습니다.
+3. `servo.oeMode`: `grounded`. 예전 `gpioChipLabel`/`gpioLine` 설정은 오류로 거절하므로 기존 설정을 백업한 뒤 새 예제와 수동 병합한다.
+4. `display`: width=1024, height=600, rotation=0, fontSize=36. OS 회전과 중복 적용하지 않는다.
+5. `audio.playbackGain`: 0–0.25. ReSpeaker Lite 카드의 입력·출력을 모두 선택하고 낮은 음량부터 확인한다.
 
-앱 내부 디자인 좌표는 항상 1560×720입니다. 실제 화면의 해상도는 Ubuntu 디스플레이 설정에서 먼저 확인합니다. 코드가 시스템 전체의 해상도를 임의로 변경하지 않습니다. 한국어 글꼴은 `fonts-noto-cjk` 패키지를 사용합니다.
+앱 내부 디자인 좌표는 기본 1024×600입니다. 실제 화면의 해상도는 Ubuntu 디스플레이 설정에서 먼저 확인합니다. 코드가 시스템 전체의 해상도를 임의로 변경하지 않습니다. 한국어 글꼴은 `fonts-noto-cjk` 패키지를 사용합니다.
 
 ## 첫 장치 시험
 
@@ -122,9 +113,8 @@ journalctl --user -u deskpet-hardware -f
 
 ## 근거
 
-- [Waveshare HDMI LCD](https://www.waveshare.com/product/6.25inch-720x1560-lcd.htm)
-- [Waveshare USB TO AUDIO](https://www.waveshare.com/product/usb-to-audio.htm)
-- [NVIDIA P3768 GPIO 매핑](https://github.com/NVIDIA/jetson-gpio/blob/master/lib/python/Jetson/GPIO/gpio_pin_data.py)
+- [RC070S](https://www.elecrow.com/rc070s-7-inch-1024-600-ips-hdmi-capacitive-touch-monitor.html)
+- [ReSpeaker Lite](https://wiki.seeedstudio.com/reSpeaker_lite/)
 - [PCA9685 데이터시트](https://www.nxp.com/docs/en/data-sheet/PCA9685.pdf)
 - [Linux I2C 사용자 공간 인터페이스](https://www.kernel.org/doc/html/latest/i2c/dev-interface.html)
 - [systemd 그래픽 세션 준비 target](https://github.com/systemd/systemd/blob/v249/units/user/graphical-session-pre.target)

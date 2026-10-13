@@ -35,6 +35,7 @@ int main() {
   c.mock = false; c.playbackDevice = "null"; cancel = false;
   auto alsa = makeOutput(c, Format{});
   alsa->write(Bytes(640, 0), cancel);
+  alsa->finishInput(cancel);
   if (!alsa->started()) alsa->start();
   alsa->drain(cancel);
 #endif

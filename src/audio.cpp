@@ -72,7 +72,7 @@ public:
   void drain(const std::atomic_bool& cancel) override { waitUntil(end_, cancel); }
   bool started() const override { return started_; }
   void start() override { started_ = true; }
-  void drop() noexcept override { end_ = Clock::now(); }
+  bool drop() noexcept override { end_ = Clock::now(); return true; }
 };
 std::unique_ptr<AudioInput> makeInput(const Config& c) {
   if (c.mock) return std::make_unique<MockInput>(c);

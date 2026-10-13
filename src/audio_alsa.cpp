@@ -1,4 +1,5 @@
 #include "deskpet/backends.hpp"
+#include "deskpet/resampler.hpp"
 #include <alsa/asoundlib.h>
 #include <thread>
 
@@ -32,8 +33,15 @@ public:
   virtual ~PCM() { if (pcm_) { snd_pcm_drop(pcm_); snd_pcm_close(pcm_); } }
 };
 class AlsaInput final : public AudioInput, private PCM {
+  int64_t bufferNs_ = 0;
 public:
-  explicit AlsaInput(const Config& c) : PCM(c.captureDevice, {16000, 1}, SND_PCM_STREAM_CAPTURE) {}
+  explicit AlsaInput(const Config& c) : PCM(c.captureDevice, {16000, 1}, SND_PCM_STREAM_CAPTURE) {
+    snd_pcm_uframes_t buffer = 0, period = 0;
+    int rc = snd_pcm_get_params(pcm_, &buffer, &period);
+    if (rc < 0) throw Error("AUDIO_DEVICE_ERROR", snd_strerror(rc));
+    bufferNs_ = (int64_t(buffer) * 1000000000 + 15999) / 16000;
+  }
+  int64_t bufferNs() const override { return bufferNs_; }
   Bytes read(const std::atomic_bool& cancel) override {
     Bytes out(640); size_t frames = 0; auto deadline = Clock::now() + std::chrono::seconds(2);
     while (frames < 320) {
@@ -47,9 +55,15 @@ public:
   }
 };
 class AlsaOutput final : public AudioOutput, private PCM {
+  SpeakerPCM converter_;
 public:
-  AlsaOutput(const Config& c, Format f) : PCM(c.playbackDevice, f, SND_PCM_STREAM_PLAYBACK) {}
+  AlsaOutput(const Config& c, Format f) : PCM(c.playbackDevice, {16000, 1}, SND_PCM_STREAM_PLAYBACK), converter_(f, c.playbackGain) {}
   void write(const Bytes& data, const std::atomic_bool& cancel) override {
+    checkCancelled(cancel);
+    writePCM(converter_.convert(data), cancel);
+  }
+  void finishInput(const std::atomic_bool& cancel) override { writePCM(converter_.convert({}), cancel); }
+  void writePCM(const Bytes& data, const std::atomic_bool& cancel) {
     size_t done = 0, count = data.size() / format_.frameBytes();
     auto deadline = Clock::now() + std::chrono::seconds(3);
     while (done < count) {
@@ -79,7 +93,7 @@ public:
       std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
   }
-  void drop() noexcept override { if (pcm_) snd_pcm_drop(pcm_); }
+  bool drop() noexcept override { return !pcm_ || snd_pcm_drop(pcm_) >= 0; }
 };
 std::unique_ptr<AudioInput> makeAlsaInput(const Config& c) { return std::make_unique<AlsaInput>(c); }
 std::unique_ptr<AudioOutput> makeAlsaOutput(const Config& c, Format f) { return std::make_unique<AlsaOutput>(c, f); }

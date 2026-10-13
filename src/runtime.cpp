@@ -12,6 +12,7 @@ struct Runtime::Impl {
   std::mutex mutex; std::condition_variable cv;
   std::atomic_bool quitting{false}, captureFault{false}, playbackFault{false}, motionFault{false};
   std::atomic_uint64_t motionGeneration{0};
+  std::atomic_bool stopFault{false};
   struct Capture {
     Packet start; std::optional<Packet> stop; std::atomic_bool cancel{false};
   };
@@ -57,9 +58,12 @@ struct Runtime::Impl {
         uint64_t sequence = 0;
         while (!quitting && !job->cancel) {
           if (captureFault.exchange(false)) throw Error("AUDIO_DEVICE_ERROR", "Injected microphone disconnection");
+          // Use the actual negotiated buffer size for a conservative earliest
+          // capture bound, not the later timestamp at socket emission.
+          auto earliest = std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now().time_since_epoch()).count() - input->bufferNs();
           auto bytes = input->read(job->cancel);
           if (bytes.empty()) { reason = "eof"; break; }
-          auto p = event(job->start, "audio.frame", {{"sequence", sequence++}, {"format", Format{}.json()}, {"simulated", config.mock}}, std::move(bytes));
+          auto p = event(job->start, "audio.frame", {{"sequence", sequence++}, {"captureEarliestMonotonicNs", earliest}, {"format", Format{}.json()}, {"simulated", config.mock}}, std::move(bytes));
           if (!emit(std::move(p))) throw Error("AUDIO_DISCONTINUITY", "Capture queue overflow; restart the stream and invalidate its STT session");
         }
       } catch (const Error& e) {
@@ -106,6 +110,7 @@ struct Runtime::Impl {
           }
           if (finish) {
             if (!wrote) throw Error("NO_AUDIO", "An empty audio job cannot be delivered");
+            output->finishInput(job->cancel);
             if (!started) {
               checkCancelled(job->cancel); output->start();
               emit(event(job->begin, "audio.started", {{"simulated", config.mock}})); started = true;
@@ -115,7 +120,8 @@ struct Runtime::Impl {
         }
       } catch (const Error& e) { code = e.code; message = e.what(); }
       catch (const std::exception& e) { code = "AUDIO_OUTPUT_ERROR"; message = e.what(); }
-      if (!completed && output) output->drop();
+      bool stoppedConfirmed = completed || !output || output->drop();
+      if (stopFault.exchange(false)) stoppedConfirmed = false;
       std::optional<Packet> finish, stop;
       { std::lock_guard lock(mutex);
         // Cancellation wins if it arrived before finalization acquired the state lock.
@@ -128,9 +134,12 @@ struct Runtime::Impl {
       } else {
         if (!acknowledged) emit(failure(job->begin, code, message));
         if (finish) emit(failure(*finish, code, message));
-        emit(event(job->begin, code == "CANCELLED" ? "audio.cancelled" : "audio.failed", {{"code", code}, {"message", message}, {"simulated", config.mock}}));
+        emit(event(job->begin, code == "CANCELLED" ? "audio.cancelled" : "audio.failed", {{"code", code}, {"message", message}, {"stoppedConfirmed", stoppedConfirmed}, {"simulated", config.mock}}));
       }
-      if (stop) emit(reply(*stop, {{"stopped", true}}));
+      if (stop) {
+        if (stoppedConfirmed) emit(reply(*stop, {{"stopped", true}}));
+        else emit(failure(*stop, "AUDIO_STOP_UNCONFIRMED", "ALSA drop failed; keep STT gated"));
+      }
     }
   }
   void servoLoop() {
@@ -244,7 +253,7 @@ struct Runtime::Impl {
         capture = std::make_shared<Capture>(); capture->start = cmd; cv.notify_all();
       } else if (op == "capture.stop") {
         std::lock_guard lock(mutex);
-        if (!capture || cmd.meta.value("captureId", "") != capture->start.meta.at("captureId")) throw Error("UNKNOWN_CAPTURE", "No matching capture stream");
+        if (!capture || cmd.meta.value("captureId", "") != capture->start.meta.at("captureId").get<std::string>()) throw Error("UNKNOWN_CAPTURE", "No matching capture stream");
         if (capture->stop) throw Error("BUSY", "Capture stop is already pending");
         capture->cancel = true; capture->stop = cmd; cv.notify_all();
       } else if (op == "speaker.begin") {
@@ -255,7 +264,7 @@ struct Runtime::Impl {
         playback = std::make_shared<Playback>(); playback->begin = cmd; playback->format = format; cv.notify_all();
       } else if (op == "speaker.write" || op == "speaker.finish" || op == "speaker.stop") {
         std::lock_guard lock(mutex);
-        if (!playback || cmd.meta.value("jobId", "") != playback->begin.meta.at("jobId")) throw Error("UNKNOWN_JOB", "No matching speaker job");
+        if (!playback || cmd.meta.value("jobId", "") != playback->begin.meta.at("jobId").get<std::string>()) throw Error("UNKNOWN_JOB", "No matching speaker job");
         if (playback->cancel) throw Error("CANCELLED", "Speaker job is stopping");
         if (op == "speaker.write") {
           if (playback->finish) throw Error("JOB_FINISHING", "No writes are accepted after finish");
@@ -282,6 +291,7 @@ struct Runtime::Impl {
         const auto device = cmd.meta.at("device").get<std::string>();
         if (device == "capture") captureFault = true;
         else if (device == "speaker") playbackFault = true;
+        else if (device == "speaker-stop") stopFault = true;
         else if (device == "motion") motionFault = true;
         else if (device == "display") display.injectFailure();
         else throw Error("INVALID_COMMAND", "Unknown device");

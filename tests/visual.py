@@ -54,7 +54,7 @@ for rotation in (0, 90):
                     with target.open("rb") as image:
                         image.seek(18)
                         dimensions = struct.unpack("<ii", image.read(8))
-                    assert dimensions == ((1560, 720) if rotation == 0 else (720, 1560)), dimensions
+                    assert dimensions == ((1024, 600) if rotation == 0 else (600, 1024)), dimensions
                 try:
                     client.show(text="마감 날짜와 시간을 빠뜨리지 마세요. " * 100)
                     raise AssertionError("Overlong text was silently accepted")

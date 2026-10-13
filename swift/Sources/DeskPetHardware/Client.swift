@@ -18,6 +18,14 @@ public final class HardwareClient: @unchecked Sendable {
     private var closed = false
     private var pending: [String: CheckedContinuation<WireMessage, Error>] = [:]
     private var frames: [AudioFrame] = []
+    private var inputGate = InputGate()
+    public var inputEpoch: Int64 { lock.withCriticalSection { inputGate.epoch } }
+    public func isCurrentInputEpoch(_ epoch: Int64) -> Bool {
+        lock.withCriticalSection {
+            let now = DispatchTime.now().uptimeNanoseconds
+            return inputGate.accepts(epoch: epoch, capturedAt: now, now: now)
+        }
+    }
     private var frameWaiter: CheckedContinuation<AudioFrame?, Error>?
     private var captureError: Error?
     private var captureEnded = true
@@ -79,7 +87,7 @@ public final class HardwareClient: @unchecked Sendable {
             guard let self else { return }
             Task { do { _ = try await self.command("ping", timeout: 2) } catch { self.close() } }
         }
-        lock.withLock { if !closed { heartbeat = timer; timer.resume() } else { timer.setEventHandler {}; timer.resume(); timer.cancel() } }
+        lock.withCriticalSection { if !closed { heartbeat = timer; timer.resume() } else { timer.setEventHandler {}; timer.resume(); timer.cancel() } }
     }
 
     public func command(_ command: String, fields: [String: JSONValue] = [:], data: Data = Data(), timeout: Double = 5) async throws -> [String: JSONValue] {
@@ -89,9 +97,19 @@ public final class HardwareClient: @unchecked Sendable {
         meta["version"] = .int(1); meta["type"] = .string("command")
         meta["commandId"] = .string(id); meta["command"] = .string(command)
         let wire = try WireMessage(meta: meta, data: data).encoded()
+        if command == "speaker.begin", let job = fields["jobId"]?.string {
+            try lock.withCriticalSection {
+                guard inputGate.begin(job) else { throw HardwareError.device(code: "BUSY", message: "Duplicate speaker job") }
+                frames.removeAll()
+            }
+            switch eventSink.yield(HardwareEvent(name: "input.invalidated", fields: ["inputEpoch": .int(inputEpoch)])) {
+            case .enqueued: break
+            default: close(); throw HardwareError.transport("Input invalidation consumer unavailable")
+            }
+        }
         let response: WireMessage = try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
-                let registered = lock.withLock { () -> Bool in
+                let registered = lock.withCriticalSection { () -> Bool in
                     guard !closed else { return false }
                     pending[id] = continuation; return true
                 }
@@ -101,7 +119,7 @@ public final class HardwareClient: @unchecked Sendable {
                 }
                 DispatchQueue.global().asyncAfter(deadline: .now() + timeout) { [weak self] in
                     guard let self else { return }
-                    if self.lock.withLock({ self.pending[id] != nil }) { self.fail(HardwareError.transport("Timed out: \(command)")) }
+                    if self.lock.withCriticalSection({ self.pending[id] != nil }) { self.fail(HardwareError.transport("Timed out: \(command)")) }
                 }
             }
         } onCancel: { self.fail(CancellationError()) }
@@ -110,14 +128,18 @@ public final class HardwareClient: @unchecked Sendable {
         }
         if status == "error" {
             let error = response.meta["error"]?.object ?? [:]
+            if command == "speaker.begin", let job = fields["jobId"]?.string {
+                // Rejection before playback, or a backend failure before any PCM write.
+                lock.withCriticalSection { inputGate.end(job, confirmed: true, now: DispatchTime.now().uptimeNanoseconds) }
+            }
             throw HardwareError.device(code: error["code"]?.string ?? "UNKNOWN", message: error["message"]?.string ?? "Hardware command failed")
         }
         return response.meta["result"]?.object ?? [:]
     }
 
     private func sendAll(_ data: Data) throws {
-        try writeLock.withLock {
-            guard !lock.withLock({ closed }) else { throw HardwareError.transport("Connection closed") }
+        try writeLock.withCriticalSection {
+            guard !lock.withCriticalSection({ closed }) else { throw HardwareError.transport("Connection closed") }
             try data.withUnsafeBytes { ptr in
                 var done = 0
                 while done < data.count {
@@ -135,7 +157,7 @@ public final class HardwareClient: @unchecked Sendable {
     }
 
     private func readLoop() {
-        defer { writeLock.withLock { systemClose(fd) } }
+        defer { writeLock.withCriticalSection { systemClose(fd) } }
         var decoder = WireDecoder(), bytes = [UInt8](repeating: 0, count: 8192)
         do {
             while true {
@@ -150,7 +172,7 @@ public final class HardwareClient: @unchecked Sendable {
     private func handle(_ packet: WireMessage) throws {
         if packet.meta["type"]?.string == "reply" {
             guard let id = packet.meta["commandId"]?.string else { throw HardwareError.transport("Reply has no commandId") }
-            let waiter = lock.withLock { pending.removeValue(forKey: id) }
+            let waiter = lock.withCriticalSection { pending.removeValue(forKey: id) }
             waiter?.resume(returning: packet)
             return
         }
@@ -160,12 +182,17 @@ public final class HardwareClient: @unchecked Sendable {
                   let seq = packet.meta["sequence"]?.integer, let ns = packet.meta["timestampUnixNs"]?.integer,
                   let format = packet.meta["format"]?.object, format["sampleRate"] == .int(16000), format["channels"] == .int(1),
                   format["encoding"] == .string("s16le"), packet.data.count == 640 else { throw HardwareError.transport("Invalid microphone frame") }
-            let frame = AudioFrame(timestamp: Date(timeIntervalSince1970: Double(ns) / 1e9), sequence: seq, captureId: id, chunk: PCMChunk(data: packet.data))
+            guard let captured = packet.meta["captureEarliestMonotonicNs"]?.integer, captured >= 0 else {
+                throw HardwareError.transport("Update daemon: capture timing bound is required for input gating")
+            }
+            var frame = AudioFrame(timestamp: Date(timeIntervalSince1970: Double(ns) / 1e9), sequence: seq, captureId: id, chunk: PCMChunk(data: packet.data))
             var waiter: CheckedContinuation<AudioFrame?, Error>?
-            try lock.withLock {
+            try lock.withCriticalSection {
                 guard id == captureId, !captureEnded else { return }
                 if let sequence, seq != sequence + 1 { throw HardwareError.device(code: "AUDIO_DISCONTINUITY", message: "Frame sequence gap") }
                 sequence = seq
+                guard inputGate.accepts(epoch: inputGate.epoch, capturedAt: UInt64(captured), now: DispatchTime.now().uptimeNanoseconds) else { return }
+                frame.inputEpoch = inputGate.epoch
                 if let waiting = frameWaiter { waiter = waiting; frameWaiter = nil }
                 else {
                     guard frames.count < 50 else { throw HardwareError.device(code: "AUDIO_DISCONTINUITY", message: "Client capture queue overflow") }
@@ -175,10 +202,14 @@ public final class HardwareClient: @unchecked Sendable {
             waiter?.resume(returning: frame)
             return
         }
+        if ["audio.completed", "audio.cancelled", "audio.failed"].contains(event), let job = packet.meta["jobId"]?.string {
+            let confirmed = event == "audio.completed" || packet.meta["stoppedConfirmed"] == .bool(true)
+            lock.withCriticalSection { inputGate.end(job, confirmed: confirmed, now: DispatchTime.now().uptimeNanoseconds); frames.removeAll() }
+        }
         if event == "device.error", packet.meta["device"]?.string == "capture" {
             finishCapture(error: HardwareError.device(code: packet.meta["code"]?.string ?? "AUDIO_DEVICE_ERROR", message: packet.meta["message"]?.string ?? "Capture failed"))
         } else if event == "capture.stopped" {
-            if lock.withLock({ packet.meta["captureId"]?.string == captureId }) { finishCapture(error: nil) }
+            if lock.withCriticalSection({ packet.meta["captureId"]?.string == captureId }) { finishCapture(error: nil) }
         }
         switch eventSink.yield(HardwareEvent(name: event, fields: packet.meta)) {
         case .enqueued: break
@@ -192,7 +223,8 @@ public final class HardwareClient: @unchecked Sendable {
     }
 
     private func finishCapture(error: Error?) {
-        let waiter = lock.withLock { () -> CheckedContinuation<AudioFrame?, Error>? in
+        let waiter = lock.withCriticalSection { () -> CheckedContinuation<AudioFrame?, Error>? in
+            inputGate.resetCapture()
             captureEnded = true
             if let error { captureError = error; frames.removeAll() }
             let waiter = frameWaiter; frameWaiter = nil; return waiter
@@ -202,17 +234,18 @@ public final class HardwareClient: @unchecked Sendable {
 
     public func startCapture() async throws {
         let id = UUID().uuidString
-        try lock.withLock {
+        try lock.withCriticalSection {
             guard captureEnded else { throw HardwareError.device(code: "BUSY", message: "Capture is already active") }
+            inputGate.resetCapture()
             captureId = id; captureEnded = false; captureError = nil; sequence = nil; frames.removeAll()
         }
         do { _ = try await command("capture.start", fields: ["captureId": .string(id)]) }
         catch { finishCapture(error: error); throw error }
     }
     public func stopCapture() async throws {
-        let id = lock.withLock { captureId ?? "" }
+        let id = lock.withCriticalSection { captureId ?? "" }
         _ = try await command("capture.stop", fields: ["captureId": .string(id)])
-        lock.withLock { frames.removeAll() }
+        lock.withCriticalSection { frames.removeAll() }
     }
     public func nextFrame() async throws -> AudioFrame? {
         try Task.checkCancellation()
@@ -232,6 +265,7 @@ public final class HardwareClient: @unchecked Sendable {
         lock.lock()
         if closed { lock.unlock(); return }
         closed = true
+        inputGate.invalidate(); frames.removeAll()
         let waiting = Array(pending.values); pending.removeAll()
         let timer = heartbeat; heartbeat = nil
         lock.unlock()
@@ -256,4 +290,12 @@ private func systemConnect(_ fd: Int32, _ address: UnsafePointer<sockaddr>, _ si
     #else
     return Darwin.connect(fd, address, size)
     #endif
+}
+
+// Swift 5.10 Linux Foundation does not expose NSLock.withLock.
+private extension NSLock {
+    func withCriticalSection<T>(_ body: () throws -> T) rethrows -> T {
+        lock(); defer { unlock() }
+        return try body()
+    }
 }

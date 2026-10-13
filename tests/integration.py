@@ -147,6 +147,14 @@ class Integration(unittest.TestCase):
         self.error("INVALID_FORMAT", lambda: self.client.request("speaker.begin", jobId="bad", requestId="r", outputId="o",
                    format={"sampleRate": 96000, "channels": 1}))
 
+    def test_unconfirmed_stop_is_not_success(self):
+        self.begin()
+        self.client.request("speaker.write", jobId="job", data=tone(0.5))
+        self.client.request("mock.fail", device="speaker-stop")
+        self.error("AUDIO_STOP_UNCONFIRMED", lambda: self.client.request("speaker.stop", jobId="job"))
+        cancelled, _ = self.event("audio.cancelled")
+        self.assertFalse(cancelled["stoppedConfirmed"])
+
     def test_playback_backpressure(self):
         self.begin()
         results = []

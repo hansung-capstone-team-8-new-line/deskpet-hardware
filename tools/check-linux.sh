@@ -4,7 +4,7 @@ set -euo pipefail
 test "$(uname -m)" = aarch64
 cmake -S . -B /tmp/deskpet-cmake -DCMAKE_BUILD_TYPE=Debug -DDESKPET_LINUX=ON -DDESKPET_SDL=ON
 cmake --build /tmp/deskpet-cmake -j 2
-swift test --package-path swift --scratch-path /tmp/deskpet-swift -Xswiftc -strict-concurrency=complete -Xswiftc -warnings-as-errors
+python3 tests/swift_live.py /tmp/deskpet-cmake/deskpet-hardware swift /tmp/deskpet-swift
 export DESKPET_SWIFT_DEMO=/tmp/deskpet-swift/debug/deskpet-swift-demo
 ctest --test-dir /tmp/deskpet-cmake --output-on-failure
 python3 tests/visual.py /tmp/deskpet-cmake/deskpet-hardware /tmp/deskpet-preview

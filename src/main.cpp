@@ -7,7 +7,6 @@
 #include <unistd.h>
 #ifdef DESKPET_LINUX
 #include <alsa/asoundlib.h>
-#include <gpiod.h>
 #endif
 
 using namespace deskpet;
@@ -34,15 +33,7 @@ static void doctor() {
     std::ifstream in(entry.path() / "name"); std::string name; std::getline(in, name);
     result["i2c"].push_back({{"device", "/dev/" + entry.path().filename().string()}, {"name", name}});
   }
-  result["gpio"] = Json::array();
-  for (const auto& entry : std::filesystem::directory_iterator("/dev")) {
-    if (entry.path().filename().string().rfind("gpiochip", 0) != 0) continue;
-    gpiod_chip* chip = gpiod_chip_open(entry.path().c_str()); if (!chip) continue;
-    result["gpio"].push_back({{"device", entry.path().string()}, {"label", gpiod_chip_label(chip)}});
-    auto* line = gpiod_chip_find_line(chip, "PAC.06");
-    if (line) result["suggestedOe"] = {{"chipLabel", gpiod_chip_label(chip)}, {"line", "PAC.06"}, {"physicalHeaderPin", 7}, {"directionMustBeConfigured", true}};
-    gpiod_chip_close(chip);
-  }
+  result["servo"] = {{"oeMode", "grounded"}, {"stopMethod", "PCA9685 FULL_OFF"}};
   std::ifstream release("/etc/nv_tegra_release"); std::string version; std::getline(release, version); result["jetsonRelease"] = version;
 #else
   result["hardware"] = "Linux drivers are not built. Mock operation is available.";

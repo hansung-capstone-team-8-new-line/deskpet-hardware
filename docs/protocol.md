@@ -35,11 +35,11 @@ Unix stream socket을 사용합니다. 기본 경로는 `$XDG_RUNTIME_DIR/deskpe
 | `speaker.stop` | `jobId` | 재생 drop·취소 후 |
 | `display.show` | `requestId`, `outputId`, `revision`, `view` | 해당 프레임 렌더러 제출 후 |
 | `display.idle` | `revision` | 기본 표정 프레임 제출 후 |
-| `motion.enable`, `motion.disable` | 없음 | OE 전환. enable은 보정 필요 |
+| `motion.enable`, `motion.disable` | 없음 | PWM FULL_OFF 설정·해제. OE=GND, enable은 보정 필요 |
 | `motion.set` | `preset` 또는 정규화된 `left`, `right` | 설정 범위로 PWM 명령 전달 후 |
 | `motion.calibration.begin/set/end` | set에는 `leftUs`, `rightUs` | 사용자가 명시적으로 시작한 보정 세션에 한정 |
 | `display.snapshot` | `path` | 모의 SDL 화면 BMP 저장 |
-| `mock.fail` | `device`: capture/speaker/display/motion | 다음 해당 장치 작업에 모의 오류 주입 |
+| `mock.fail` | `device`: capture/speaker/speaker-stop/display/motion | 다음 해당 장치 작업에 모의 오류 주입 |
 
 PCM `format`은 `{"encoding":"s16le","sampleRate":16000,"channels":1}`입니다. 출력은 8–48kHz, 1·2채널을 지원하며 TTS job 안에서 형식을 변경할 수 없습니다. 스피커 큐는 1초 분량, 모션 명령 큐는 16개입니다. `QUEUE_FULL`인 write payload는 수락되지 않았으므로 같은 데이터에 새 commandId로 재시도할 수 있습니다. 이미 수락한 데이터는 재전송하지 않습니다.
 
@@ -47,11 +47,11 @@ PCM `format`은 `{"encoding":"s16le","sampleRate":16000,"channels":1}`입니다.
 
 이벤트에는 `version:1`, `type:event`, `event`, `timestampUnixNs`가 있습니다.
 
-- `audio.frame`: `captureId`, 연속 `sequence`, PCM `format`, 640바이트 payload. 16kHz·모노·PCM16의 20ms입니다. 타임스탬프는 호스트에서 프레임을 읽은 시점으로 ADC의 정밀 표본 시각이 아닙니다.
+- `audio.frame`: `captureId`, 연속 `sequence`, PCM `format`, 640바이트 payload, `captureEarliestMonotonicNs`(실제 캡처 버퍼 길이를 뺀 monotonic 하한). 16kHz·모노·PCM16의 20ms입니다. 타임스탬프는 호스트에서 프레임을 읽은 시점으로 ADC의 정밀 표본 시각이 아닙니다.
 - `capture.stopped`: EOF·취소·오류 등 `reason`을 포함합니다.
 - `audio.started`: 첫 PCM 재생 시작을 확인했을 때. `begin` 수락을 뜻하지 않습니다.
 - `audio.completed`: 마지막 PCM의 drain 이후에만 발생합니다. 빈 job은 `NO_AUDIO`로 실패합니다.
-- `audio.failed`, `audio.cancelled`: 실패 또는 취소. 이 출력은 전달 완료로 기록하지 않습니다.
+- `audio.failed`, `audio.cancelled`: 실패 또는 취소. `stoppedConfirmed`로 drain/drop 정지 확인 여부를 보고하며 false면 STT gate를 유지합니다. 이 출력은 전달 완료로 기록하지 않습니다.
 - `display.displayed`: 렌더러에 새 프레임을 제출했음을 뜻합니다. 패널 센서가 없으므로 실제 화면 발광이나 사용자의 읽음을 검증한 것은 아닙니다.
 - `motion.commanded`: 설정 범위 내 PWM 명령 완료. `positionVerified:false`이며 실제 귀 위치에 대한 피드백은 없습니다.
 - `device.error`: 실패 장치·오류 코드·메시지를 전달합니다.
@@ -96,3 +96,11 @@ while let frame = try await microphone.nextFrame() {
 실제 파이프라인의 `SpeakerAdapter.begin(jobId,event)`에는 format이 없으므로, 연결 래퍼에서 TTS 출력 형식을 알고 있다면 begin에 넘깁니다. 형식을 첫 chunk에서만 알 수 있다면 그 래퍼가 첫 chunk까지 장치 begin을 보류해야 합니다. 이 패키지의 speaker write는 format 변경을 거절합니다. 같은 job의 begin → write들 → finish는 순서대로 await합니다.
 
 이 패키지의 `PCMChunk`, `AudioFrame`, `OutputEvent`는 **독립 DTO**입니다. 실제 팀 타입을 중복 정의하거나 import했다고 가정하지 않습니다. 확보한 팀 소스에서 protocol의 정확한 async/throws/Sendable 조건과 타입 생성자를 확인한 뒤 변환 래퍼를 추가하세요. 현재 제공하는 실행 가능한 연결 예제는 `swift/Sources/DeskPetHardwareDemo/main.swift`입니다.
+
+### Current Audio Contract — 2026-10-13
+
+ReSpeaker Lite 실제 출력은 **16kHz·모노 s16le**다. 소켓의 8–48kHz·1/2채널 입력 계약은 유지하며 C++ SoXR가 청크 간 상태를 유지해 모노 혼합·변환하고 마지막 필터 표본까지 drain한다. `audio.playbackGain`은 0–0.25(기본 0.25)이고 필터 overshoot도 제한한다. 디지털 진폭 제한은 3W 전력 보장이 아니므로 낮은 음량부터 실제 스피커 왜곡·발열·출력을 측정한다.
+
+동일한 `HardwareClient`를 마이크·스피커가 공유해야 한다. `speaker.begin` 전 클라이언트가 입력 epoch를 바꾸고 큐를 비운 뒤 `input.invalidated`를 발생시킨다. 파이프라인은 이 이벤트에서 VAD/STT 누적 상태를 초기화하고, 프레임의 `inputEpoch`를 발화에 보존하며 늦은 STT final을 업무로 보내기 직전에 `client.isCurrentInputEpoch(epoch)`로 거절한다. 프레임 수신만 다시 시작하고 이전 STT 결과를 수용하면 안 된다.
+
+캡처 자체는 계속되지만 Swift는 재생 중 및 실제 drain/drop 확인 후 300ms까지 프레임을 버린다. 서버의 보수적 `captureEarliestMonotonicNs`로 지연 도착 프레임도 버리며 재전달하지 않는다. `audio.failed`·`audio.cancelled`의 `stoppedConfirmed:false` 또는 연결 상실은 차단 유지다. 장치 정지 원인을 확인하고 세션을 새로 연결한다. 원시 소켓/`deskpetctl`은 진단용 연속 캡처를 제공하므로 직접 사용하는 파이프라인은 같은 차단·epoch 계약을 별도로 구현해야 한다. 새 Swift 클라이언트와 새 데몬을 함께 배포한다.

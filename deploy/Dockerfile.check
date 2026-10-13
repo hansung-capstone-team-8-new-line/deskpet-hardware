@@ -1,6 +1,6 @@
 FROM swift:6.0.3-jammy
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    cmake build-essential pkg-config libsdl2-dev libsdl2-ttf-dev libasound2-dev libgpiod-dev \
+    cmake build-essential pkg-config libsdl2-dev libsdl2-ttf-dev libasound2-dev libsoxr-dev \
     python3 fonts-noto-cjk && rm -rf /var/lib/apt/lists/*
 WORKDIR /work
 CMD ["/bin/bash", "tools/check-linux.sh"]

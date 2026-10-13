@@ -20,6 +20,8 @@ int Ear::pulse(double normalized) const {
   return static_cast<int>(std::lround(neutralUs + n * (n < 0 ? neutralUs - minUs : maxUs - neutralUs)));
 }
 void Config::validate() const {
+  if (oeMode != "grounded" || !std::isfinite(playbackGain) || playbackGain < 0 || playbackGain > 0.25)
+    throw Error("CONFIG_ERROR", "Require grounded OE and playbackGain in 0..0.25");
   if (socketPath.empty() || socketPath.size() >= 100) throw Error("CONFIG_ERROR", "Socket path is missing or too long");
   if (width < 240 || height < 240 || width > 4096 || height > 4096 ||
       (rotation != 0 && rotation != 90 && rotation != 180 && rotation != 270) || fontSize < 16 || fontSize > 128)
@@ -46,13 +48,16 @@ Config Config::load(const std::string& file) {
     c.leaseMs = j.value("leaseMs", 3000);
     const auto d = j.value("display", Json::object());
     c.headless = d.value("headless", false); c.fullscreen = d.value("fullscreen", false);
-    c.width = d.value("width", 1560); c.height = d.value("height", 720);
-    c.rotation = d.value("rotation", 90); c.font = d.value("font", ""); c.fontSize = d.value("fontSize", 52);
+    c.width = d.value("width", 1024); c.height = d.value("height", 600);
+    c.rotation = d.value("rotation", 0); c.font = d.value("font", ""); c.fontSize = d.value("fontSize", 36);
     const auto a = j.value("audio", Json::object());
     c.captureDevice = a.value("captureDevice", ""); c.playbackDevice = a.value("playbackDevice", ""); c.wavInput = a.value("wavInput", "");
+    c.playbackGain = a.value("playbackGain", 0.25);
     const auto s = j.value("servo", Json::object());
     c.i2cDevice = s.value("i2cDevice", ""); c.address = s.value("address", 64);
-    c.gpioChipLabel = s.value("gpioChipLabel", "tegra234-gpio"); c.gpioLine = s.value("gpioLine", "PAC.06");
+    c.oeMode = s.value("oeMode", "grounded");
+    if (s.contains("gpioLine") || s.contains("gpioChipLabel"))
+      throw Error("CONFIG_ERROR", "Legacy GPIO OE config: migrate explicitly to grounded wiring");
     c.calibrated = s.value("calibrated", false); c.frequency = s.value("frequency", 50); c.stepUs = s.value("stepUs", 20);
     auto ear = [](const Json& x, Ear& e) {
       e.channel = x.value("channel", e.channel); e.minUs = x.value("minUs", 1000);

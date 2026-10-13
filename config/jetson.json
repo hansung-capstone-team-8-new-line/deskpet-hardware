@@ -1,13 +1,40 @@
 {
   "mode": "real",
   "leaseMs": 3000,
-  "display": {"headless": false, "fullscreen": true, "width": 1560, "height": 720, "rotation": 90, "font": "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", "fontSize": 52},
-  "audio": {"captureDevice": "", "playbackDevice": ""},
+  "display": {
+    "headless": false,
+    "fullscreen": true,
+    "width": 1024,
+    "height": 600,
+    "rotation": 0,
+    "font": "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "fontSize": 36
+  },
+  "audio": {
+    "captureDevice": "",
+    "playbackDevice": "",
+    "playbackGain": 0.25
+  },
   "servo": {
-    "i2cDevice": "", "address": 64, "frequency": 50,
-    "gpioChipLabel": "tegra234-gpio", "gpioLine": "PAC.06",
-    "calibrated": false, "stepUs": 20,
-    "left": {"channel": 0, "minUs": 1400, "neutralUs": 1500, "maxUs": 1600, "inverted": false},
-    "right": {"channel": 1, "minUs": 1400, "neutralUs": 1500, "maxUs": 1600, "inverted": true}
+    "i2cDevice": "",
+    "address": 64,
+    "frequency": 50,
+    "calibrated": false,
+    "stepUs": 20,
+    "left": {
+      "channel": 0,
+      "minUs": 1400,
+      "neutralUs": 1500,
+      "maxUs": 1600,
+      "inverted": false
+    },
+    "right": {
+      "channel": 1,
+      "minUs": 1400,
+      "neutralUs": 1500,
+      "maxUs": 1600,
+      "inverted": true
+    },
+    "oeMode": "grounded"
   }
 }

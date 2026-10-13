@@ -36,8 +36,9 @@ struct Ear {
 struct Config {
   bool mock = true, headless = false, fullscreen = false, calibrated = false;
   std::string socketPath, font, captureDevice, playbackDevice, wavInput;
-  std::string i2cDevice, gpioChipLabel = "tegra234-gpio", gpioLine = "PAC.06";
-  int width = 1560, height = 720, rotation = 90, fontSize = 52;
+  std::string i2cDevice, oeMode = "grounded";
+  double playbackGain = 0.25;
+  int width = 1024, height = 600, rotation = 0, fontSize = 36;
   int address = 0x40, frequency = 50, stepUs = 20;
   int leaseMs = 3000;
   Ear left, right{1};

@@ -61,6 +61,8 @@ public struct AudioFrame: Sendable {
     public let sequence: Int64
     public let captureId: String
     public let chunk: PCMChunk
+    /// Invalidate the STT session when this changes; reject late finals via isCurrentInputEpoch.
+    public var inputEpoch: Int64 = 0
 }
 
 public struct OutputEvent: Sendable {

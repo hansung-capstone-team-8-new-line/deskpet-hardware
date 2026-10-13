@@ -1,3 +1,2 @@
 # Install only on the Jetson. Membership in deskpet-hw grants hardware access.
 SUBSYSTEM=="i2c-dev", KERNEL=="i2c-*", GROUP="deskpet-hw", MODE="0660"
-SUBSYSTEM=="gpio", KERNEL=="gpiochip*", GROUP="deskpet-hw", MODE="0660"

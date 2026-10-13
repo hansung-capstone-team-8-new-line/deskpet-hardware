@@ -1,10 +1,9 @@
 import Foundation
 import DeskPetHardware
 
-@main
 struct Demo {
     static func main() async throws {
-        let path = CommandLine.arguments.dropFirst().first ?? HardwareClient.defaultSocket
+        let path = ProcessInfo.processInfo.arguments.dropFirst().first ?? HardwareClient.defaultSocket
         let client = try await HardwareClient.connect(path: path)
         defer { client.close() }
         // Always consume delivery/error events; the client will not silently drop them.
@@ -40,15 +39,18 @@ struct Demo {
             try await speaker.write(PCMChunk(data: data), jobId: id)
         }
         try await speaker.finish(jobId: id)
+        try await Task.sleep(nanoseconds: 500_000_000) // Gate release + one fresh capture frame.
         try await microphone.stop()
         let count = try await capture.value
-        guard count > 0 else { throw HardwareError.transport("No concurrent capture frames received") }
+        guard count > 0 else { throw HardwareError.transport("No fresh capture frames after gate release") }
         do {
             try await motion.enable()
             try await motion.apply(preset: "wiggle", requestId: id, outputId: id)
             try await motion.disable()
         } catch { print("Motion unavailable:", error) }
         try await display.idle()
-        print("Swift round trip passed; concurrent microphone frames:", count)
+        print("Swift round trip passed; ungated microphone frames:", count)
     }
 }
+
+try await Demo.main()
