@@ -1,0 +1,634 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<export version="E">
+  <design>
+    <source>/tmp/claude-0/-home-claude/16b9fa89-65fe-5c31-8fd0-7c5db26450be/scratchpad/kicad/out/deskpet.kicad_sch</source>
+    <date>Fri Oct  9 01:15:12 2026</date>
+    <tool>Eeschema 7.0.11+dfsg-1build4</tool>
+    <sheet number="1" name="/" tstamps="/">
+      <title_block>
+        <title>DeskPet wiring schematic - plan A</title>
+        <company>Hansung capstone team 8</company>
+        <rev>A</rev>
+        <date>2026-10-09</date>
+        <source>deskpet.kicad_sch</source>
+        <comment number="1" value="Jetson Orin Nano + PCA9685 + SG90 x2 + ReSpeaker Lite + RC070S 7in LCD"/>
+        <comment number="2" value=""/>
+        <comment number="3" value=""/>
+        <comment number="4" value=""/>
+        <comment number="5" value=""/>
+        <comment number="6" value=""/>
+        <comment number="7" value=""/>
+        <comment number="8" value=""/>
+        <comment number="9" value=""/>
+      </title_block>
+    </sheet>
+  </design>
+  <components>
+    <comp ref="A1">
+      <value>DP→HDMI 젠더 NXC067</value>
+      <libsource lib="DeskPet" part="DP_HDMI_Adapter" description=""/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>23861ac1-6868-4a14-a8ba-cacfbbaa0e49</tstamps>
+    </comp>
+    <comp ref="C1">
+      <value>1000µF 16V 전해</value>
+      <libsource lib="Device" part="C_Polarized" description="Polarized capacitor"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <property name="ki_description" value="Polarized capacitor"/>
+      <property name="ki_keywords" value="cap capacitor"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>49c39d5f-c4be-4f33-9698-802b2b0f52e4</tstamps>
+    </comp>
+    <comp ref="F1">
+      <value>MINI 퓨즈 3A + 홀더 BE151</value>
+      <libsource lib="Device" part="Fuse" description="Fuse"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <property name="ki_description" value="Fuse"/>
+      <property name="ki_keywords" value="fuse"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>338173c7-24e4-4dc0-a0f6-ddc3be8d7fdb</tstamps>
+    </comp>
+    <comp ref="J1">
+      <value>Jetson 40핀 = 분배보드(리본 1:1)</value>
+      <libsource lib="Connector_Generic" part="Conn_02x20_Odd_Even" description="Generic connector, double row, 02x20, odd/even pin numbering scheme (row 1 odd numbers, row 2 even numbers), script generated (kicad-library-utils/schlib/autogen/connector/)"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <property name="ki_description" value="Generic connector, double row, 02x20, odd/even pin numbering scheme (row 1 odd numbers, row 2 even numbers), script generated (kicad-library-utils/schlib/autogen/connector/)"/>
+      <property name="ki_keywords" value="connector"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>209425be-2b4d-4993-b29c-2c097e5bb72e</tstamps>
+    </comp>
+    <comp ref="J3">
+      <value>DC잭 터미널 VLT-DC001</value>
+      <libsource lib="DeskPet" part="DC_Jack_Terminal" description=""/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>396db61c-65af-4d80-9106-e58d5214c229</tstamps>
+    </comp>
+    <comp ref="JP1">
+      <value>OE↔GND 점퍼선</value>
+      <libsource lib="Connector_Generic" part="Conn_01x02" description="Generic connector, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <property name="ki_description" value="Generic connector, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
+      <property name="ki_keywords" value="connector"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>f086bf52-ce52-41c7-bee2-7fc8ed9ab857</tstamps>
+    </comp>
+    <comp ref="LS1">
+      <value>밀폐형 스피커 3W 4Ω ada-3351</value>
+      <libsource lib="Device" part="Speaker" description="Speaker"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <property name="ki_description" value="Speaker"/>
+      <property name="ki_keywords" value="speaker sound"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>d205d2aa-a6f3-49ec-8502-ae53d519e469</tstamps>
+    </comp>
+    <comp ref="M1">
+      <value>SG90 왼쪽 귀</value>
+      <libsource lib="Motor" part="Motor_Servo" description="Servo Motor (Futaba, HiTec, JR connector)"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <property name="ki_description" value="Servo Motor (Futaba, HiTec, JR connector)"/>
+      <property name="ki_keywords" value="Servo Motor"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>80e19a04-dbc6-425f-a02c-3321f76e2910</tstamps>
+    </comp>
+    <comp ref="M2">
+      <value>SG90 오른쪽 귀</value>
+      <libsource lib="Motor" part="Motor_Servo" description="Servo Motor (Futaba, HiTec, JR connector)"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <property name="ki_description" value="Servo Motor (Futaba, HiTec, JR connector)"/>
+      <property name="ki_keywords" value="Servo Motor"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>88fd1d30-2a1e-4f4c-ae86-6ab2397d1dd7</tstamps>
+    </comp>
+    <comp ref="PS1">
+      <value>Jetson 전원 어댑터(키트)</value>
+      <libsource lib="DeskPet" part="PSU_Jetson" description=""/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>e48d8703-3a34-4b1a-bce5-0ebf1af1a80f</tstamps>
+    </comp>
+    <comp ref="PS2">
+      <value>5V 5A 어댑터(서보 전용)</value>
+      <libsource lib="DeskPet" part="PSU_5V5A" description=""/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>9b03bc84-407f-48f1-81f7-1d2510b4327c</tstamps>
+    </comp>
+    <comp ref="U1">
+      <value>Jetson Orin Nano 8GB 개발 키트</value>
+      <libsource lib="DeskPet" part="Jetson_OrinNano_DevKit" description=""/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>fd484e05-6066-4765-8075-d977adbd4619</tstamps>
+    </comp>
+    <comp ref="U2">
+      <value>Elecrow RC070S 7in 1024x600</value>
+      <libsource lib="DeskPet" part="Elecrow_RC070S_7in" description=""/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>053008f3-26b0-4272-83c3-031e21c692c2</tstamps>
+    </comp>
+    <comp ref="U3">
+      <value>ReSpeaker Lite 107990273</value>
+      <libsource lib="DeskPet" part="ReSpeaker_Lite" description=""/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>73aee258-7919-4e2d-8676-7d57f0e236f9</tstamps>
+    </comp>
+    <comp ref="U4">
+      <value>PCA9685 모듈 VLT-MD032</value>
+      <libsource lib="DeskPet" part="PCA9685_Module" description=""/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>a05218b2-e11b-426a-b179-0e199703166c</tstamps>
+    </comp>
+  </components>
+  <libparts>
+    <libpart lib="Connector_Generic" part="Conn_01x02">
+      <description>Generic connector, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)</description>
+      <docs>~</docs>
+      <footprints>
+        <fp>Connector*:*_1x??_*</fp>
+      </footprints>
+      <fields>
+        <field name="Reference">J</field>
+        <field name="Value">Conn_01x02</field>
+        <field name="Datasheet">~</field>
+      </fields>
+      <pins>
+        <pin num="1" name="Pin_1" type="passive"/>
+        <pin num="2" name="Pin_2" type="passive"/>
+      </pins>
+    </libpart>
+    <libpart lib="Connector_Generic" part="Conn_02x20_Odd_Even">
+      <description>Generic connector, double row, 02x20, odd/even pin numbering scheme (row 1 odd numbers, row 2 even numbers), script generated (kicad-library-utils/schlib/autogen/connector/)</description>
+      <docs>~</docs>
+      <footprints>
+        <fp>Connector*:*_2x??_*</fp>
+      </footprints>
+      <fields>
+        <field name="Reference">J</field>
+        <field name="Value">Conn_02x20_Odd_Even</field>
+        <field name="Datasheet">~</field>
+      </fields>
+      <pins>
+        <pin num="1" name="Pin_1" type="passive"/>
+        <pin num="2" name="Pin_2" type="passive"/>
+        <pin num="3" name="Pin_3" type="passive"/>
+        <pin num="4" name="Pin_4" type="passive"/>
+        <pin num="5" name="Pin_5" type="passive"/>
+        <pin num="6" name="Pin_6" type="passive"/>
+        <pin num="7" name="Pin_7" type="passive"/>
+        <pin num="8" name="Pin_8" type="passive"/>
+        <pin num="9" name="Pin_9" type="passive"/>
+        <pin num="10" name="Pin_10" type="passive"/>
+        <pin num="11" name="Pin_11" type="passive"/>
+        <pin num="12" name="Pin_12" type="passive"/>
+        <pin num="13" name="Pin_13" type="passive"/>
+        <pin num="14" name="Pin_14" type="passive"/>
+        <pin num="15" name="Pin_15" type="passive"/>
+        <pin num="16" name="Pin_16" type="passive"/>
+        <pin num="17" name="Pin_17" type="passive"/>
+        <pin num="18" name="Pin_18" type="passive"/>
+        <pin num="19" name="Pin_19" type="passive"/>
+        <pin num="20" name="Pin_20" type="passive"/>
+        <pin num="21" name="Pin_21" type="passive"/>
+        <pin num="22" name="Pin_22" type="passive"/>
+        <pin num="23" name="Pin_23" type="passive"/>
+        <pin num="24" name="Pin_24" type="passive"/>
+        <pin num="25" name="Pin_25" type="passive"/>
+        <pin num="26" name="Pin_26" type="passive"/>
+        <pin num="27" name="Pin_27" type="passive"/>
+        <pin num="28" name="Pin_28" type="passive"/>
+        <pin num="29" name="Pin_29" type="passive"/>
+        <pin num="30" name="Pin_30" type="passive"/>
+        <pin num="31" name="Pin_31" type="passive"/>
+        <pin num="32" name="Pin_32" type="passive"/>
+        <pin num="33" name="Pin_33" type="passive"/>
+        <pin num="34" name="Pin_34" type="passive"/>
+        <pin num="35" name="Pin_35" type="passive"/>
+        <pin num="36" name="Pin_36" type="passive"/>
+        <pin num="37" name="Pin_37" type="passive"/>
+        <pin num="38" name="Pin_38" type="passive"/>
+        <pin num="39" name="Pin_39" type="passive"/>
+        <pin num="40" name="Pin_40" type="passive"/>
+      </pins>
+    </libpart>
+    <libpart lib="DeskPet" part="DC_Jack_Terminal">
+      <fields>
+        <field name="Reference">U</field>
+        <field name="Value">DC잭 터미널 VLT-DC001</field>
+      </fields>
+      <pins>
+        <pin num="1" name="IN(+)" type="passive"/>
+        <pin num="2" name="IN(-)" type="passive"/>
+        <pin num="3" name="+" type="passive"/>
+        <pin num="4" name="-" type="passive"/>
+      </pins>
+    </libpart>
+    <libpart lib="DeskPet" part="DP_HDMI_Adapter">
+      <fields>
+        <field name="Reference">U</field>
+        <field name="Value">DP→HDMI 젠더 NXC067</field>
+      </fields>
+      <pins>
+        <pin num="1" name="DP" type="passive"/>
+        <pin num="2" name="HDMI" type="passive"/>
+      </pins>
+    </libpart>
+    <libpart lib="DeskPet" part="Elecrow_RC070S_7in">
+      <fields>
+        <field name="Reference">U</field>
+        <field name="Value">7인치 LCD RC070S (1024×600)</field>
+      </fields>
+      <pins>
+        <pin num="1" name="HDMI_IN" type="passive"/>
+        <pin num="2" name="microUSB_PWR" type="passive"/>
+      </pins>
+    </libpart>
+    <libpart lib="DeskPet" part="Jetson_OrinNano_DevKit">
+      <fields>
+        <field name="Reference">U</field>
+        <field name="Value">Jetson Orin Nano 8GB 개발 키트 (대여)</field>
+      </fields>
+      <pins>
+        <pin num="1" name="DC_IN" type="power_in"/>
+        <pin num="2" name="DP" type="passive"/>
+        <pin num="3" name="USB_A1" type="passive"/>
+        <pin num="4" name="USB_A2" type="passive"/>
+        <pin num="5" name="USB_A3" type="passive"/>
+        <pin num="6" name="USB_A4" type="passive"/>
+      </pins>
+    </libpart>
+    <libpart lib="DeskPet" part="PCA9685_Module">
+      <fields>
+        <field name="Reference">U</field>
+        <field name="Value">PCA9685 서보 드라이버 모듈 (VLT-MD032)</field>
+      </fields>
+      <pins>
+        <pin num="1" name="GND" type="power_in"/>
+        <pin num="2" name="OE" type="input"/>
+        <pin num="3" name="SCL" type="bidirectional"/>
+        <pin num="4" name="SDA" type="bidirectional"/>
+        <pin num="5" name="VCC" type="power_in"/>
+        <pin num="6" name="V+" type="passive"/>
+        <pin num="7" name="GND" type="power_in"/>
+        <pin num="8" name="OE" type="input"/>
+        <pin num="9" name="SCL" type="bidirectional"/>
+        <pin num="10" name="SDA" type="bidirectional"/>
+        <pin num="11" name="VCC" type="power_in"/>
+        <pin num="12" name="V+" type="passive"/>
+        <pin num="13" name="TERM_V+" type="passive"/>
+        <pin num="14" name="TERM_GND" type="power_in"/>
+        <pin num="15" name="CH0_PWM" type="output"/>
+        <pin num="16" name="CH0_V+" type="passive"/>
+        <pin num="17" name="CH0_GND" type="power_in"/>
+        <pin num="18" name="CH1_PWM" type="output"/>
+        <pin num="19" name="CH1_V+" type="passive"/>
+        <pin num="20" name="CH1_GND" type="power_in"/>
+      </pins>
+    </libpart>
+    <libpart lib="DeskPet" part="PSU_5V5A">
+      <fields>
+        <field name="Reference">U</field>
+        <field name="Value">5V 5A 어댑터 (서보 전용)</field>
+      </fields>
+      <pins>
+        <pin num="1" name="+5V" type="power_out"/>
+        <pin num="2" name="GND" type="power_out"/>
+      </pins>
+    </libpart>
+    <libpart lib="DeskPet" part="PSU_Jetson">
+      <fields>
+        <field name="Reference">U</field>
+        <field name="Value">Jetson 전원 어댑터 (키트 동봉)</field>
+      </fields>
+      <pins>
+        <pin num="1" name="DC_OUT" type="power_out"/>
+      </pins>
+    </libpart>
+    <libpart lib="DeskPet" part="ReSpeaker_Lite">
+      <fields>
+        <field name="Reference">U</field>
+        <field name="Value">ReSpeaker Lite (USB 펌웨어)</field>
+      </fields>
+      <pins>
+        <pin num="1" name="USB-C" type="passive"/>
+        <pin num="2" name="SPK_1" type="passive"/>
+        <pin num="3" name="SPK_2" type="passive"/>
+        <pin num="4" name="3.5mm_JACK" type="passive"/>
+      </pins>
+    </libpart>
+    <libpart lib="Device" part="C_Polarized">
+      <description>Polarized capacitor</description>
+      <docs>~</docs>
+      <footprints>
+        <fp>CP_*</fp>
+      </footprints>
+      <fields>
+        <field name="Reference">C</field>
+        <field name="Value">C_Polarized</field>
+        <field name="Datasheet">~</field>
+      </fields>
+      <pins>
+        <pin num="1" name="" type="passive"/>
+        <pin num="2" name="" type="passive"/>
+      </pins>
+    </libpart>
+    <libpart lib="Device" part="Fuse">
+      <description>Fuse</description>
+      <docs>~</docs>
+      <footprints>
+        <fp>*Fuse*</fp>
+      </footprints>
+      <fields>
+        <field name="Reference">F</field>
+        <field name="Value">Fuse</field>
+        <field name="Datasheet">~</field>
+      </fields>
+      <pins>
+        <pin num="1" name="" type="passive"/>
+        <pin num="2" name="" type="passive"/>
+      </pins>
+    </libpart>
+    <libpart lib="Device" part="Speaker">
+      <description>Speaker</description>
+      <docs>~</docs>
+      <fields>
+        <field name="Reference">LS</field>
+        <field name="Value">Speaker</field>
+        <field name="Datasheet">~</field>
+      </fields>
+      <pins>
+        <pin num="1" name="1" type="input"/>
+        <pin num="2" name="2" type="input"/>
+      </pins>
+    </libpart>
+    <libpart lib="Motor" part="Motor_Servo">
+      <description>Servo Motor (Futaba, HiTec, JR connector)</description>
+      <docs>http://forums.parallax.com/uploads/attachments/46831/74481.png</docs>
+      <footprints>
+        <fp>PinHeader*P2.54mm*</fp>
+      </footprints>
+      <fields>
+        <field name="Reference">M</field>
+        <field name="Value">Motor_Servo</field>
+        <field name="Datasheet">http://forums.parallax.com/uploads/attachments/46831/74481.png</field>
+      </fields>
+      <pins>
+        <pin num="1" name="PWM" type="passive"/>
+        <pin num="2" name="+" type="passive"/>
+        <pin num="3" name="-" type="passive"/>
+      </pins>
+    </libpart>
+  </libparts>
+  <libraries>
+    <library logical="Connector_Generic">
+      <uri>/usr/share/kicad/symbols//Connector_Generic.kicad_sym</uri>
+    </library>
+    <library logical="DeskPet">
+      <uri>/tmp/claude-0/-home-claude/16b9fa89-65fe-5c31-8fd0-7c5db26450be/scratchpad/kicad/out/deskpet.kicad_sym</uri>
+    </library>
+    <library logical="Device">
+      <uri>/usr/share/kicad/symbols//Device.kicad_sym</uri>
+    </library>
+    <library logical="Motor">
+      <uri>/usr/share/kicad/symbols//Motor.kicad_sym</uri>
+    </library>
+  </libraries>
+  <nets>
+    <net code="1" name="/+3V3">
+      <node ref="J1" pin="1" pinfunction="Pin_1" pintype="passive"/>
+      <node ref="U4" pin="5" pinfunction="VCC" pintype="power_in"/>
+    </net>
+    <net code="2" name="/+5V_RAW">
+      <node ref="F1" pin="1" pintype="passive"/>
+      <node ref="J3" pin="1" pinfunction="IN(+)" pintype="passive"/>
+      <node ref="J3" pin="3" pinfunction="+" pintype="passive"/>
+      <node ref="PS2" pin="1" pinfunction="+5V" pintype="power_out"/>
+    </net>
+    <net code="3" name="/+5V_SERVO">
+      <node ref="C1" pin="1" pintype="passive"/>
+      <node ref="F1" pin="2" pintype="passive"/>
+      <node ref="M1" pin="2" pinfunction="+" pintype="passive"/>
+      <node ref="M2" pin="2" pinfunction="+" pintype="passive"/>
+      <node ref="U4" pin="13" pinfunction="TERM_V+" pintype="passive"/>
+      <node ref="U4" pin="16" pinfunction="CH0_V+" pintype="passive"/>
+      <node ref="U4" pin="19" pinfunction="CH1_V+" pintype="passive"/>
+    </net>
+    <net code="4" name="/DC_JETSON">
+      <node ref="PS1" pin="1" pinfunction="DC_OUT" pintype="power_out"/>
+      <node ref="U1" pin="1" pinfunction="DC_IN" pintype="power_in"/>
+    </net>
+    <net code="5" name="/DP_LINK">
+      <node ref="A1" pin="1" pinfunction="DP" pintype="passive"/>
+      <node ref="U1" pin="2" pinfunction="DP" pintype="passive"/>
+    </net>
+    <net code="6" name="/GND">
+      <node ref="C1" pin="2" pintype="passive"/>
+      <node ref="J1" pin="6" pinfunction="Pin_6" pintype="passive"/>
+      <node ref="J3" pin="2" pinfunction="IN(-)" pintype="passive"/>
+      <node ref="J3" pin="4" pinfunction="-" pintype="passive"/>
+      <node ref="JP1" pin="2" pinfunction="Pin_2" pintype="passive"/>
+      <node ref="M1" pin="3" pinfunction="-" pintype="passive"/>
+      <node ref="M2" pin="3" pinfunction="-" pintype="passive"/>
+      <node ref="PS2" pin="2" pinfunction="GND" pintype="power_out"/>
+      <node ref="U4" pin="1" pinfunction="GND" pintype="power_in"/>
+      <node ref="U4" pin="14" pinfunction="TERM_GND" pintype="power_in"/>
+      <node ref="U4" pin="17" pinfunction="CH0_GND" pintype="power_in"/>
+      <node ref="U4" pin="20" pinfunction="CH1_GND" pintype="power_in"/>
+      <node ref="U4" pin="7" pinfunction="GND" pintype="power_in"/>
+    </net>
+    <net code="7" name="/HDMI_LINK">
+      <node ref="A1" pin="2" pinfunction="HDMI" pintype="passive"/>
+      <node ref="U2" pin="1" pinfunction="HDMI_IN" pintype="passive"/>
+    </net>
+    <net code="8" name="/I2C_SCL">
+      <node ref="J1" pin="5" pinfunction="Pin_5" pintype="passive"/>
+      <node ref="U4" pin="3" pinfunction="SCL" pintype="bidirectional"/>
+    </net>
+    <net code="9" name="/I2C_SDA">
+      <node ref="J1" pin="3" pinfunction="Pin_3" pintype="passive"/>
+      <node ref="U4" pin="4" pinfunction="SDA" pintype="bidirectional"/>
+    </net>
+    <net code="10" name="/PCA_OE">
+      <node ref="JP1" pin="1" pinfunction="Pin_1" pintype="passive"/>
+      <node ref="U4" pin="8" pinfunction="OE" pintype="input"/>
+    </net>
+    <net code="11" name="/SERVO_L_PWM">
+      <node ref="M1" pin="1" pinfunction="PWM" pintype="passive"/>
+      <node ref="U4" pin="15" pinfunction="CH0_PWM" pintype="output"/>
+    </net>
+    <net code="12" name="/SERVO_R_PWM">
+      <node ref="M2" pin="1" pinfunction="PWM" pintype="passive"/>
+      <node ref="U4" pin="18" pinfunction="CH1_PWM" pintype="output"/>
+    </net>
+    <net code="13" name="/SPK_1">
+      <node ref="LS1" pin="1" pinfunction="1" pintype="input"/>
+      <node ref="U3" pin="2" pinfunction="SPK_1" pintype="passive"/>
+    </net>
+    <net code="14" name="/SPK_2">
+      <node ref="LS1" pin="2" pinfunction="2" pintype="input"/>
+      <node ref="U3" pin="3" pinfunction="SPK_2" pintype="passive"/>
+    </net>
+    <net code="15" name="/USB_LCD_PWR">
+      <node ref="U1" pin="3" pinfunction="USB_A1" pintype="passive"/>
+      <node ref="U2" pin="2" pinfunction="microUSB_PWR" pintype="passive"/>
+    </net>
+    <net code="16" name="/USB_RESPEAKER">
+      <node ref="U1" pin="4" pinfunction="USB_A2" pintype="passive"/>
+      <node ref="U3" pin="1" pinfunction="USB-C" pintype="passive"/>
+    </net>
+    <net code="17" name="unconnected-(J1-Pin_2-Pad2)">
+      <node ref="J1" pin="2" pinfunction="Pin_2" pintype="passive+no_connect"/>
+    </net>
+    <net code="18" name="unconnected-(J1-Pin_4-Pad4)">
+      <node ref="J1" pin="4" pinfunction="Pin_4" pintype="passive+no_connect"/>
+    </net>
+    <net code="19" name="unconnected-(J1-Pin_7-Pad7)">
+      <node ref="J1" pin="7" pinfunction="Pin_7" pintype="passive+no_connect"/>
+    </net>
+    <net code="20" name="unconnected-(J1-Pin_8-Pad8)">
+      <node ref="J1" pin="8" pinfunction="Pin_8" pintype="passive+no_connect"/>
+    </net>
+    <net code="21" name="unconnected-(J1-Pin_9-Pad9)">
+      <node ref="J1" pin="9" pinfunction="Pin_9" pintype="passive+no_connect"/>
+    </net>
+    <net code="22" name="unconnected-(J1-Pin_10-Pad10)">
+      <node ref="J1" pin="10" pinfunction="Pin_10" pintype="passive+no_connect"/>
+    </net>
+    <net code="23" name="unconnected-(J1-Pin_11-Pad11)">
+      <node ref="J1" pin="11" pinfunction="Pin_11" pintype="passive+no_connect"/>
+    </net>
+    <net code="24" name="unconnected-(J1-Pin_12-Pad12)">
+      <node ref="J1" pin="12" pinfunction="Pin_12" pintype="passive+no_connect"/>
+    </net>
+    <net code="25" name="unconnected-(J1-Pin_13-Pad13)">
+      <node ref="J1" pin="13" pinfunction="Pin_13" pintype="passive+no_connect"/>
+    </net>
+    <net code="26" name="unconnected-(J1-Pin_14-Pad14)">
+      <node ref="J1" pin="14" pinfunction="Pin_14" pintype="passive+no_connect"/>
+    </net>
+    <net code="27" name="unconnected-(J1-Pin_15-Pad15)">
+      <node ref="J1" pin="15" pinfunction="Pin_15" pintype="passive+no_connect"/>
+    </net>
+    <net code="28" name="unconnected-(J1-Pin_16-Pad16)">
+      <node ref="J1" pin="16" pinfunction="Pin_16" pintype="passive+no_connect"/>
+    </net>
+    <net code="29" name="unconnected-(J1-Pin_17-Pad17)">
+      <node ref="J1" pin="17" pinfunction="Pin_17" pintype="passive+no_connect"/>
+    </net>
+    <net code="30" name="unconnected-(J1-Pin_18-Pad18)">
+      <node ref="J1" pin="18" pinfunction="Pin_18" pintype="passive+no_connect"/>
+    </net>
+    <net code="31" name="unconnected-(J1-Pin_19-Pad19)">
+      <node ref="J1" pin="19" pinfunction="Pin_19" pintype="passive+no_connect"/>
+    </net>
+    <net code="32" name="unconnected-(J1-Pin_20-Pad20)">
+      <node ref="J1" pin="20" pinfunction="Pin_20" pintype="passive+no_connect"/>
+    </net>
+    <net code="33" name="unconnected-(J1-Pin_21-Pad21)">
+      <node ref="J1" pin="21" pinfunction="Pin_21" pintype="passive+no_connect"/>
+    </net>
+    <net code="34" name="unconnected-(J1-Pin_22-Pad22)">
+      <node ref="J1" pin="22" pinfunction="Pin_22" pintype="passive+no_connect"/>
+    </net>
+    <net code="35" name="unconnected-(J1-Pin_23-Pad23)">
+      <node ref="J1" pin="23" pinfunction="Pin_23" pintype="passive+no_connect"/>
+    </net>
+    <net code="36" name="unconnected-(J1-Pin_24-Pad24)">
+      <node ref="J1" pin="24" pinfunction="Pin_24" pintype="passive+no_connect"/>
+    </net>
+    <net code="37" name="unconnected-(J1-Pin_25-Pad25)">
+      <node ref="J1" pin="25" pinfunction="Pin_25" pintype="passive+no_connect"/>
+    </net>
+    <net code="38" name="unconnected-(J1-Pin_26-Pad26)">
+      <node ref="J1" pin="26" pinfunction="Pin_26" pintype="passive+no_connect"/>
+    </net>
+    <net code="39" name="unconnected-(J1-Pin_27-Pad27)">
+      <node ref="J1" pin="27" pinfunction="Pin_27" pintype="passive+no_connect"/>
+    </net>
+    <net code="40" name="unconnected-(J1-Pin_28-Pad28)">
+      <node ref="J1" pin="28" pinfunction="Pin_28" pintype="passive+no_connect"/>
+    </net>
+    <net code="41" name="unconnected-(J1-Pin_29-Pad29)">
+      <node ref="J1" pin="29" pinfunction="Pin_29" pintype="passive+no_connect"/>
+    </net>
+    <net code="42" name="unconnected-(J1-Pin_30-Pad30)">
+      <node ref="J1" pin="30" pinfunction="Pin_30" pintype="passive+no_connect"/>
+    </net>
+    <net code="43" name="unconnected-(J1-Pin_31-Pad31)">
+      <node ref="J1" pin="31" pinfunction="Pin_31" pintype="passive+no_connect"/>
+    </net>
+    <net code="44" name="unconnected-(J1-Pin_32-Pad32)">
+      <node ref="J1" pin="32" pinfunction="Pin_32" pintype="passive+no_connect"/>
+    </net>
+    <net code="45" name="unconnected-(J1-Pin_33-Pad33)">
+      <node ref="J1" pin="33" pinfunction="Pin_33" pintype="passive+no_connect"/>
+    </net>
+    <net code="46" name="unconnected-(J1-Pin_34-Pad34)">
+      <node ref="J1" pin="34" pinfunction="Pin_34" pintype="passive+no_connect"/>
+    </net>
+    <net code="47" name="unconnected-(J1-Pin_35-Pad35)">
+      <node ref="J1" pin="35" pinfunction="Pin_35" pintype="passive+no_connect"/>
+    </net>
+    <net code="48" name="unconnected-(J1-Pin_36-Pad36)">
+      <node ref="J1" pin="36" pinfunction="Pin_36" pintype="passive+no_connect"/>
+    </net>
+    <net code="49" name="unconnected-(J1-Pin_37-Pad37)">
+      <node ref="J1" pin="37" pinfunction="Pin_37" pintype="passive+no_connect"/>
+    </net>
+    <net code="50" name="unconnected-(J1-Pin_38-Pad38)">
+      <node ref="J1" pin="38" pinfunction="Pin_38" pintype="passive+no_connect"/>
+    </net>
+    <net code="51" name="unconnected-(J1-Pin_39-Pad39)">
+      <node ref="J1" pin="39" pinfunction="Pin_39" pintype="passive+no_connect"/>
+    </net>
+    <net code="52" name="unconnected-(J1-Pin_40-Pad40)">
+      <node ref="J1" pin="40" pinfunction="Pin_40" pintype="passive+no_connect"/>
+    </net>
+    <net code="53" name="unconnected-(U1-USB_A3-Pad5)">
+      <node ref="U1" pin="5" pinfunction="USB_A3" pintype="passive+no_connect"/>
+    </net>
+    <net code="54" name="unconnected-(U1-USB_A4-Pad6)">
+      <node ref="U1" pin="6" pinfunction="USB_A4" pintype="passive+no_connect"/>
+    </net>
+    <net code="55" name="unconnected-(U3-3.5mm_JACK-Pad4)">
+      <node ref="U3" pin="4" pinfunction="3.5mm_JACK" pintype="passive+no_connect"/>
+    </net>
+    <net code="56" name="unconnected-(U4-OE-Pad2)">
+      <node ref="U4" pin="2" pinfunction="OE" pintype="input+no_connect"/>
+    </net>
+    <net code="57" name="unconnected-(U4-SCL-Pad9)">
+      <node ref="U4" pin="9" pinfunction="SCL" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="58" name="unconnected-(U4-SDA-Pad10)">
+      <node ref="U4" pin="10" pinfunction="SDA" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="59" name="unconnected-(U4-V+-Pad6)">
+      <node ref="U4" pin="6" pinfunction="V+" pintype="passive+no_connect"/>
+    </net>
+    <net code="60" name="unconnected-(U4-V+-Pad12)">
+      <node ref="U4" pin="12" pinfunction="V+" pintype="passive+no_connect"/>
+    </net>
+    <net code="61" name="unconnected-(U4-VCC-Pad11)">
+      <node ref="U4" pin="11" pinfunction="VCC" pintype="power_in+no_connect"/>
+    </net>
+  </nets>
+</export>
