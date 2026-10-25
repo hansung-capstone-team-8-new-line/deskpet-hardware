@@ -1,13 +1,13 @@
 # DeskPet Hardware
 
-Jetson Orin Nano 8GB, Elecrow RC070S 7인치 HDMI LCD(1024×600), ReSpeaker Lite, PCA9685와 SG90 귀 서보 2개를 위한 구동 패키지입니다. **실제 Linux 드라이버와 하드웨어 없는 모의 실행을 같은 인터페이스로 제공합니다.**
+Jetson Orin Nano 8GB, 10.1인치 IPS 터치 LCD(1024×600, mini HDMI·USB-C), ReSpeaker Lite Voice Assistant Kit, PCA9685와 SG90 귀 서보 2개를 위한 구동 패키지입니다. **실제 Linux 드라이버와 하드웨어 없는 모의 실행을 같은 인터페이스로 제공합니다.**
 
-STT·LLM·TTS는 팀 파이프라인에서 연결합니다. 이 패키지는 PCM 녹음·재생, 표정·한글 화면, 귀 동작과 장치 오류 보고를 담당합니다. 터치 입력은 사용하지 않습니다.
+STT·LLM·TTS는 팀 파이프라인에서 연결합니다. 이 패키지는 PCM 녹음·재생, 표정·한글 화면, 귀 동작과 장치 오류 보고를 담당합니다. LCD 터치는 2026-10-16 발주한 10.1인치 화면부터 하드웨어로 확보했지만 입력 처리 코드는 아직 없습니다.
 
-이 저장소는 **뉴라인 팀 조직의 하드웨어 전용 소스 저장소**입니다. 이후 코드 수정·커밋·PR은 여기에서 진행합니다. 팀 위키 `knowledge`에는 설계·인터페이스·검증 문서와 이 저장소 링크를 유지합니다. 초기 구현 커밋 `d81c287`의 코드 이력을 이어갑니다.
+이 저장소는 **뉴라인 팀 조직의 하드웨어 전용 저장소**입니다. 코드, 기술 문서(`docs/`), 회로도·배선 원본(`hardware-design/`)을 여기에서 관리하고 수정·커밋·PR도 여기에서 진행합니다. 팀 위키 `knowledge`에는 진행상황·결정·구매 계획과 팀 간 인터페이스 명세를 둡니다. 초기 구현 커밋 `d81c287`의 코드 이력을 이어갑니다.
 
 - 저장소: [hansung-capstone-team-8-new-line/deskpet-hardware](https://github.com/hansung-capstone-team-8-new-line/deskpet-hardware)
-- 팀 문서: [하드웨어 문서 목차](https://github.com/hansung-capstone-team-8-new-line/knowledge/blob/master/wiki/topics/deskpet-hardware.md)
+- 진행상황: [하드웨어 진행상황(위키)](https://github.com/hansung-capstone-team-8-new-line/knowledge/blob/master/wiki/deskpet-hardware.md)
 - 접근: 비공개 저장소입니다. 해당 조직의 권한이 있는 GitHub 계정으로 로그인하세요.
 
 ```sh
@@ -19,7 +19,7 @@ cd deskpet-hardware
 
 ## 문서와 원본 코드
 
-[구현 개요](https://github.com/hansung-capstone-team-8-new-line/knowledge/blob/master/wiki/deskpet-hardware-runtime.md)에서 전체 구조를 읽고, 출력 모델 담당자는 [표정 명세](https://github.com/hansung-capstone-team-8-new-line/knowledge/blob/master/wiki/deskpet-display-interface.md) → [화면 연결 예제](https://github.com/hansung-capstone-team-8-new-line/knowledge/blob/master/wiki/deskpet-display-integration.md) 순서로 확인하세요.
+[구현 개요](docs/architecture.md)에서 전체 구조와 문서 읽는 순서를 확인하고, 출력 모델 담당자는 [표정 명세](https://github.com/hansung-capstone-team-8-new-line/knowledge/blob/master/wiki/deskpet-display-interface.md) → [화면 연결 예제](https://github.com/hansung-capstone-team-8-new-line/knowledge/blob/master/wiki/deskpet-display-integration.md) 순서로 확인하세요.
 
 | 작업 | 원본 파일 |
 | --- | --- |
@@ -34,8 +34,9 @@ cd deskpet-hardware
 | 기본 설정 파일 | [모의 실행](config/mock.json), [Jetson](config/jetson.json) |
 | 실행·보정·설치 | [deskpetctl.py](tools/deskpetctl.py), [install-jetson.sh](tools/install-jetson.sh) |
 | 검사 수정 | [통합](tests/integration.py), [화면](tests/visual.py), [C++](tests/core.cpp), [Swift](swift/Tests/DeskPetHardwareTests/WireTests.swift) |
+| 회로도·배선 원본과 검증 | [hardware-design/](hardware-design/README.md) |
 
-원본 코드를 고친 뒤 이 저장소에서 커밋합니다. `build/`, `out/`, Swift 빌드 캐시, WAV·BMP, 로컬 보정 설정은 `.gitignore`로 제외합니다. 2026-10-12 분리 당시에는 실행 로직을 유지했습니다. 2026-10-13 현재 구성 정렬에서 RC070S·ReSpeaker·FULL_OFF·입력 게이트를 변경했습니다. 이전 구현은 Git 이력에 보존됩니다.
+원본 코드를 고친 뒤 이 저장소에서 커밋합니다. `build/`, `out/`, Swift 빌드 캐시, WAV·BMP, 로컬 보정 설정은 `.gitignore`로 제외합니다. 2026-10-12 분리 당시에는 실행 로직을 유지했습니다. 2026-10-13 구성 정렬에서 1024×600 화면·ReSpeaker·FULL_OFF·입력 게이트를 변경했습니다. 2026-10-16 발주에서 화면이 10.1인치 터치 LCD로 바뀌었으나 해상도가 같아 화면 코드는 그대로입니다. 이전 구현은 Git 이력에 보존됩니다.
 
 ## 지금 실행하기
 
@@ -126,7 +127,7 @@ docker build --platform linux/arm64 -f deploy/Dockerfile.check -t deskpet-check 
 docker run --rm --platform linux/arm64 -v "$PWD:/work:ro" deskpet-check
 ```
 
-코드 구조는 `src/`의 장치·서버 구현, `swift/`의 연결 모듈, `tools/`의 시험·설치 도구, `config/`의 모드별 설정으로 나뉩니다. [위키 검증 기록](https://github.com/hansung-capstone-team-8-new-line/knowledge/blob/master/wiki/deskpet-hardware-validation.md)에서 소프트웨어 검사와 실물 확인 항목을 확인하세요.
+코드 구조는 `src/`의 장치·서버 구현, `swift/`의 연결 모듈, `tools/`의 시험·설치 도구, `config/`의 모드별 설정으로 나뉩니다. [검증 기록](docs/validation.md)에서 소프트웨어 검사와 실물 확인 항목을 확인하세요.
 
 ### Current Audio Contract — 2026-10-13
 

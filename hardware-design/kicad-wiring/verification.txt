@@ -1,0 +1,45 @@
+DeskPet 회로도 검증 기록 (2026-10-25 21:39 KST) — 2026-10-16 발주품 기준 rev B
+(10.1인치 터치 LCD·ReSpeaker Lite 키트·DC 연장선·T-Cobbler·PCA9685 동급 모듈. 연결 구조는 rev A와 같다)
+
+1) KiCad 7.0.11 eeschema 공식 ERC
+ERC report (Sun Oct 25 21:38:44 2026, Encoding UTF8)
+
+***** Sheet /
+
+ ** ERC messages: 0  Errors 0  Warnings 0
+
+2) 넷리스트 대조 (kicad-cli 넷리스트 → tools/verify.py)
+PASS: 넷 16개 일치, 연결 금지 핀 6개 비어 있음, 안전 규칙 6종 통과
+
+3) 일부러 틀린 회로 6종 — 모두 FAIL이어야 정상
+[swap_i2c] exit=1
+FAIL
+ - I2C_SDA: 빠짐 [('U4', '4')] / 잘못 추가 [('U4', '3')]
+ - I2C_SCL: 빠짐 [('U4', '3')] / 잘못 추가 [('U4', '4')]
+ - I2C SDA/SCL 바뀜
+[jetson5v_to_servo] exit=1
+FAIL
+ - +5V_SERVO: 빠짐 [] / 잘못 추가 [('J1', '2')]
+ - 연결 금지 핀 사용: J1-2 (Jetson 5V) → +5V_SERVO
+[cap_reversed] exit=1
+FAIL
+ - GND: 빠짐 [('C1', '2')] / 잘못 추가 [('C1', '1')]
+ - +5V_SERVO: 빠짐 [('C1', '1')] / 잘못 추가 [('C1', '2')]
+ - C1 극성 오류: + 다리는 +5V_SERVO, − 다리는 GND여야 함
+[fuse_bypassed] exit=1
+FAIL
+ - +5V_RAW: 빠짐 [] / 잘못 추가 [('U4', '13')]
+ - +5V_SERVO: 빠짐 [('U4', '13')] / 잘못 추가 []
+ - 퓨즈 우회: 어댑터 +와 PCA 단자 V+가 퓨즈 없이 직결
+[header_vplus_used] exit=1
+FAIL
+ - +5V_SERVO: 빠짐 [] / 잘못 추가 [('U4', '12')]
+ - 연결 금지 핀 사용: U4-12 (PCA 오른쪽 헤더 V+) → +5V_SERVO
+[no_common_gnd] exit=1
+FAIL
+ - GND: 빠짐 [('J1', '6')] / 잘못 추가 []
+ - 기준에 없는 넷: JETSON_GND_ONLY [('J1', '6')]
+ - 공통 접지 없음: Jetson GND와 서보 전원 GND가 분리됨
+
+4) 배선 작업표 대조
+wiring-table: 18행 모두 기준 넷과 일치

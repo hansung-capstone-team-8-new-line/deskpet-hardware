@@ -4,8 +4,8 @@
 
 - Jetson Orin Nano 8GB 정품 개발자 키트, P3768 캐리어
 - JetPack 6.x / Ubuntu 22.04 ARM64
-- Elecrow RC070S 7인치 1024×600 HDMI LCD
-- ReSpeaker Lite, USB 마이크·모노 스피커 출력
+- 10.1인치 IPS 터치 LCD 1024×600, mini HDMI 입력·USB-C 터치 (2026-10-16 발주, 11/3 도착 예정)
+- ReSpeaker Lite Voice Assistant Kit, USB 마이크·키트 동봉 밀폐형 스피커
 - PCA9685, SG90 위치제어 서보 2개, 독립 5V 5A 서보 전원
 
 7.x/Ubuntu 24.04나 다른 캐리어 보드에서의 호환성은 검증하지 않았습니다. 설치기는 OS·펌웨어·핀mux를 자동 변경하지 않습니다.
@@ -16,14 +16,14 @@
 
 | 연결 | 설정·동작 |
 | --- | --- |
-| Jetson DisplayPort → DP-HDMI 변환기 → LCD HDMI | LCD가 1024×600 가로 모드로 잡히는지 먼저 확인 |
-| LCD 전원 micro USB | 제조사 전원 요구를 충족하는 연결 사용. 터치 이벤트는 코드에서 무시 |
-| Jetson USB → ReSpeaker Lite | 내장 마이크로 입력, 이 모듈의 스피커 단자로 출력 |
-| USB 오디오의 스피커 단자 → 4Ω 3W 스피커 | 실물의 좌우 채널 및 +/− 표기를 확인. 증폭 출력의 어느 쪽도 GND에 연결하지 않음 |
+| Jetson DisplayPort → DP-HDMI 변환기(NEXI NXC067) → LCD 동봉 HDMI 케이블 → LCD mini HDMI | LCD가 1024×600 가로 모드로 잡히는지 먼저 확인 |
+| Jetson USB → LCD USB-C | 터치 신호와 전원 공급 여부를 실물·설명서로 확인. 터치 입력 처리 코드는 아직 없음 |
+| Jetson USB-A → USB-C 데이터 케이블 → ReSpeaker Lite | 내장 마이크로 입력, 이 모듈의 스피커 단자로 출력 |
+| ReSpeaker 스피커 단자 → 키트 동봉 밀폐형 스피커 | 실물의 좌우 채널 및 +/− 표기를 확인. 증폭 출력의 어느 쪽도 GND에 연결하지 않음 |
 | Jetson 헤더 물리 1번 3.3V → PCA9685 VCC | I2C 풀업도 3.3V로 유지. 서보 전원 V+와 구분 |
 | Jetson 물리 3번 SDA·5번 SCL → PCA9685 SDA·SCL | 실제 Linux I2C 어댑터는 doctor로 식별 |
 | PCA9685 채널 0·1 → 좌우 SG90 신호 | 채널 및 좌우 반전은 설정으로 변경 가능 |
-| 독립 5V → 퓨즈 → PCA9685 서보 V+ | 보드의 5V 출력으로 서보 전원을 공급하지 않음 |
+| 독립 5V 5A 어댑터 → DC 연장선(암단자 쪽 절단) → MINI 3A 퓨즈 → PCA9685 서보 V+ | 보드의 5V 출력으로 서보 전원을 공급하지 않음 |
 | Jetson·PCA9685·서보 전원 GND | 공통 접지. 독립 전원의 +극과 Jetson의 +극은 연결하지 않음 |
 | PCA9685 OE | GND 고정. GPIO·버퍼 없이 아래 FULL_OFF 방식 사용 |
 
@@ -113,7 +113,6 @@ journalctl --user -u deskpet-hardware -f
 
 ## 근거
 
-- [RC070S](https://www.elecrow.com/rc070s-7-inch-1024-600-ips-hdmi-capacitive-touch-monitor.html)
 - [ReSpeaker Lite](https://wiki.seeedstudio.com/reSpeaker_lite/)
 - [PCA9685 데이터시트](https://www.nxp.com/docs/en/data-sheet/PCA9685.pdf)
 - [Linux I2C 사용자 공간 인터페이스](https://www.kernel.org/doc/html/latest/i2c/dev-interface.html)

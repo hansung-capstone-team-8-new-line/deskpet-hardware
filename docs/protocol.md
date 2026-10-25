@@ -104,3 +104,56 @@ ReSpeaker Lite 실제 출력은 **16kHz·모노 s16le**다. 소켓의 8–48kHz�
 동일한 `HardwareClient`를 마이크·스피커가 공유해야 한다. `speaker.begin` 전 클라이언트가 입력 epoch를 바꾸고 큐를 비운 뒤 `input.invalidated`를 발생시킨다. 파이프라인은 이 이벤트에서 VAD/STT 누적 상태를 초기화하고, 프레임의 `inputEpoch`를 발화에 보존하며 늦은 STT final을 업무로 보내기 직전에 `client.isCurrentInputEpoch(epoch)`로 거절한다. 프레임 수신만 다시 시작하고 이전 STT 결과를 수용하면 안 된다.
 
 캡처 자체는 계속되지만 Swift는 재생 중 및 실제 drain/drop 확인 후 300ms까지 프레임을 버린다. 서버의 보수적 `captureEarliestMonotonicNs`로 지연 도착 프레임도 버리며 재전달하지 않는다. `audio.failed`·`audio.cancelled`의 `stoppedConfirmed:false` 또는 연결 상실은 차단 유지다. 장치 정지 원인을 확인하고 세션을 새로 연결한다. 원시 소켓/`deskpetctl`은 진단용 연속 캡처를 제공하므로 직접 사용하는 파이프라인은 같은 차단·epoch 계약을 별도로 구현해야 한다. 새 Swift 클라이언트와 새 데몬을 함께 배포한다.
+
+## Swift 어댑터 요약
+
+| 연결 클래스 | 호출 | 역할 |
+| --- | --- | --- |
+| `HardwareClient` | `connect`, `command`, `events`, `close` | 소켓 연결·명령·이벤트 수신. `command("health")`로 상태 조회 |
+| `HardwareMicrophoneSource` | `start`, `nextFrame`, `stop` | 마이크 프레임 스트림 |
+| `HardwareSpeakerAdapter` | `begin`, `write`, `finish`, `stop` | 형식을 유지하는 스트리밍 재생 |
+| `HardwareDisplayAdapter` | `show`, `idle` | 화면 출력과 revision 관리 |
+| `HardwareMotionAdapter` | `enable`, `apply`, `disable` | 귀 활성화·동작·차단 |
+
+[Swift 데모](../swift/Sources/DeskPetHardwareDemo/main.swift)는 이벤트를 소비하는 Task와 마이크를 소비하는 Task를 두고, 마이크를 받는 동안 440Hz PCM을 재생한 뒤 귀와 화면을 정리합니다.
+
+## 화면 명령 직접 보내기
+
+Swift 클라이언트를 쓰면 아래 봉투와 패킷을 직접 구현할 필요가 없습니다. 다른 언어에서 직접 연결할 때는 첫 명령 `hello`, 주기적 `ping`, 단일 제어 연결, 응답·이벤트 소비를 함께 구현해야 합니다. 다른 장치를 제어 중인 연결과 별도로 화면 연결을 하나 더 여는 방식은 지원하지 않습니다.
+
+```json
+{
+  "version": 1,
+  "type": "command",
+  "commandId": "cmd-104",
+  "command": "display.show",
+  "requestId": "req-018",
+  "outputId": "out-018",
+  "revision": 4,
+  "view": {
+    "activity": "speaking",
+    "emotion": "happy",
+    "actionStatus": "succeeded",
+    "displayState": "default",
+    "displayMode": "face",
+    "displayText": ""
+  }
+}
+```
+
+화면 명령의 PCM 길이는 `0`입니다. 개행으로 구분하는 JSON 문자열이나 HTTP 요청을 보내는 프로토콜이 아닙니다. 표시 성공 시 `display.displayed` 이벤트와 해당 `commandId`의 성공 응답이 나옵니다. Swift의 `show`는 성공 응답을 기다리고, `client.events`는 같은 표시 결과 이벤트를 전달하므로 상위 업무를 이중 실행하지 않습니다.
+
+`display.idle`의 Swift 호출에는 출력 ID 인자가 없습니다. 연결을 추적해야 하는 화면 복귀라면 `OutputEvent(requestId: requestId, outputId: outputId, activity: "idle", emotion: "neutral", displayMode: "face", actionStatus: nil)`를 `show`로 보냅니다.
+
+## 화면 오류
+
+| 오류 | 원인·처리 |
+| --- | --- |
+| `INVALID_COMMAND` | 허용하지 않은 `activity`·모드, 빈 텍스트, 잘못된 타입·ID 등. 전송 값 수정 |
+| `DISPLAY_TEXT_TOO_LONG` | 실제 글꼴 기준 화면을 넘음. 사실을 유지한 더 짧은 문장으로 새 요청 |
+| `STALE_OUTPUT` | 이미 적용한 번호 이하의 revision. 어댑터 중복·명령 순서 확인 |
+| `SUPERSEDED` | 표시 전에 새 화면으로 대체됨. 현재 상태를 유지하고 옛 화면 재전송 금지 |
+| `DISPLAY_ERROR` | 글꼴·SDL·렌더링 또는 주입한 오류. health 확인, 정상 표시로 기록하지 않음 |
+| 연결 종료·timeout | 화면·오디오·모션 연결 수명 확인. 전송한 명령의 결과를 임의로 성공 처리하지 않음 |
+
+현재 Swift 클라이언트는 명령 timeout이나 진행 중 명령 Task 취소 시 연결을 닫습니다. 화면만 취소할 생각으로 공유 하드웨어 명령 Task를 임의 취소하면 다른 장치에도 연결 종료가 영향을 줄 수 있습니다. 이전 출력은 가능한 한 제출 전에 현재 토큰 검사로 걸러냅니다.
