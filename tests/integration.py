@@ -63,6 +63,76 @@ class Daemon:
 
 
 class Integration(unittest.TestCase):
+    def test_touch_subscription_rotation_and_disconnect(self):
+        self.client.request("touch.subscribe")
+        for phase in ("down", "down", "move", "up"):
+            self.client.request("mock.touch", phase=phase, contactId="finger", x=.2, y=.7)
+        down, _ = self.event("touch.event")
+        self.assertEqual(down["phase"], "down")
+        move, _ = self.event("touch.event")
+        up, _ = self.event("touch.event")
+        self.assertEqual((move["phase"], up["phase"]), ("move", "up"))
+        self.assertAlmostEqual(up["x"], .2)
+        self.assertTrue(up["simulated"])
+        self.error("INVALID_TOUCH", lambda: self.client.request("mock.touch", phase="down", contactId="bad", x=2, y=0))
+        self.client.close()
+        time.sleep(.05)
+        self.client = Client(self.daemon.path)
+        self.client.request("touch.subscribe")
+        self.client.request("mock.touch", phase="up", contactId="finger", x=.2, y=.7)
+        self.assertTrue(self.client.events.empty())
+
+    def test_motion_intensity_and_uncalibrated(self):
+        self.client.request("motion.enable")
+        state = self.client.request("motion.set", preset="perk", intensity=.5)
+        self.assertEqual(state["leftUs"], 1550)
+        self.assertEqual(state["rightUs"], 1450)
+        self.error("MOTION_RANGE", lambda: self.client.request("motion.set", preset="perk", intensity=1.1))
+
+    def test_touch_rotation_and_motion_flood_preserve_control(self):
+        for rotation, expected in ((0, (.2, .7)), (90, (.7, .8)), (180, (.8, .3)), (270, (.3, .2))):
+            daemon = Daemon(display={"headless": True, "rotation": rotation})
+            try:
+                with Client(daemon.path) as client:
+                    client.request("touch.subscribe")
+                    client.request("mock.touch", phase="down", contactId="rotate", x=.2, y=.7)
+                    meta, _ = client.events.get(timeout=1)
+                    self.assertAlmostEqual(meta["x"], expected[0])
+                    self.assertAlmostEqual(meta["y"], expected[1])
+                    for n in range(150):
+                        client.request("mock.touch", phase="move", contactId="rotate", x=(n % 100) / 100, y=.5)
+                    client.request("mock.touch", phase="up", contactId="rotate", x=.5, y=.5)
+                    self.assertEqual(client.request("health")["mode"], "mock")
+                    events = []
+                    while not client.events.empty():
+                        events.append(client.events.get_nowait()[0])
+                    self.assertLess(sum(e.get("phase") == "move" for e in events), 150)
+                    self.assertEqual(events[-1]["phase"], "up")
+            finally:
+                daemon.close()
+
+    def test_board_profile_requires_servo_calibration(self):
+        config = json.loads((ROOT / "config/board-only.json").read_text())
+        daemon = Daemon(**config)
+        try:
+            with Client(daemon.path) as client:
+                with self.assertRaises(DeviceError) as failure:
+                    client.request("motion.enable")
+                self.assertEqual(failure.exception.code, "CALIBRATION_REQUIRED")
+        finally:
+            daemon.close()
+
+    def test_real_mode_rejects_synthetic_touch(self):
+        daemon = Daemon(mode="real")
+        try:
+            with Client(daemon.path) as client:
+                with self.assertRaises(DeviceError) as failure:
+                    client.request("mock.touch", phase="down", contactId="test", x=.5, y=.5)
+                self.assertEqual(failure.exception.code, "MOCK_ONLY")
+                self.assertEqual(client.request("health")["mode"], "real")
+        finally:
+            daemon.close()
+
     def setUp(self):
         self.daemon = Daemon()
         self.client = Client(self.daemon.path)

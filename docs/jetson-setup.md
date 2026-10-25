@@ -17,7 +17,7 @@
 | 연결 | 설정·동작 |
 | --- | --- |
 | Jetson DisplayPort → DP-HDMI 변환기(NEXI NXC067) → LCD 동봉 HDMI 케이블 → LCD mini HDMI | LCD가 1024×600 가로 모드로 잡히는지 먼저 확인 |
-| Jetson USB → LCD USB-C | 터치 신호와 전원 공급 여부를 실물·설명서로 확인. 터치 입력 처리 코드는 아직 없음 |
+| Jetson USB → LCD USB-C | 터치 신호와 전원 공급 여부를 실물·설명서로 확인. SDL 터치 이벤트는 `touch.subscribe`로 수신 |
 | Jetson USB-A → USB-C 데이터 케이블 → ReSpeaker Lite | 내장 마이크로 입력, 이 모듈의 스피커 단자로 출력 |
 | ReSpeaker 스피커 단자 → 키트 동봉 밀폐형 스피커 | 실물의 좌우 채널 및 +/− 표기를 확인. 증폭 출력의 어느 쪽도 GND에 연결하지 않음 |
 | Jetson 헤더 물리 1번 3.3V → PCA9685 VCC | I2C 풀업도 3.3V로 유지. 서보 전원 V+와 구분 |
@@ -40,11 +40,11 @@ OE가 상시 활성인 회로이므로 프로세스 강제 종료·커널 정지
 일반 사용자로 프로젝트 폴더에서 실행합니다.
 
 ```sh
-bash tools/install-jetson.sh
+bash tools/install-jetson.sh real
 deskpet-hardware doctor
 ```
 
-설치기는 의존성, `/usr/local/bin` 실행 파일, 하드웨어 접근 그룹·udev 규칙, 사용자 서비스를 설치합니다. 기존 사용자 설정은 덮어쓰지 않습니다. 새 그룹 권한을 적용하려면 로그아웃·로그인이 필요합니다.
+설치기는 의존성, `/usr/local/bin` 실행 파일, 하드웨어 접근 그룹·udev 규칙, 사용자 서비스를 설치합니다. 기존 사용자 설정은 덮어쓰지 않고 자동 시작을 새로 활성화하지 않습니다. 새 그룹 권한을 적용하려면 로그아웃·로그인이 필요합니다. 보드 단독·Swift 설치와 팀 통합은 [보드 시험 안내](board-test.md)를 따릅니다.
 
 `~/.config/deskpet-hardware/config.json`에 다음 값을 채웁니다.
 

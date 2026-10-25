@@ -292,6 +292,10 @@ def main():
     play.add_argument("wav", nargs="?")
     motion = sub.add_parser("motion")
     motion.add_argument("preset", choices=["enable", "disable", "neutral", "perk", "droop", "wiggle"])
+    motion.add_argument("--intensity", type=float, default=1)
+    touch = sub.add_parser("touch")
+    touch.add_argument("--seconds", type=float, default=30)
+    touch.add_argument("--inject", action="store_true")
     sub.add_parser("calibrate").add_argument("--config", required=True)
     demo = sub.add_parser("demo")
     demo.add_argument("--fail-speaker", action="store_true")
@@ -333,12 +337,26 @@ def main():
             else:
                 client.play(tone())
             print("재생 완료" + (" (모의)" if client.info["mode"] == "mock" else ""))
+        elif args.command == "touch":
+            client.request("touch.subscribe")
+            if args.inject:
+                for phase, x in (("down", .2), ("move", .5), ("up", .8)):
+                    client.request("mock.touch", phase=phase, contactId="cli", x=x, y=.5)
+            deadline = time.monotonic() + max(0, args.seconds)
+            while time.monotonic() < deadline:
+                try:
+                    meta, _ = client.events.get(timeout=.1)
+                    if meta.get("event") == "touch.event":
+                        print(json.dumps(meta, ensure_ascii=False), flush=True)
+                except queue.Empty:
+                    pass
+            client.request("touch.subscribe", enabled=False)
         elif args.command == "motion":
             if args.preset in ("enable", "disable"):
                 print(client.request("motion." + args.preset))
             else:
                 client.request("motion.enable")
-                print(client.request("motion.set", preset=args.preset))
+                print(client.request("motion.set", preset=args.preset, intensity=args.intensity))
                 time.sleep(0.3)
                 client.request("motion.disable")
         elif args.command == "calibrate":

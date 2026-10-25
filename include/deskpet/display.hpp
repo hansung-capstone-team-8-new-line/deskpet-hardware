@@ -15,5 +15,7 @@ public:
   Json health() const;
   void injectFailure();
   void snapshot(const std::string& path);
+  void subscribeTouch(const Packet& command);
+  void injectTouch(const Packet& command, Emit emit);
 };
 }

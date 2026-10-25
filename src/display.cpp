@@ -12,6 +12,33 @@ struct Display::Impl {
   Config config;
   Json view = {{"displayMode", "face"}, {"activity", "idle"}};
   std::optional<Packet> pending;
+  std::optional<Packet> touchSubscription;
+  std::map<std::string, Json> contacts, moved;
+  Clock::time_point touchWindow = Clock::now();
+  size_t touchEdges = 0;
+  void touch(std::string phase, const std::string& id, double x, double y, bool simulated, Emit emit) {
+    if (!touchSubscription) return;
+    if (!std::isfinite(x) || !std::isfinite(y) || x < 0 || x > 1 || y < 0 || y > 1 || id.empty() || id.size() > 128)
+      throw Error("INVALID_TOUCH", "Invalid contact or normalized coordinates");
+    if (phase != "down" && phase != "move" && phase != "up") throw Error("INVALID_TOUCH", "Expected down/move/up");
+    if (phase == "down" && contacts.count(id)) return;
+    if (phase != "down" && !contacts.count(id)) return;
+    if (Clock::now() - touchWindow >= std::chrono::seconds(1)) { touchWindow = Clock::now(); touchEdges = 0; }
+    if ((phase != "move" && ++touchEdges > 64) || (phase == "down" && contacts.size() >= 10)) {
+      emit(event(*touchSubscription, "touch.event", {{"phase", "cancel"}, {"contactId", "*"}, {"x", 0}, {"y", 0}, {"simulated", simulated}, {"reason", "TOUCH_OVERFLOW"}}));
+      contacts.clear(); moved.clear(); touchSubscription.reset(); return;
+    }
+    // SDL normalizes touch against the logical viewport; invert our canvas rotation.
+    const double ox = x, oy = y;
+    if (config.rotation == 90) { x = oy; y = 1 - ox; }
+    if (config.rotation == 180) { x = 1 - ox; y = 1 - oy; }
+    if (config.rotation == 270) { x = 1 - oy; y = ox; }
+    Json fields{{"phase", phase}, {"contactId", id}, {"x", x}, {"y", y}, {"simulated", simulated}};
+    if (phase == "move") { contacts[id] = fields; moved[id] = fields; return; }
+    if (moved.count(id)) { emit(event(*touchSubscription, "touch.event", moved[id])); moved.erase(id); }
+    emit(event(*touchSubscription, "touch.event", fields));
+    if (phase == "down") contacts[id] = fields; else contacts.erase(id);
+  }
   uint64_t revision = 0;
   bool revisionSet = false, failNext = false;
   std::string error;
@@ -132,6 +159,7 @@ Display::Display(const Config& c) : impl_(std::make_unique<Impl>()) {
   if (c.headless) { if (!c.mock) d.error = "Headless display is only available in mock mode"; return; }
 #ifdef DESKPET_SDL
   try {
+    SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0");
     if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0) throw Error("DISPLAY_ERROR", SDL_GetError());
     d.sdl = true;
     if (TTF_Init() < 0) throw Error("DISPLAY_ERROR", TTF_GetError());
@@ -187,10 +215,36 @@ void Display::submit(Packet cmd, Emit emit) {
 bool Display::tick(Emit emit) {
   auto& d = *impl_;
 #ifdef DESKPET_SDL
-  if (d.sdl) { SDL_Event e; while (SDL_PollEvent(&e)) if (e.type == SDL_QUIT) return false; }
+  if (d.sdl) {
+    SDL_Event e;
+    while (SDL_PollEvent(&e)) {
+      if (e.type == SDL_QUIT) return false;
+      if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_FOCUS_LOST && d.touchSubscription) {
+        emit(event(*d.touchSubscription, "touch.event", {{"phase", "cancel"}, {"contactId", "*"}, {"x", 0}, {"y", 0}, {"simulated", d.config.mock}, {"reason", "FOCUS_LOST"}}));
+        d.contacts.clear(); d.moved.clear();
+      }
+      if (e.type == SDL_FINGERDOWN || e.type == SDL_FINGERMOTION || e.type == SDL_FINGERUP) {
+        // SDL may report points outside a letterboxed viewport. Ignore those points.
+        if (e.type != SDL_FINGERUP && (e.tfinger.x < 0 || e.tfinger.x > 1 || e.tfinger.y < 0 || e.tfinger.y > 1)) continue;
+        d.touch(e.type == SDL_FINGERDOWN ? "down" : e.type == SDL_FINGERUP ? "up" : "move",
+          std::to_string(e.tfinger.touchId) + ":" + std::to_string(e.tfinger.fingerId), std::clamp(e.tfinger.x, 0.0f, 1.0f), std::clamp(e.tfinger.y, 0.0f, 1.0f), false, emit);
+      }
+      if (d.config.mock && (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP || e.type == SDL_MOUSEMOTION)) {
+        const bool moving = e.type == SDL_MOUSEMOTION;
+        if ((moving ? e.motion.which : e.button.which) == SDL_TOUCH_MOUSEID) continue;
+        if (!moving && e.button.button != SDL_BUTTON_LEFT) continue;
+        const bool sideways = d.config.rotation == 90 || d.config.rotation == 270;
+        const double x = double(moving ? e.motion.x : e.button.x) / (sideways ? d.config.height : d.config.width);
+        const double y = double(moving ? e.motion.y : e.button.y) / (sideways ? d.config.width : d.config.height);
+        d.touch(moving ? "move" : e.type == SDL_MOUSEBUTTONDOWN ? "down" : "up", "mouse", std::clamp(x, 0.0, 1.0), std::clamp(y, 0.0, 1.0), true, emit);
+      }
+    }
+  }
 #endif
   if (!d.error.empty() || Clock::now() - d.last < std::chrono::milliseconds(33)) return true;
   d.last = Clock::now();
+  if (d.touchSubscription) for (const auto& [id, fields] : d.moved) emit(event(*d.touchSubscription, "touch.event", fields));
+  d.moved.clear();
   try {
 #ifdef DESKPET_SDL
     if (!d.config.headless) d.draw();
@@ -207,7 +261,17 @@ bool Display::tick(Emit emit) {
 }
 void Display::reset() {
   auto& d = *impl_; d.pending.reset(); d.revisionSet = false;
+  d.touchSubscription.reset(); d.contacts.clear(); d.moved.clear();
   d.view = {{"displayMode", "face"}, {"activity", "idle"}};
+}
+void Display::subscribeTouch(const Packet& command) {
+  auto& d = *impl_; d.contacts.clear(); d.moved.clear(); d.touchEdges = 0; d.touchWindow = Clock::now();
+  if (command.meta.value("enabled", true)) d.touchSubscription = command; else d.touchSubscription.reset();
+}
+void Display::injectTouch(const Packet& command, Emit emit) {
+  if (!impl_->config.mock) throw Error("MOCK_ONLY", "Touch injection requires mock mode");
+  impl_->touch(command.meta.at("phase").get<std::string>(), requiredString(command.meta, "contactId"),
+    command.meta.at("x").get<double>(), command.meta.at("y").get<double>(), true, emit);
 }
 void Display::injectFailure() { impl_->failNext = true; }
 Json Display::health() const { return {{"available", impl_->error.empty()}, {"error", impl_->error}, {"simulated", impl_->config.mock}}; }

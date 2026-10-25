@@ -60,14 +60,28 @@ public actor HardwareSpeakerAdapter {
 public actor HardwareDisplayAdapter {
     private let client: HardwareClient
     private var revision: Int64 = 0
+    private var displaying = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    private func acquire() async throws {
+        guard waiters.count < 16 else { throw HardwareError.device(code: "QUEUE_FULL", message: "Display queue full") }
+        if displaying { await withCheckedContinuation { waiters.append($0) } }
+        else { displaying = true }
+    }
+    private func release() {
+        if waiters.isEmpty { displaying = false } else { waiters.removeFirst().resume() }
+    }
     public init(client: HardwareClient) { self.client = client }
     public func show(_ event: OutputEvent) async throws {
+        try await acquire(); defer { release() }
+        try Task.checkCancellation()
         revision += 1
         var fields = event.identifiers
         fields["revision"] = .int(revision); fields["view"] = event.view
         _ = try await client.command("display.show", fields: fields)
     }
     public func idle() async throws {
+        try await acquire(); defer { release() }
+        try Task.checkCancellation()
         revision += 1
         _ = try await client.command("display.idle", fields: ["revision": .int(revision)])
     }
@@ -78,7 +92,8 @@ public struct HardwareMotionAdapter: Sendable {
     public init(client: HardwareClient) { self.client = client }
     public func enable() async throws { _ = try await client.command("motion.enable") }
     public func disable() async throws { _ = try await client.command("motion.disable") }
-    public func apply(preset: String, requestId: String, outputId: String) async throws {
-        _ = try await client.command("motion.set", fields: ["preset": .string(preset), "requestId": .string(requestId), "outputId": .string(outputId)])
+    public func apply(preset: String, intensity: Double = 1, requestId: String, outputId: String) async throws {
+        guard intensity.isFinite, (0...1).contains(intensity) else { throw HardwareError.device(code: "MOTION_RANGE", message: "Intensity must be in 0..1") }
+        _ = try await client.command("motion.set", fields: ["preset": .string(preset), "intensity": .double(intensity), "requestId": .string(requestId), "outputId": .string(outputId)])
     }
 }

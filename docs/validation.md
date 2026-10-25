@@ -1,5 +1,22 @@
 # 검증 기록과 실물 확인 절차
 
+## 보드 시험 준비 검증 — 2026-10-25
+
+Ubuntu 22.04 WSL **x86_64**, GCC 11.4, Swift **6.0.3**에서 현재 소스를 검증했습니다.
+
+- C++20 ALSA·I2C·SoXR·SDL 드라이버 빌드, core·current-profile·실소켓 통합 22개 통과.
+- 하드웨어 Swift strict-concurrency / warnings-as-errors 빌드, XCTest 9개 통과.
+- 팀 파이프라인·새 연결부 Swift Testing 67개 통과. 단일 실제 Unix 소켓, 첫 24kHz PCM 형식 확정, 형식 변경 거절, 터치 전달, 16kHz 캡처, 1.5초 재생 중 입력 대기, 실제 완료+300ms 이후 fresh frame, 정지 불명 차단을 포함합니다.
+- 취소 완료가 지연되는 STT fixture에서도 이전 epoch의 final이 context·업무 실행으로 전달되지 않았습니다.
+- 60초 반복 실행 **101회**에서 음성 전달 완료를 확인했습니다. 장치·모델은 mock/fixture이며 실제 소켓·프로세스를 사용했습니다.
+- 터치 0/90/180/270도 좌표, 중복 입력·이동 합치기·재접속, real 모드 합성 주입 거절, 서보 보정 전 거절·intensity 범위를 검사했습니다.
+- SDL 화면 16종, 한글 overflow 거절·0/90도 회전 검사 통과. 설치 쉘 문법, Python 도구 문법, ARM64 Swift 다운로드 주소를 확인했습니다.
+- 배포 소스를 별도 폴더에 풀어 111개 파일 SHA256을 대조하고 C++·두 Swift 패키지를 다시 빌드·시험했습니다. 5초 반복 실행 9회도 통과했습니다.
+
+**Jetson ARM64, LCD·터치 패널, ReSpeaker, 서보·전원·열은 아직 미검증입니다.** 내일 [보드 시험 안내](board-test.md)의 `test-board.py --seconds 1800`을 보드에서 실행해 별도 판정합니다. 개발 PC 실행은 `boardAcceptance=SKIP`으로 기록합니다.
+
+실행 도구는 단계 로그와 `result.json`을 생성하며 배포 묶음은 기준 커밋·작업 트리 변경·파일 SHA256을 `manifest.json`에 기록합니다.
+
 ## 소프트웨어 검증
 
 **이 아래 2026-10-12 표는 당시 구현의 과거 기록이다.** 1024×600 화면·ReSpeaker·FULL_OFF·입력 게이트 변경의 검증은 아래 2026-10-13 항목을 따른다. 파이프라인 문서에는 10월 12일 Swift 매핑 작성 및 C++20 JSON/string 비교 빌드 실패가 별도 기록돼 있다. 이번 변경은 비교 타입을 명시했다. 당시 성공 기록으로 이후 빌드 실패를 덮지 않는다.
@@ -55,11 +72,11 @@ macOS에서는 Command Line Tools 환경에 XCTest가 없어 Swift 단위 검사
 
 ## 남아 있는 통합 경계
 
-실제 팀 Swift 저장소의 protocol 적합성, STT/VAD/AEC, TTS가 내보내는 PCM 형식, 모델·업무 API는 이 패키지 단독 테스트의 대상이 아닙니다. 팀 파이프라인에 연결할 때 DTO 변환과 타이머 소유권을 확인하고 동일한 출력 ID로 성공·실패를 반영해야 합니다.
+2026-10-25에는 팀 저장소 `a70067b`의 공개 protocol을 기준으로 `DeskPetHardwareIntegration`을 추가해 실제 소켓 연결과 DTO 변환·타이머 수명·출력 ID 보존을 시험했습니다. 10월 12일 위키에 기록된 팀 로컬 서버 연결부는 이 원격 기준에 없었습니다. 실제 STT/VAD/AEC·TTS 모델의 PCM, 외부 업무 API, Jetson 장치는 여전히 별도 검증 대상입니다.
 
 ## 팀 파이프라인 연결 합격 기준
 
-2026-10-12에 Swift 화면 매핑 함수를 실제 패키지 모듈로 타입 검사해 통과했고, 소켓 JSON 예제는 SDL 모의 서버에서 표시 성공·ID·revision을 확인했습니다. 활동 5종·결과 3종·한글 대체 문구·잘못된 활동값 거절도 확인했습니다. 아래 항목은 팀 파이프라인에 연결한 뒤 추가로 확인할 기준입니다.
+2026-10-12에 Swift 화면 매핑 함수를 실제 패키지 모듈로 타입 검사해 통과했고, 소켓 JSON 예제는 SDL 모의 서버에서 표시 성공·ID·revision을 확인했습니다. 활동 5종·결과 3종·한글 대체 문구·잘못된 활동값 거절도 확인했습니다. 아래 기준은 2026-10-25 mock 통합의 회귀 기준이며, 실제 모델·장치 연결 후에도 다시 확인합니다.
 
 - 성공·실패·결과 미확인 각각이 [표정 명세](https://github.com/hansung-capstone-team-8-new-line/knowledge/blob/master/wiki/deskpet-display-interface.md)의 매핑대로 표시되는지 확인한다.
 - 답변을 만드는 동안 `processing`, 실제 재생 시작 뒤 `speaking`이 되는지 확인한다.

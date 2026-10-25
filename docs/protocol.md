@@ -157,3 +157,20 @@ Swift 클라이언트를 쓰면 아래 봉투와 패킷을 직접 구현할 필�
 | 연결 종료·timeout | 화면·오디오·모션 연결 수명 확인. 전송한 명령의 결과를 임의로 성공 처리하지 않음 |
 
 현재 Swift 클라이언트는 명령 timeout이나 진행 중 명령 Task 취소 시 연결을 닫습니다. 화면만 취소할 생각으로 공유 하드웨어 명령 Task를 임의 취소하면 다른 장치에도 연결 종료가 영향을 줄 수 있습니다. 이전 출력은 가능한 한 제출 전에 현재 토큰 검사로 걸러냅니다.
+
+## 터치 확장 (v1, 선택적 구독)
+
+- `touch.subscribe`의 `enabled` 기본값은 true입니다. false는 구독과 접촉 상태를 비웁니다. 구독은 연결 세션에 귀속되며 재접속 시 다시 요청합니다.
+- `touch.event`: `phase=down/move/up/cancel`, `contactId` 문자열, 회전 역변환 후 `x/y` 정규화 좌표(0..1), `timestampUnixNs`, `simulated`를 보냅니다. PCM payload는 없습니다. `contactId=*`인 cancel은 모든 접촉을 취소합니다.
+- SDL 이동은 렌더 주기별 접촉당 하나로 합치고, 송신 큐의 이동도 합칩니다. 터치 큐 상한 초과 시 cancel을 보내고 구독을 다시 요청할 때까지 터치 전달을 중단합니다. 장치 완료·오류를 위한 큐 공간을 남깁니다.
+- 중복 down과 활성 접촉 없는 move/up은 무시합니다. 접촉은 최대 10개이며 과도한 down/up은 cancel로 종료합니다.
+- `mock.touch`는 `phase/contactId/x/y`로 합성 입력을 넣습니다. real에서는 `MOCK_ONLY`입니다. 마우스 입력도 mock 모드에서만 터치로 변환합니다.
+- 터치 자체를 음성 중지·업무 확인으로 해석하지 않습니다. Swift `TouchEvent`와 팀 `TouchInput`으로 전달합니다.
+
+`motion.set`에는 선택적 `intensity`(기본 1, 유한한 0..1)가 추가되었습니다. preset의 정규화 진폭에 곱한 뒤 각 귀의 보정 범위로 변환하며 범위 밖 값은 `MOTION_RANGE`입니다.
+
+## 팀 통합 입력 수명
+
+`DeskPetHardwareIntegration.HardwareBridge`는 한 클라이언트와 한 이벤트 소비자를 공유합니다. 실제 캡처는 계속 드레인하고 입력 전달만 보류합니다. `holdInputDelivery` 후 `resumeInputDelivery(epoch:)`는 현재 epoch와 실제 재생 종료+300ms를 검사하고 복귀 시각보다 오래된 프레임을 버립니다. 전달 보류 동안에도 캡처 watchdog은 1초 이상 장치 프레임이 없으면 오류로 연결을 종료합니다.
+
+파이프라인은 프레임·음성 세션의 epoch를 검사하고 재생 시작 전에 세션을 무효화합니다. 취소 호출이 비동기로 지연되어도 늦은 결과는 유효해지지 않습니다. 듣기 화면 ack와 VAD reset 뒤 전달을 재개하며 정지 불명은 차단을 유지합니다. `ManagedMicrophoneSource`만 자체 watchdog을 사용하고 일반 입력 소스의 기존 timeout은 유지합니다.

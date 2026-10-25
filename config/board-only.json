@@ -1,0 +1,11 @@
+{
+  "mode": "mock",
+  "leaseMs": 3000,
+  "display": {"headless": true, "fullscreen": false, "width": 1024, "height": 600, "rotation": 0},
+  "audio": {"playbackGain": 0.25},
+  "servo": {
+    "oeMode": "grounded", "calibrated": false, "address": 64, "frequency": 50,
+    "left": {"channel": 0, "minUs": 1400, "neutralUs": 1500, "maxUs": 1600},
+    "right": {"channel": 1, "minUs": 1400, "neutralUs": 1500, "maxUs": 1600, "inverted": true}
+  }
+}

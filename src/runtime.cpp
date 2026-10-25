@@ -5,6 +5,7 @@
 #include <mutex>
 #include <optional>
 #include <thread>
+#include <cmath>
 
 namespace deskpet {
 struct Runtime::Impl {
@@ -200,6 +201,10 @@ struct Runtime::Impl {
             else if (preset == "wiggle") positions = {{0.5, -0.5}, {-0.5, 0.5}, {0, 0}};
             else if (preset.empty()) positions = {{cmd.meta.at("left").get<double>(), cmd.meta.at("right").get<double>()}};
             else throw Error("INVALID_COMMAND", "Unknown motion preset");
+            const auto intensity = cmd.meta.value("intensity", 1.0);
+            if (!std::isfinite(intensity) || intensity < 0 || intensity > 1)
+              throw Error("MOTION_RANGE", "Intensity must be in 0..1");
+            for (auto& pose : positions) { pose.first *= intensity; pose.second *= intensity; }
             for (auto [l, r] : positions) poses.push_back({config.left.pulse(l), config.right.pulse(r)});
           }
           for (auto [l, r] : poses) {
@@ -246,6 +251,11 @@ struct Runtime::Impl {
         display.submit(cmd, emit);
       } else if (op == "display.snapshot") {
         display.snapshot(cmd.meta.at("path").get<std::string>()); emit(reply(cmd));
+      } else if (op == "touch.subscribe") {
+        display.subscribeTouch(cmd); emit(reply(cmd));
+      } else if (op == "mock.touch") {
+        if (!config.mock) throw Error("MOCK_ONLY", "Touch injection requires mock mode");
+        display.injectTouch(cmd, emit); emit(reply(cmd));
       } else if (op == "capture.start") {
         (void)requiredString(cmd.meta, "captureId");
         std::lock_guard lock(mutex);

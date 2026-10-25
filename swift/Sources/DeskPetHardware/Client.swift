@@ -19,6 +19,19 @@ public final class HardwareClient: @unchecked Sendable {
     private var pending: [String: CheckedContinuation<WireMessage, Error>] = [:]
     private var frames: [AudioFrame] = []
     private var inputGate = InputGate()
+    private var deliveryHeld = false
+    private var deliveryResumeAt: UInt64 = 0
+    private var lastCaptureAt: UInt64 = 0
+    private var captureWatchdog: DispatchSourceTimer?
+    /// The bridge holds delivery until VAD reset and the listening display ack finish.
+    public func holdInputDelivery() { lock.withCriticalSection { inputGate.resetCapture(); deliveryHeld = true; frames.removeAll() } }
+    public func resumeInputDelivery(epoch: Int64) -> Bool {
+        lock.withCriticalSection {
+            let now = DispatchTime.now().uptimeNanoseconds
+            guard inputGate.accepts(epoch: epoch, capturedAt: now, now: now) else { return false }
+            frames.removeAll(); deliveryResumeAt = now; deliveryHeld = false; return true
+        }
+    }
     public var inputEpoch: Int64 { lock.withCriticalSection { inputGate.epoch } }
     public func isCurrentInputEpoch(_ epoch: Int64) -> Bool {
         lock.withCriticalSection {
@@ -191,7 +204,8 @@ public final class HardwareClient: @unchecked Sendable {
                 guard id == captureId, !captureEnded else { return }
                 if let sequence, seq != sequence + 1 { throw HardwareError.device(code: "AUDIO_DISCONTINUITY", message: "Frame sequence gap") }
                 sequence = seq
-                guard inputGate.accepts(epoch: inputGate.epoch, capturedAt: UInt64(captured), now: DispatchTime.now().uptimeNanoseconds) else { return }
+                lastCaptureAt = DispatchTime.now().uptimeNanoseconds
+                guard !deliveryHeld, UInt64(captured) >= deliveryResumeAt, inputGate.accepts(epoch: inputGate.epoch, capturedAt: UInt64(captured), now: DispatchTime.now().uptimeNanoseconds) else { return }
                 frame.inputEpoch = inputGate.epoch
                 if let waiting = frameWaiter { waiter = waiting; frameWaiter = nil }
                 else {
@@ -226,6 +240,7 @@ public final class HardwareClient: @unchecked Sendable {
         let waiter = lock.withCriticalSection { () -> CheckedContinuation<AudioFrame?, Error>? in
             inputGate.resetCapture()
             captureEnded = true
+            captureWatchdog?.cancel(); captureWatchdog = nil
             if let error { captureError = error; frames.removeAll() }
             let waiter = frameWaiter; frameWaiter = nil; return waiter
         }
@@ -239,7 +254,23 @@ public final class HardwareClient: @unchecked Sendable {
             inputGate.resetCapture()
             captureId = id; captureEnded = false; captureError = nil; sequence = nil; frames.removeAll()
         }
-        do { _ = try await command("capture.start", fields: ["captureId": .string(id)]) }
+        do {
+            _ = try await command("capture.start", fields: ["captureId": .string(id)])
+            let timer = DispatchSource.makeTimerSource(queue: DispatchQueue(label: "deskpet.capture.watchdog"))
+            timer.schedule(deadline: .now() + 1, repeating: 0.25)
+            timer.setEventHandler { [weak self] in
+                guard let self else { return }
+                let stalled = self.lock.withCriticalSection {
+                    !self.captureEnded && DispatchTime.now().uptimeNanoseconds - self.lastCaptureAt > 1_000_000_000
+                }
+                if stalled { self.fail(HardwareError.device(code: "CAPTURE_TIMEOUT", message: "No device frames for one second")) }
+            }
+            lock.withCriticalSection {
+                lastCaptureAt = DispatchTime.now().uptimeNanoseconds
+                if !captureEnded { captureWatchdog = timer; timer.resume() }
+                else { timer.resume(); timer.cancel() }
+            }
+        }
         catch { finishCapture(error: error); throw error }
     }
     public func stopCapture() async throws {

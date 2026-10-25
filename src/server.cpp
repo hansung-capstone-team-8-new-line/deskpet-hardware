@@ -62,9 +62,28 @@ int runServer(const Config& config, std::atomic_bool& interrupted) {
   size_t queuedBytes = 0, queuedFrames = 0;
   std::atomic_bool outputOverflow{false};
   std::atomic_uint64_t currentSession{0};
+  std::atomic_bool touchSuppressed{false};
   auto emit = [&](Packet p) {
     std::lock_guard guard(outputMutex);
     if (p.session == 0 || p.session != currentSession) return false;
+    if (p.meta.value("event", "") == "touch.event") {
+      if (touchSuppressed) return true;
+      if (p.meta.value("phase", "") == "move") {
+        for (auto i = output.rbegin(); i != output.rend(); ++i) {
+          if (i->meta.value("event", "") == "touch.event" && i->meta.value("contactId", "") == p.meta.value("contactId", "")) {
+            if (i->meta.value("phase", "") == "move") { *i = std::move(p); return true; }
+            break;
+          }
+        }
+      }
+      size_t touches = 0;
+      for (const auto& queued : output) if (queued.meta.value("event", "") == "touch.event") ++touches;
+      if (touches >= 32) {
+        std::erase_if(output, [](const Packet& item) { return item.meta.value("event", "") == "touch.event"; });
+        p.meta.update({{"phase", "cancel"}, {"contactId", "*"}, {"reason", "TOUCH_OVERFLOW"}, {"x", 0}, {"y", 0}});
+        touchSuppressed = true; // Reserve the rest of the queue for device/control events.
+      }
+    }
     const bool frame = p.meta.value("event", "") == "audio.frame";
     if (frame && queuedFrames >= 50) return false;
     if (output.size() >= 256 || queuedBytes + p.data.size() > 2 * 1024 * 1024) {
@@ -82,6 +101,7 @@ int runServer(const Config& config, std::atomic_bool& interrupted) {
   auto lastReceived = Clock::now();
   auto disconnect = [&] {
     currentSession = 0;
+    touchSuppressed = false;
     if (client.n >= 0) { ::close(client.n); client.n = -1; }
     runtime.disconnect(); decoder.clear(); sending.clear(); sent = 0; greeted = false;
     seen.clear(); seenOrder.clear();
@@ -117,7 +137,9 @@ int runServer(const Config& config, std::atomic_bool& interrupted) {
             lastReceived = Clock::now();
             if (!seen.insert(id).second) { emit(failure(p, "DUPLICATE_COMMAND", "Use a unique commandId; commands are not replayed")); continue; }
             seenOrder.push_back(id); if (seenOrder.size() > 512) { seen.erase(seenOrder.front()); seenOrder.pop_front(); }
-            greeted = true; runtime.command(std::move(p));
+            greeted = true;
+            if (op == "touch.subscribe") touchSuppressed = false;
+            runtime.command(std::move(p));
           }
         } catch (const std::exception& e) { std::cerr << "Protocol connection closed: " << e.what() << '\n'; disconnect(); continue; }
       }
