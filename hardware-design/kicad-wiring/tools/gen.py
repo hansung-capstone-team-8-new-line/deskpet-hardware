@@ -78,23 +78,23 @@ L_JET = custom("Jetson_OrinNano_DevKit", [("1", "DC_IN", PWRIN)],
                w=14, title="Jetson Orin Nano 8GB 개발 키트 (대여)",
                notes=[("40핀 헤더 = J1", -1.0), ("(리본 1:1 → 분배보드)", -2.0)])
 L_PS1 = custom("PSU_Jetson", [], [("1", "DC_OUT", PWROUT)], w=10, title="Jetson 전원 어댑터 (키트 동봉)")
-L_ADP = custom("DP_HDMI_Adapter", [("1", "DP", PAS)], [("2", "HDMI", PAS)], w=10, title="DP→HDMI 젠더 NXC067")
-L_LCD = custom("Elecrow_RC070S_7in", [("1", "HDMI_IN", PAS), ("2", "microUSB_PWR", PAS)], [],
-               w=14, title="7인치 LCD RC070S (1024×600)", notes=[("micro USB = 전원+터치(터치 미사용)", -2.6)])
+L_ADP = custom("DP_HDMI_Adapter", [("1", "DP", PAS)], [("2", "HDMI", PAS)], w=10, title="DP→HDMI 젠더 NEXI NXC067")
+L_LCD = custom("LCD_10in1_Touch", [("1", "miniHDMI_IN", PAS), ("2", "USB-C_TOUCH_PWR", PAS)], [],
+               w=14, title="10.1인치 IPS 터치 LCD (1024×600)", notes=[("USB-C 하나 = 터치+전원", -2.6), ("금속 케이스 237×145×14 mm", -3.6)])
 L_MIC = custom("ReSpeaker_Lite", [("1", "USB-C", PAS)], [("2", "SPK_1", PAS), ("3", "SPK_2", PAS), ("4", "3.5mm_JACK", PAS)],
-               w=14, title="ReSpeaker Lite (USB 펌웨어)", notes=[("스피커: JST-PH 2핀, 내장 앰프", -2.6)])
+               w=14, title="ReSpeaker Lite Voice Assistant Kit", notes=[("스피커 단자: 키트 동봉 스피커, 내장 앰프", -2.6)])
 pca_left = [("1", "GND", PWRIN), ("2", "OE", IN), ("3", "SCL", BI), ("4", "SDA", BI), ("5", "VCC", PWRIN), ("6", "V+", PAS)]
 pca_right = [("7", "GND", PWRIN), ("8", "OE", IN), ("9", "SCL", BI), ("10", "SDA", BI), ("11", "VCC", PWRIN), ("12", "V+", PAS),
              None, ("13", "TERM_V+", PAS), ("14", "TERM_GND", PWRIN),
              None, ("15", "CH0_PWM", OUT_), ("16", "CH0_V+", PAS), ("17", "CH0_GND", PWRIN),
              None, ("18", "CH1_PWM", OUT_), ("19", "CH1_V+", PAS), ("20", "CH1_GND", PWRIN)]
-L_PCA = custom("PCA9685_Module", pca_left, pca_right, w=20, title="PCA9685 서보 드라이버 모듈 (VLT-MD032)",
+L_PCA = custom("PCA9685_Module", pca_left, pca_right, w=20, title="PCA9685 16채널 서보 드라이버 모듈",
                notes=[("← 왼쪽 헤더   오른쪽 헤더 →", 5.5), ("단자대 →", 0.5),
                       ("CH0: 왼쪽 귀 →", -3.0), ("CH1: 오른쪽 귀 →", -7.0),
                       ("같은 이름 핀 = 내부 연결", -8.4)])
 L_PS2 = custom("PSU_5V5A", [], [("1", "+5V", PWROUT), ("2", "GND", PWROUT)], w=10, title="5V 5A 어댑터 (서보 전용)")
-L_JACK = custom("DC_Jack_Terminal", [("1", "IN(+)", PAS), ("2", "IN(-)", PAS)], [("3", "+", PAS), ("4", "-", PAS)],
-                w=10, title="DC잭 터미널 VLT-DC001", notes=[("플러그 → 나사 단자", -1.6)])
+L_JACK = custom("DC_Extension_Female", [("1", "IN(+)", PAS), ("2", "IN(-)", PAS)], [("3", "+선", PAS), ("4", "-선", PAS)],
+                w=10, title="DC 연장선 암단자 (5.5×2.1, 절단)", notes=[("플러그 → 잘라낸 두 선", -1.6)])
 L_HDR = use_lib("Connector_Generic", "Conn_02x20_Odd_Even")
 L_SERVO = use_lib("Motor", "Motor_Servo")
 L_FUSE = use_lib("Device", "Fuse")
@@ -107,18 +107,18 @@ L_FLAG = use_lib("power", "PWR_FLAG")
 PARTS = {
     "PS1": (L_PS1, "Jetson 전원 어댑터(키트)", (10, 24)),
     "U1": (L_JET, "Jetson Orin Nano 8GB 개발 키트", (34, 24)),
-    "J1": (L_HDR, "Jetson 40핀 = 분배보드(리본 1:1)", (26, 62)),
-    "A1": (L_ADP, "DP→HDMI 젠더 NXC067", (64, 14)),
-    "U2": (L_LCD, "Elecrow RC070S 7in 1024x600", (90, 16)),
-    "U3": (L_MIC, "ReSpeaker Lite 107990273", (90, 34)),
-    "LS1": (L_SPK, "밀폐형 스피커 3W 4Ω ada-3351", (110, 54)),
-    "U4": (L_PCA, "PCA9685 모듈 VLT-MD032", (78, 66)),
+    "J1": (L_HDR, "Jetson 40핀 = T-Cobbler 분배보드(리본 1:1)", (26, 62)),
+    "A1": (L_ADP, "DP→HDMI 젠더 NEXI NXC067", (64, 14)),
+    "U2": (L_LCD, "10.1in IPS 터치 LCD 1024x600", (90, 16)),
+    "U3": (L_MIC, "ReSpeaker Lite Voice Assistant Kit", (90, 34)),
+    "LS1": (L_SPK, "키트 동봉 밀폐형 스피커", (110, 54)),
+    "U4": (L_PCA, "PCA9685 16채널 모듈", (78, 66)),
     "JP1": (L_JP, "OE↔GND 점퍼선", (106, 58)),
-    "M1": (L_SERVO, "SG90 왼쪽 귀", (110, 72)),
-    "M2": (L_SERVO, "SG90 오른쪽 귀", (110, 80)),
+    "M1": (L_SERVO, "SG90 호환 왼쪽 귀", (110, 72)),
+    "M2": (L_SERVO, "SG90 호환 오른쪽 귀", (110, 80)),
     "PS2": (L_PS2, "5V 5A 어댑터(서보 전용)", (14, 92)),
-    "J3": (L_JACK, "DC잭 터미널 VLT-DC001", (38, 92)),
-    "F1": (L_FUSE, "MINI 퓨즈 3A + 홀더 BE151", (58, 92)),
+    "J3": (L_JACK, "DC 연장선 암단자 5A", (38, 92)),
+    "F1": (L_FUSE, "MINI 퓨즈 3A + 인라인 홀더 BE151", (58, 92)),
     "C1": (L_CAP, "1000µF 16V 전해", (76, 92)),
     "#FLG01": (L_FLAG, "PWR_FLAG", (12, 52)),
     "#FLG02": (L_FLAG, "PWR_FLAG", (86, 86)),
@@ -220,32 +220,32 @@ for ref, num in NC - {m for v in NETS.values() for m in v}:
     items.append(f'(no_connect (at {x:.2f} {y:.2f}) (uuid {U()}))')
 
 # ------------------------------------------------------------------ 주석
-text("DeskPet 배선 회로도 — 구매 수정안 A (2026-10-09)", 4, 3, 3.0, True)
+text("DeskPet 배선 회로도 — 2026-10-16 발주품 기준 (rev B, 2026-10-25)", 4, 3, 3.0, True)
 text("같은 이름의 라벨끼리 연결된다. X 표시 핀에는 아무것도 연결하지 않는다.", 4, 6.2, 1.8)
 notes = [
     "배선 규칙 (회로가 망가지지 않게)",
-    "1. J1 번호 = Jetson 40핀 물리 번호. 분배보드의 라즈베리파이 이름(GPIO2 등)은 무시.",
+    "1. J1 번호 = Jetson 40핀 물리 번호. T-Cobbler의 라즈베리파이 이름(GPIO2 등)은 무시.",
     "2. PCA9685 VCC는 J1-1(3.3V)에만. Jetson 5V 핀(2·4)은 어디에도 연결하지 않는다.",
-    "3. 서보 전기(+5V_SERVO)는 5V 5A 어댑터 → 3A 퓨즈 → PCA9685 나사 단자로만 들어간다.",
+    "3. 서보 전기(+5V_SERVO)는 5V 5A 어댑터 → DC 연장선 → 3A 퓨즈 → PCA9685 나사 단자로만.",
     "4. PCA9685 헤더의 V+ 핀(6·12)은 연결 금지. Jetson과 서보 전원은 GND만 공유한다.",
     "5. OE는 오른쪽 헤더에서 GND와 점퍼(JP1) → 출력 항상 활성. 끄기는 프로그램이 담당.",
     "6. C1은 극성 주의: + = 긴 다리 = +5V_SERVO, − = 띠 = GND. 정격 16V ≥ 5V.",
-    "7. 꽂기 전 멀티미터: +5V_RAW↔GND, +5V_SERVO↔GND, +3V3↔GND 단락 없음 확인.",
+    "7. 꽂기 전 멀티미터: 연장선 +/− 선 구분, +5V_RAW·+5V_SERVO·+3V3↔GND 단락 없음.",
     "8. 연결·분리는 모든 전원을 끈 상태에서만. 켜는 순서: Jetson → 프로그램 → 서보 5V.",
     "",
     "전류·정격 점검",
     "· SG90 2개 동시 정지(스톨) 합계 약 1.5 A 이하 < 퓨즈 3 A < 어댑터 5 A",
     "· I2C 3.3 V: PCA9685 VCC 3.3 V라 모듈 풀업도 3.3 V (Jetson 핀 보호)",
     "· 서보 신호는 3.3 V PWM (SG90 입력으로 일반적으로 인식, 실물 확인)",
-    "· LCD(micro USB)·ReSpeaker는 Jetson USB 전원 사용 (LCD 최대 밝기 전류 실측)",
+    "· LCD(USB-C 터치·전원)·ReSpeaker는 Jetson USB 사용 (LCD 최대 밝기 전류 실측)",
 ]
 for i, s in enumerate(notes):
     text(s, 120, 10 + i * 2.6, 1.5 if i not in (0, 10) else 1.9, bold=i in (0, 10))
 
 # ------------------------------------------------------------------ 파일 쓰기
 sch = (f'(kicad_sch (version 20230121) (generator eeschema)\n(uuid {ROOT})\n(paper "A3")\n'
-       f'(title_block (title "DeskPet wiring schematic - plan A") (date "2026-10-09") (rev "A") '
-       f'(company "Hansung capstone team 8") (comment 1 "Jetson Orin Nano + PCA9685 + SG90 x2 + ReSpeaker Lite + RC070S 7in LCD"))\n'
+       f'(title_block (title "DeskPet wiring schematic - ordered parts") (date "2026-10-25") (rev "B") '
+       f'(company "Hansung capstone team 8") (comment 1 "Jetson Orin Nano + PCA9685 + SG90 x2 + ReSpeaker Lite kit + 10.1in touch LCD"))\n'
        f'(lib_symbols\n' + "\n".join(LIBSYMS.values()) + '\n)\n' + "\n".join(items) +
        f'\n(sheet_instances (path "/" (page "1")))\n)\n')
 open(f"{OUT}/deskpet.kicad_sch", "w", encoding="utf-8").write(sch)

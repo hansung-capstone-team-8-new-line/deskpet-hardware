@@ -1,19 +1,19 @@
 ﻿번호,출발,도착,선·부품,색,넷
-R,Jetson 40핀 헤더,분배보드 SMP0080,40핀 리본(동봉),"회색, 빨간 줄 = 1번",리본 1:1
+R,Jetson 40핀 헤더,T-Cobbler Plus 분배보드,40p 플랫 리본(동봉),"회색, 빨간 줄 = 1번",리본 1:1
 W1,분배보드 1번 (3.3V),PCA9685 왼쪽 헤더 VCC,F/F 점퍼,빨강,+3V3
 W2,분배보드 3번 (SDA),PCA9685 왼쪽 헤더 SDA,F/F 점퍼,파랑,I2C_SDA
 W3,분배보드 5번 (SCL),PCA9685 왼쪽 헤더 SCL,F/F 점퍼,노랑,I2C_SCL
 W4,분배보드 6번 (GND),PCA9685 왼쪽 헤더 GND,F/F 점퍼,검정,GND
 W5,PCA9685 오른쪽 헤더 OE,PCA9685 오른쪽 헤더 GND,짧은 F/F 점퍼 (JP1),초록,"GND, PCA_OE"
-W6,5V 5A 어댑터 플러그,DC잭 터미널 VLT-DC001,플러그 끼우기,-,"+5V_RAW, GND"
-W7,DC잭 터미널 + 나사,퓨즈 홀더 BE151 한쪽 선,18AWG + 납땜·수축튜브,빨강,+5V_RAW
+W6,5V 5A 어댑터 플러그,DC 연장선 암단자 (20~30cm 남기고 절단),플러그 끼우기,-,"+5V_RAW, GND"
+W7,DC 연장선 + 선 (테스터로 확인),퓨즈 홀더 BE151 한쪽 선,18AWG + 납땜·수축튜브 3/6mm,빨강,+5V_RAW
 W8,퓨즈 홀더 다른 쪽 선,PCA9685 단자대 V+,18AWG,빨강,+5V_SERVO
-W9,DC잭 터미널 − 나사,PCA9685 단자대 GND,18AWG,검정,GND
+W9,DC 연장선 − 선,PCA9685 단자대 GND,18AWG,검정,GND
 W10,1000µF: + 긴 다리 / − 띠 쪽,PCA9685 단자대 V+ / 단자대 GND,콘덴서 리드 (자리 있으면 기판 납땜),-,"+5V_SERVO, GND"
-W11,SG90 왼쪽 귀 플러그,"PCA9685 CH0 (갈색=GND, 빨강=V+, 주황=PWM)",서보 선 그대로,갈·빨·주,"+5V_SERVO, GND, SERVO_L_PWM"
-W12,SG90 오른쪽 귀 플러그,PCA9685 CH1 (같은 방향),서보 선 그대로,갈·빨·주,"+5V_SERVO, GND, SERVO_R_PWM"
-C1,Jetson DP,DP→HDMI 젠더 → HDMI 케이블 → LCD HDMI,젠더 + LCD 동봉 HDMI,-,"DP_LINK, HDMI_LINK"
-C2,Jetson USB-A,LCD micro USB (전원·터치),LCD 동봉 USB→micro USB 케이블,-,USB_LCD_PWR
-C3,Jetson USB-A,ReSpeaker USB-C,USB-A→C 데이터 케이블 (별도 구매품),-,USB_RESPEAKER
-C4,ReSpeaker 스피커 단자 (JST-PH 2핀),밀폐형 스피커,스피커 동봉 JST 케이블,-,"SPK_1, SPK_2"
+W11,SG90 호환 왼쪽 귀 플러그,"PCA9685 CH0 (갈색=GND, 빨강=V+, 주황=PWM)",서보 선 그대로,갈·빨·주,"+5V_SERVO, GND, SERVO_L_PWM"
+W12,SG90 호환 오른쪽 귀 플러그,PCA9685 CH1 (같은 방향),서보 선 그대로,갈·빨·주,"+5V_SERVO, GND, SERVO_R_PWM"
+C1,Jetson DP,DP→HDMI 젠더 → HDMI 케이블 → LCD mini HDMI,NXC067 + LCD 동봉 HDMI,-,"DP_LINK, HDMI_LINK"
+C2,Jetson USB-A,LCD USB-C (터치·전원),LCD 동봉 USB 케이블,-,USB_LCD_PWR
+C3,Jetson USB-A,ReSpeaker USB-C,HT-CA3100W USB-A→C 데이터 케이블,-,USB_RESPEAKER
+C4,ReSpeaker 스피커 단자,키트 밀폐형 스피커,키트 동봉 케이블,-,"SPK_1, SPK_2"
 C5,Jetson 전원 어댑터,Jetson DC 입력,키트 동봉,-,DC_JETSON
