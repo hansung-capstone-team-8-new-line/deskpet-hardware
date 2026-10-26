@@ -1,6 +1,6 @@
 # DeskPet Hardware
 
-Jetson Orin Nano 8GB, 10.1인치 IPS 터치 LCD(1024×600, mini HDMI·USB-C), ReSpeaker Lite Voice Assistant Kit, PCA9685와 SG90 귀 서보 2개를 위한 구동 패키지입니다. **실제 Linux 드라이버와 하드웨어 없는 모의 실행을 같은 인터페이스로 제공합니다.**
+Jetson Orin Nano 8GB, Waveshare 7인치 IPS 터치 LCD (C)(1024×600, HDMI·micro USB), ReSpeaker Lite + 3W 4Ω 밀폐형 스피커, PCA9685와 SG90 귀 서보 2개를 위한 구동 패키지입니다. **실제 Linux 드라이버와 하드웨어 없는 모의 실행을 같은 인터페이스로 제공합니다.**
 
 STT·LLM·TTS는 팀 파이프라인에서 연결합니다. 이 패키지는 PCM 녹음·재생, 표정·한글 화면, 귀 동작과 장치 오류 보고를 담당합니다. LCD 터치는 SDL 이벤트·소켓 구독·Swift 타입으로 전달하며 실제 패널 인식은 실물 시험 대상입니다.
 
@@ -38,7 +38,7 @@ cd deskpet-hardware
 | 검사 수정 | [통합](tests/integration.py), [화면](tests/visual.py), [C++](tests/core.cpp), [Swift](swift/Tests/DeskPetHardwareTests/WireTests.swift) |
 | 회로도·배선 원본과 검증 | [hardware-design/](hardware-design/README.md) |
 
-원본 코드를 고친 뒤 이 저장소에서 커밋합니다. `build/`, `out/`, Swift 빌드 캐시, WAV·BMP, 로컬 보정 설정은 `.gitignore`로 제외합니다. 2026-10-12 분리 당시에는 실행 로직을 유지했습니다. 2026-10-13 구성 정렬에서 1024×600 화면·ReSpeaker·FULL_OFF·입력 게이트를 변경했습니다. 2026-10-16 발주에서 화면이 10.1인치 터치 LCD로 바뀌었으나 해상도가 같아 화면 코드는 그대로입니다. 이전 구현은 Git 이력에 보존됩니다.
+원본 코드를 고친 뒤 이 저장소에서 커밋합니다. `build/`, `out/`, Swift 빌드 캐시, WAV·BMP, 로컬 보정 설정은 `.gitignore`로 제외합니다. 2026-10-12 분리 당시에는 실행 로직을 유지했습니다. 2026-10-13 구성 정렬에서 1024×600 화면·ReSpeaker·FULL_OFF·입력 게이트를 변경했습니다. 2026-10-16 발주에서 화면이 10.1인치 터치 LCD로 바뀌었고, 2026-10-26 재구매 계획(rev C)에서 7인치 터치 LCD (C)로 다시 바뀌었으나 모두 1024×600이라 화면 코드는 그대로입니다. 이전 구현은 Git 이력에 보존됩니다.
 
 ## 지금 실행하기
 

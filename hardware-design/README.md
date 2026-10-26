@@ -1,13 +1,13 @@
 # 하드웨어 설계 자료
 
-회로도·배선 원본, 조립 설명서 그림 생성기, 그리고 이를 재생성·검증하는 도구입니다. 모두 **2026-10-16 발주품 기준(rev B, 2026-10-25)** 입니다. KiCad 원본은 2026-10-25 팀 위키 `knowledge`의 `projects/deskpet/outputs/kicad-wiring`에서 옮겼고, 위키에는 문서에 넣는 그림만 남아 있습니다. 과거 Fritzing 배선도와 Python 참조 구현은 옮기지 않았으며 위키 저장소의 Git 기록에서 볼 수 있습니다.
+회로도·배선 원본, 조립 설명서 그림 생성기, 그리고 이를 재생성·검증하는 도구입니다. **2026-10-26 재구매 계획 기준(rev C)** 입니다. 7인치 LCD (C), GPIO 분배보드 SMP0080(리본 세트), 코드 일체형 5V 4A 어댑터, DC 클립 터미널, PCA9685 내장 콘덴서를 반영했습니다. KiCad 원본은 2026-10-25 팀 위키 `knowledge`의 `projects/deskpet/outputs/kicad-wiring`에서 옮겼고, 위키에는 문서에 넣는 그림만 남아 있습니다. 과거 Fritzing 배선도와 Python 참조 구현은 옮기지 않았으며 위키 저장소의 Git 기록에서 볼 수 있습니다.
 
 진행 상황과 결정은 위키의 [하드웨어 진행상황](https://github.com/hansung-capstone-team-8-new-line/knowledge/blob/master/wiki/deskpet-hardware.md), 조립 절차는 [조립 설명서](https://github.com/hansung-capstone-team-8-new-line/knowledge/blob/master/wiki/deskpet-assembly-manual.md)에서 확인합니다.
 
 | 폴더 | 내용 | 상태 |
 | --- | --- | --- |
-| [kicad-wiring/](kicad-wiring/README.md) | KiCad 회로도·넷리스트·BOM·배선 작업표, 생성·ERC·넷리스트 검증 도구 | rev B: 발주품 부품명, ERC 0·넷리스트 검사 통과 |
-| [assembly-figures/](assembly-figures/README.md) | 조립 설명서 그림 15장과 케이스 배치 3면도 생성기. 케이스 계획 치수 표(`CASE`)를 한 곳에서 관리 | rev B 계획안 (LCD 실측 후 확정) |
+| [kicad-wiring/](kicad-wiring/README.md) | KiCad 회로도·넷리스트·BOM·배선 작업표, 생성·ERC·넷리스트 검증 도구 | rev C 원본(`tools/gen.py`·작업표) 갱신. 넷은 rev B와 같아 넷리스트 검사 통과. 회로도 PDF·PNG·넷리스트·BOM·ERC는 KiCad 환경에서 재생성 대기 |
+| [assembly-figures/](assembly-figures/README.md) | 조립 설명서 그림 15장과 케이스 배치 3면도 생성기. 케이스 계획 치수 표(`CASE`)를 한 곳에서 관리 | rev C 계획안 204 × 122 × 150 mm (LCD 실측 후 확정) |
 
 ## 다시 만들기
 
