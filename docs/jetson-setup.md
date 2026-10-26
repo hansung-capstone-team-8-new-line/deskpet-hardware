@@ -4,9 +4,9 @@
 
 - Jetson Orin Nano 8GB 정품 개발자 키트, P3768 캐리어
 - JetPack 6.x / Ubuntu 22.04 ARM64
-- 10.1인치 IPS 터치 LCD 1024×600, mini HDMI 입력·USB-C 터치 (2026-10-16 발주, 11/3 도착 예정)
-- ReSpeaker Lite Voice Assistant Kit, USB 마이크·키트 동봉 밀폐형 스피커
-- PCA9685, SG90 위치제어 서보 2개, 독립 5V 5A 서보 전원
+- Waveshare 7inch HDMI LCD (C) 1024×600 IPS, HDMI 입력·micro USB 터치/전원 (2026-10-26 재구매 계획, rev C)
+- Seeed ReSpeaker Lite(USB 마이크) + Adafruit 3351 3W 4Ω 밀폐형 스피커(JST-PH 2핀)
+- PCA9685(VLT-MD032, 1000µF 내장), SG90 위치제어 서보 2개, 독립 5V 4A 서보 전원
 
 7.x/Ubuntu 24.04나 다른 캐리어 보드에서의 호환성은 검증하지 않았습니다. 설치기는 OS·펌웨어·핀mux를 자동 변경하지 않습니다.
 
@@ -16,14 +16,14 @@
 
 | 연결 | 설정·동작 |
 | --- | --- |
-| Jetson DisplayPort → DP-HDMI 변환기(NEXI NXC067) → LCD 동봉 HDMI 케이블 → LCD mini HDMI | LCD가 1024×600 가로 모드로 잡히는지 먼저 확인 |
-| Jetson USB → LCD USB-C | 터치 신호와 전원 공급 여부를 실물·설명서로 확인. SDL 터치 이벤트는 `touch.subscribe`로 수신 |
+| Jetson DisplayPort → DP-HDMI 변환기(NEXI NXC067) → LCD 동봉 HDMI 케이블 → LCD HDMI | LCD가 1024×600 가로 모드로 잡히는지 먼저 확인 |
+| Jetson USB → LCD micro USB (동봉 USB-A→micro B) | 터치와 전원(5V 약 0.5A)을 함께 공급. Ubuntu에서 단일·다중 터치 여부는 실물 확인. SDL 터치 이벤트는 `touch.subscribe`로 수신 |
 | Jetson USB-A → USB-C 데이터 케이블 → ReSpeaker Lite | 내장 마이크로 입력, 이 모듈의 스피커 단자로 출력 |
-| ReSpeaker 스피커 단자 → 키트 동봉 밀폐형 스피커 | 실물의 좌우 채널 및 +/− 표기를 확인. 증폭 출력의 어느 쪽도 GND에 연결하지 않음 |
-| Jetson 헤더 물리 1번 3.3V → PCA9685 VCC | I2C 풀업도 3.3V로 유지. 서보 전원 V+와 구분 |
+| ReSpeaker 스피커 단자(JST-PH 2핀) → Adafruit 3351 밀폐형 스피커 | 실물의 좌우 채널 및 +/− 표기를 확인. 증폭 출력의 어느 쪽도 GND에 연결하지 않음 |
+| Jetson 헤더 물리 1번 3.3V → 40p 리본 → GPIO 분배보드(SMP0080) → PCA9685 VCC | I2C 풀업도 3.3V로 유지. 서보 전원 V+와 구분 |
 | Jetson 물리 3번 SDA·5번 SCL → PCA9685 SDA·SCL | 실제 Linux I2C 어댑터는 doctor로 식별 |
 | PCA9685 채널 0·1 → 좌우 SG90 신호 | 채널 및 좌우 반전은 설정으로 변경 가능 |
-| 독립 5V 5A 어댑터 → DC 연장선(암단자 쪽 절단) → MINI 3A 퓨즈 → PCA9685 서보 V+ | 보드의 5V 출력으로 서보 전원을 공급하지 않음 |
+| 독립 5V 4A 어댑터(코드 일체형) → 스위치 연장선 MT202 → DC 클립 터미널 TC5521F → MINI 3A 퓨즈 → PCA9685 서보 V+ | 보드의 5V 출력으로 서보 전원을 공급하지 않음 |
 | Jetson·PCA9685·서보 전원 GND | 공통 접지. 독립 전원의 +극과 Jetson의 +극은 연결하지 않음 |
 | PCA9685 OE | GND 고정. GPIO·버퍼 없이 아래 FULL_OFF 방식 사용 |
 
@@ -33,7 +33,7 @@
 
 현재 KiCad 수정안 A는 OE를 GND에 고정한다. GPIO 7/16번, HC125, OE 풀업을 추가하지 않는다. I2C 초기화 첫 쓰기와 정상 종료·취소·연결 만료·검출한 오류에서는 `ALL_LED_OFF_H=0x10`으로 모든 PWM을 끈다. 중립값을 미리 쓸 때 각 채널 FULL_OFF를 유지하고 명시적 enable에서 CH0/CH1만 해제한다. 정지 쓰기가 실패하면 `SERVO_STOP_UNCONFIRMED`다.
 
-OE가 상시 활성인 회로이므로 프로세스 강제 종료·커널 정지·I2C 단절에서 PWM 차단을 보장할 수 없다. 독립 서보 전원 차단 수단을 확보하고 전원 순서·부팅·재시작을 실측한다. `motion.commanded`는 위치 센서 확인이 아니다. 현재 회로는 [위키 회로도](https://github.com/hansung-capstone-team-8-new-line/knowledge/blob/master/wiki/deskpet-wiring-schematic.md)를 따른다.
+OE가 상시 활성인 회로이므로 프로세스 강제 종료·커널 정지·I2C 단절에서 PWM 차단을 보장할 수 없다. 서보 전원 경로의 스위치 연장선(MT202)으로 서보 전원을 수동 차단하고, 전원 순서·부팅·재시작을 실측한다. `motion.commanded`는 위치 센서 확인이 아니다. 현재 회로는 [위키 회로도](https://github.com/hansung-capstone-team-8-new-line/knowledge/blob/master/wiki/deskpet-wiring-schematic.md)를 따른다.
 
 ## 설치
 
