@@ -20,8 +20,8 @@ ROWS = [
  ("W3", "분배보드 5번 (SCL)", "PCA9685 왼쪽 헤더 SCL", "F/F 점퍼", "노랑", [(("J1", "5"), ("U4", "3"))]),
  ("W4", "분배보드 6번 (GND)", "PCA9685 왼쪽 헤더 GND", "F/F 점퍼", "검정", [(("J1", "6"), ("U4", "1"))]),
  ("W5", "PCA9685 오른쪽 헤더 OE", "PCA9685 오른쪽 헤더 GND", "짧은 F/F 점퍼 (JP1)", "초록", [(("U4", "8"), ("JP1", "1")), (("U4", "7"), ("JP1", "2"))]),
- ("W6", "5V 4A 어댑터 플러그 (코드 일체형)", "DC 클립 터미널 TC5521F", "플러그 끼우기", "-", [(("PS2", "1"), ("J3", "1")), (("PS2", "2"), ("J3", "2"))]),
- ("S1", "5V 4A 어댑터 플러그", "스위치 연장선 MT202 → DC 클립 터미널", "MT202 M/F 29cm (회로도 반영 대기)", "-", []),
+ ("W6", "5V 4A 어댑터 플러그 (코드 일체형)", "스위치 연장선 MT202 암 단자 (SW1)", "플러그 끼우기", "-", [(("PS2", "1"), ("SW1", "1"))]),
+ ("S1", "스위치 연장선 MT202 수 플러그", "DC 클립 터미널 TC5521F", "MT202 M/F 29cm, 처음엔 OFF", "-", [(("SW1", "2"), ("J3", "1")), (("PS2", "2"), ("J3", "2"))]),
  ("W7", "클립 터미널 + (테스터로 확인)", "퓨즈 홀더 BE151 한쪽 선", "18AWG(XT30 선 절단) + 납땜·수축튜브 3/6mm", "빨강", [(("J3", "3"), ("F1", "1"))]),
  ("W8", "퓨즈 홀더 다른 쪽 선", "PCA9685 단자대 V+", "18AWG", "빨강", [(("F1", "2"), ("U4", "13"))]),
  ("W9", "클립 터미널 −", "PCA9685 단자대 GND", "18AWG", "검정", [(("J3", "4"), ("U4", "14"))]),
@@ -54,7 +54,7 @@ print("wiring table consistent with GOLDEN nets:", len(ROWS), "rows")
 with open(f"{OUT}/wiring-table.csv", "w", newline="", encoding="utf-8-sig") as f:
     w = csv.writer(f); w.writerow(["번호", "출발", "도착", "선·부품", "색", "넷"])
     for r in ROWS:
-        w.writerow([r[0], r[1], r[2], r[3], r[4], ", ".join(sorted({net_of(a) for a, b in r[5]})) or ("리본 1:1" if r[0] == "R" else "+5V_RAW 중간 차단")])
+        w.writerow([r[0], r[1], r[2], r[3], r[4], ", ".join(sorted({net_of(a) for a, b in r[5]})) or "리본 1:1"])
 
 fig = plt.figure(figsize=(16, 10.5)); ax = fig.add_axes([0, 0, 1, 1]); ax.axis("off")
 ax.text(0.02, 0.965, "DeskPet 배선 작업표 (rev C, 2026-10-26 재구매품) — 위에서부터 차례대로, 모든 전원을 끈 상태에서", fontsize=17, weight="bold", color="#243C5A")
@@ -66,11 +66,11 @@ for x, c in zip(xs, cols):
     ax.text(x, y, c, fontsize=11, weight="bold", color="white", va="center")
 ax.add_patch(plt.Rectangle((0.015, y - 0.018), 0.97, 0.036, color="#243C5A", zorder=0))
 for i, r in enumerate(ROWS):
-    yy = y - 0.044 * (i + 1)
+    yy = y - 0.041 * (i + 1)
     if i % 2 == 0:
-        ax.add_patch(plt.Rectangle((0.015, yy - 0.02), 0.97, 0.04, color="#F0F4F8", zorder=0))
+        ax.add_patch(plt.Rectangle((0.015, yy - 0.0195), 0.97, 0.039, color="#F0F4F8", zorder=0))
     ax.add_patch(plt.Rectangle((0.027, yy - 0.009), 0.014, 0.018, fill=False, ec="#2D6A4F", lw=1.3))
-    nets = ", ".join(sorted({net_of(a) for a, b in r[5]})) or ("리본 1:1" if r[0] == "R" else "+5V_RAW 중간 차단")
+    nets = ", ".join(sorted({net_of(a) for a, b in r[5]})) or "리본 1:1"
     vals = [r[0], r[1], r[2], r[3], r[4], nets]
     for x, v in zip(xs[1:], vals):
         ax.text(x, yy, v, fontsize=9.0 if x != xs[-1] else 8.2, va="center", color="#B23A2A" if (r[0] in ("W8", "W9", "W10") and x == xs[1]) else "#1B2733")

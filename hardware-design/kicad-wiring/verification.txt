@@ -1,17 +1,18 @@
-DeskPet 회로도 검증 기록 (2026-10-25 21:39 KST) — 2026-10-16 발주품 기준 rev B
-(10.1인치 터치 LCD·ReSpeaker Lite 키트·DC 연장선·T-Cobbler·PCA9685 동급 모듈. 연결 구조는 rev A와 같다)
+DeskPet 회로도 검증 기록 (2026-10-27 10:03 KST) — 2026-10-26 재구매 계획 기준 rev C
+(7인치 LCD (C)·SMP0080 분배보드·5V 4A 코드 일체형 어댑터·서보 전원 스위치 MT202(SW1)·DC 클립 터미널 TC5521F·PCA9685 내장 1000µF.
+ rev B 대비 넷 변화: 어댑터 + 와 클립 터미널 사이에 SW1을 넣어 +5V_ADP 넷 추가)
 
 1) KiCad 7.0.11 eeschema 공식 ERC
-ERC report (Sun Oct 25 21:38:44 2026, Encoding UTF8)
+ERC report (Tue Oct 27 10:02:50 2026, Encoding UTF8)
 
 ***** Sheet /
 
  ** ERC messages: 0  Errors 0  Warnings 0
 
 2) 넷리스트 대조 (kicad-cli 넷리스트 → tools/verify.py)
-PASS: 넷 16개 일치, 연결 금지 핀 6개 비어 있음, 안전 규칙 6종 통과
+PASS: 넷 17개 일치, 연결 금지 핀 6개 비어 있음, 안전 규칙 7종 통과
 
-3) 일부러 틀린 회로 6종 — 모두 FAIL이어야 정상
+3) 일부러 틀린 회로 7종 — 모두 FAIL이어야 정상
 [swap_i2c] exit=1
 FAIL
  - I2C_SDA: 빠짐 [('U4', '4')] / 잘못 추가 [('U4', '3')]
@@ -30,7 +31,12 @@ FAIL
 FAIL
  - +5V_RAW: 빠짐 [] / 잘못 추가 [('U4', '13')]
  - +5V_SERVO: 빠짐 [('U4', '13')] / 잘못 추가 []
- - 퓨즈 우회: 어댑터 +와 PCA 단자 V+가 퓨즈 없이 직결
+ - 퓨즈 우회: 클립 터미널 +와 PCA 단자 V+가 퓨즈 없이 직결
+[switch_bypassed] exit=1
+FAIL
+ - +5V_ADP: 빠짐 [('PS2', '1')] / 잘못 추가 []
+ - +5V_RAW: 빠짐 [] / 잘못 추가 [('PS2', '1')]
+ - 스위치 우회: 어댑터 +가 서보 전원 스위치 없이 클립 터미널에 직결
 [header_vplus_used] exit=1
 FAIL
  - +5V_SERVO: 빠짐 [] / 잘못 추가 [('U4', '12')]
@@ -42,4 +48,4 @@ FAIL
  - 공통 접지 없음: Jetson GND와 서보 전원 GND가 분리됨
 
 4) 배선 작업표 대조
-wiring-table: 18행 모두 기준 넷과 일치
+wiring-table: 19행 모두 기준 넷과 일치

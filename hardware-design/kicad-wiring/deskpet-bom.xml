@@ -2,16 +2,16 @@
 <export version="E">
   <design>
     <source>/tmp/kw/out/deskpet.kicad_sch</source>
-    <date>Sun Oct 25 21:37:05 2026</date>
+    <date>Tue Oct 27 10:02:10 2026</date>
     <tool>Eeschema 7.0.11-7.0.11~ubuntu22.04.1</tool>
     <sheet number="1" name="/" tstamps="/">
       <title_block>
-        <title>DeskPet wiring schematic - ordered parts</title>
+        <title>DeskPet wiring schematic - rev C re-purchase</title>
         <company>Hansung capstone team 8</company>
-        <rev>B</rev>
-        <date>2026-10-25</date>
+        <rev>C</rev>
+        <date>2026-10-27</date>
         <source>deskpet.kicad_sch</source>
-        <comment number="1" value="Jetson Orin Nano + PCA9685 + SG90 x2 + ReSpeaker Lite kit + 10.1in touch LCD"/>
+        <comment number="1" value="Jetson Orin Nano + PCA9685 + SG90 x2 + ReSpeaker Lite + 7in touch LCD (C) (rev C)"/>
         <comment number="2" value=""/>
         <comment number="3" value=""/>
         <comment number="4" value=""/>
@@ -28,135 +28,145 @@
       <value>DP→HDMI 젠더 NEXI NXC067</value>
       <libsource lib="DeskPet" part="DP_HDMI_Adapter" description=""/>
       <property name="Sheetname" value=""/>
-      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <property name="Sheetfile" value="out/deskpet.kicad_sch"/>
       <sheetpath names="/" tstamps="/"/>
-      <tstamps>15ea2236-0646-495f-8128-755b5566fc08</tstamps>
+      <tstamps>cd7de7b0-4a95-448a-a301-0cdf6394022c</tstamps>
     </comp>
     <comp ref="C1">
-      <value>1000µF 16V 전해</value>
+      <value>1000µF 전해 (PCA9685 보드 내장)</value>
       <libsource lib="Device" part="C_Polarized" description="Polarized capacitor"/>
       <property name="Sheetname" value=""/>
-      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <property name="Sheetfile" value="out/deskpet.kicad_sch"/>
       <property name="ki_description" value="Polarized capacitor"/>
       <property name="ki_keywords" value="cap capacitor"/>
       <sheetpath names="/" tstamps="/"/>
-      <tstamps>c1fbc479-25d0-49c6-aa8b-649109bff933</tstamps>
+      <tstamps>7b551f10-8733-4449-8937-f2ecd7b42819</tstamps>
     </comp>
     <comp ref="F1">
       <value>MINI 퓨즈 3A + 인라인 홀더 BE151</value>
       <libsource lib="Device" part="Fuse" description="Fuse"/>
       <property name="Sheetname" value=""/>
-      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <property name="Sheetfile" value="out/deskpet.kicad_sch"/>
       <property name="ki_description" value="Fuse"/>
       <property name="ki_keywords" value="fuse"/>
       <sheetpath names="/" tstamps="/"/>
-      <tstamps>4bd1eb7c-7a71-45c2-82a3-d0336e5dfa9c</tstamps>
+      <tstamps>cfa2639a-2326-49cb-b81b-4100529efdcc</tstamps>
     </comp>
     <comp ref="J1">
-      <value>Jetson 40핀 = T-Cobbler 분배보드(리본 1:1)</value>
+      <value>Jetson 40핀 = GPIO 분배보드 SMP0080 (리본 1:1)</value>
       <libsource lib="Connector_Generic" part="Conn_02x20_Odd_Even" description="Generic connector, double row, 02x20, odd/even pin numbering scheme (row 1 odd numbers, row 2 even numbers), script generated (kicad-library-utils/schlib/autogen/connector/)"/>
       <property name="Sheetname" value=""/>
-      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <property name="Sheetfile" value="out/deskpet.kicad_sch"/>
       <property name="ki_description" value="Generic connector, double row, 02x20, odd/even pin numbering scheme (row 1 odd numbers, row 2 even numbers), script generated (kicad-library-utils/schlib/autogen/connector/)"/>
       <property name="ki_keywords" value="connector"/>
       <sheetpath names="/" tstamps="/"/>
-      <tstamps>6ad060f4-21e0-49c7-b195-f4ce7cfb3593</tstamps>
+      <tstamps>78fd2ce4-5717-40d3-bf55-ef0ee58b6419</tstamps>
     </comp>
     <comp ref="J3">
-      <value>DC 연장선 암단자 5A</value>
+      <value>DC 클립 터미널 암 TC5521F</value>
       <libsource lib="DeskPet" part="DC_Extension_Female" description=""/>
       <property name="Sheetname" value=""/>
-      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <property name="Sheetfile" value="out/deskpet.kicad_sch"/>
       <sheetpath names="/" tstamps="/"/>
-      <tstamps>b7025128-0b78-49e4-b1dc-ca527a41278a</tstamps>
+      <tstamps>8a6fdaac-fe33-44fe-a769-28c7545e9a7c</tstamps>
     </comp>
     <comp ref="JP1">
       <value>OE↔GND 점퍼선</value>
       <libsource lib="Connector_Generic" part="Conn_01x02" description="Generic connector, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
       <property name="Sheetname" value=""/>
-      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <property name="Sheetfile" value="out/deskpet.kicad_sch"/>
       <property name="ki_description" value="Generic connector, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
       <property name="ki_keywords" value="connector"/>
       <sheetpath names="/" tstamps="/"/>
-      <tstamps>fd83b082-30c9-4c58-b29d-14aed58a7892</tstamps>
+      <tstamps>0047b42e-c582-488d-ad2b-d9370ad92f21</tstamps>
     </comp>
     <comp ref="LS1">
-      <value>키트 동봉 밀폐형 스피커</value>
+      <value>Adafruit 3351 3W 4Ω 밀폐형 스피커</value>
       <libsource lib="Device" part="Speaker" description="Speaker"/>
       <property name="Sheetname" value=""/>
-      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <property name="Sheetfile" value="out/deskpet.kicad_sch"/>
       <property name="ki_description" value="Speaker"/>
       <property name="ki_keywords" value="speaker sound"/>
       <sheetpath names="/" tstamps="/"/>
-      <tstamps>096aaa0a-2f8e-418c-affb-561cb38a2a0a</tstamps>
+      <tstamps>166a162e-0686-47b4-ac26-fd6d37359417</tstamps>
     </comp>
     <comp ref="M1">
       <value>SG90 호환 왼쪽 귀</value>
       <libsource lib="Motor" part="Motor_Servo" description="Servo Motor (Futaba, HiTec, JR connector)"/>
       <property name="Sheetname" value=""/>
-      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <property name="Sheetfile" value="out/deskpet.kicad_sch"/>
       <property name="ki_description" value="Servo Motor (Futaba, HiTec, JR connector)"/>
       <property name="ki_keywords" value="Servo Motor"/>
       <sheetpath names="/" tstamps="/"/>
-      <tstamps>f22b91d2-a20d-4150-9d51-803bc897d072</tstamps>
+      <tstamps>d07bda64-2024-4897-bd04-116409720335</tstamps>
     </comp>
     <comp ref="M2">
       <value>SG90 호환 오른쪽 귀</value>
       <libsource lib="Motor" part="Motor_Servo" description="Servo Motor (Futaba, HiTec, JR connector)"/>
       <property name="Sheetname" value=""/>
-      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <property name="Sheetfile" value="out/deskpet.kicad_sch"/>
       <property name="ki_description" value="Servo Motor (Futaba, HiTec, JR connector)"/>
       <property name="ki_keywords" value="Servo Motor"/>
       <sheetpath names="/" tstamps="/"/>
-      <tstamps>caff1a73-00ca-4d0d-b96d-de2c99a9e0ad</tstamps>
+      <tstamps>7338ed8c-64f7-49c7-b24a-274407286c74</tstamps>
     </comp>
     <comp ref="PS1">
       <value>Jetson 전원 어댑터(키트)</value>
       <libsource lib="DeskPet" part="PSU_Jetson" description=""/>
       <property name="Sheetname" value=""/>
-      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <property name="Sheetfile" value="out/deskpet.kicad_sch"/>
       <sheetpath names="/" tstamps="/"/>
-      <tstamps>07065a76-94d3-430f-9bd1-f007806da6ba</tstamps>
+      <tstamps>037b6192-e217-4149-b8b6-a3a46b472234</tstamps>
     </comp>
     <comp ref="PS2">
-      <value>5V 5A 어댑터(서보 전용)</value>
+      <value>5V 4A 어댑터(서보 전용)</value>
       <libsource lib="DeskPet" part="PSU_5V5A" description=""/>
       <property name="Sheetname" value=""/>
-      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <property name="Sheetfile" value="out/deskpet.kicad_sch"/>
       <sheetpath names="/" tstamps="/"/>
-      <tstamps>7fa0812f-7937-4885-a32a-353dcee3de97</tstamps>
+      <tstamps>c39f7115-d44d-4d6f-bbf8-956134f69631</tstamps>
+    </comp>
+    <comp ref="SW1">
+      <value>서보 전원 스위치 연장선 MT202</value>
+      <libsource lib="Switch" part="SW_SPST" description="Single Pole Single Throw (SPST) switch"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="out/deskpet.kicad_sch"/>
+      <property name="ki_description" value="Single Pole Single Throw (SPST) switch"/>
+      <property name="ki_keywords" value="switch lever"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>7a0eedbd-ff7c-4eed-ade3-010778213df4</tstamps>
     </comp>
     <comp ref="U1">
       <value>Jetson Orin Nano 8GB 개발 키트</value>
       <libsource lib="DeskPet" part="Jetson_OrinNano_DevKit" description=""/>
       <property name="Sheetname" value=""/>
-      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <property name="Sheetfile" value="out/deskpet.kicad_sch"/>
       <sheetpath names="/" tstamps="/"/>
-      <tstamps>60ec2a7f-c3b9-440e-926f-08e848aa63ba</tstamps>
+      <tstamps>5dd118ca-ba8b-4603-b042-a057104105f0</tstamps>
     </comp>
     <comp ref="U2">
-      <value>10.1in IPS 터치 LCD 1024x600</value>
-      <libsource lib="DeskPet" part="LCD_10in1_Touch" description=""/>
+      <value>7in LCD (C) 1024x600</value>
+      <libsource lib="DeskPet" part="LCD_7in_C_Touch" description=""/>
       <property name="Sheetname" value=""/>
-      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <property name="Sheetfile" value="out/deskpet.kicad_sch"/>
       <sheetpath names="/" tstamps="/"/>
-      <tstamps>1dcd7a0f-4dfa-47c5-a67e-403789ce6b0b</tstamps>
+      <tstamps>2bd87e78-c73b-4258-88d7-5b1ced89bd60</tstamps>
     </comp>
     <comp ref="U3">
-      <value>ReSpeaker Lite Voice Assistant Kit</value>
+      <value>ReSpeaker Lite</value>
       <libsource lib="DeskPet" part="ReSpeaker_Lite" description=""/>
       <property name="Sheetname" value=""/>
-      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <property name="Sheetfile" value="out/deskpet.kicad_sch"/>
       <sheetpath names="/" tstamps="/"/>
-      <tstamps>9f0f9f42-34f0-4d6b-ada4-b247646b40aa</tstamps>
+      <tstamps>8b0be10d-9a81-4738-b3f1-46a4a3e4ad1b</tstamps>
     </comp>
     <comp ref="U4">
       <value>PCA9685 16채널 모듈</value>
       <libsource lib="DeskPet" part="PCA9685_Module" description=""/>
       <property name="Sheetname" value=""/>
-      <property name="Sheetfile" value="deskpet.kicad_sch"/>
+      <property name="Sheetfile" value="out/deskpet.kicad_sch"/>
       <sheetpath names="/" tstamps="/"/>
-      <tstamps>05b8c94a-1047-4f96-af7a-2228bbee9b84</tstamps>
+      <tstamps>20c2d2d2-e6d2-47ad-ba11-59d402bf81f4</tstamps>
     </comp>
   </components>
   <libparts>
@@ -233,7 +243,7 @@
     <libpart lib="DeskPet" part="DC_Extension_Female">
       <fields>
         <field name="Reference">U</field>
-        <field name="Value">DC 연장선 암단자 (5.5×2.1, 절단)</field>
+        <field name="Value">DC 클립 터미널 암 TC5521F (5.5×2.1)</field>
       </fields>
       <pins>
         <pin num="1" name="IN(+)" type="passive"/>
@@ -266,14 +276,14 @@
         <pin num="6" name="USB_A4" type="passive"/>
       </pins>
     </libpart>
-    <libpart lib="DeskPet" part="LCD_10in1_Touch">
+    <libpart lib="DeskPet" part="LCD_7in_C_Touch">
       <fields>
         <field name="Reference">U</field>
-        <field name="Value">10.1인치 IPS 터치 LCD (1024×600)</field>
+        <field name="Value">Waveshare 7inch HDMI LCD (C) 1024×600</field>
       </fields>
       <pins>
-        <pin num="1" name="miniHDMI_IN" type="passive"/>
-        <pin num="2" name="USB-C_TOUCH_PWR" type="passive"/>
+        <pin num="1" name="HDMI_IN" type="passive"/>
+        <pin num="2" name="microUSB_TOUCH_PWR" type="passive"/>
       </pins>
     </libpart>
     <libpart lib="DeskPet" part="PCA9685_Module">
@@ -307,7 +317,7 @@
     <libpart lib="DeskPet" part="PSU_5V5A">
       <fields>
         <field name="Reference">U</field>
-        <field name="Value">5V 5A 어댑터 (서보 전용)</field>
+        <field name="Value">5V 4A 어댑터 (서보 전용, 코드 일체형)</field>
       </fields>
       <pins>
         <pin num="1" name="+5V" type="power_out"/>
@@ -326,7 +336,7 @@
     <libpart lib="DeskPet" part="ReSpeaker_Lite">
       <fields>
         <field name="Reference">U</field>
-        <field name="Value">ReSpeaker Lite Voice Assistant Kit</field>
+        <field name="Value">Seeed ReSpeaker Lite 107990273</field>
       </fields>
       <pins>
         <pin num="1" name="USB-C" type="passive"/>
@@ -397,10 +407,32 @@
         <pin num="3" name="-" type="passive"/>
       </pins>
     </libpart>
+    <libpart lib="Switch" part="SW_SPST">
+      <description>Single Pole Single Throw (SPST) switch</description>
+      <docs>~</docs>
+      <fields>
+        <field name="Reference">SW</field>
+        <field name="Value">SW_SPST</field>
+        <field name="Datasheet">~</field>
+      </fields>
+      <pins>
+        <pin num="1" name="A" type="passive"/>
+        <pin num="2" name="B" type="passive"/>
+      </pins>
+    </libpart>
   </libparts>
   <libraries>
-    <library logical="DeskPet">
-      <uri>/tmp/kw/out/deskpet.kicad_sym</uri>
+    <library logical="Connector_Generic">
+      <uri>/usr/share/kicad/symbols//Connector_Generic.kicad_sym</uri>
+    </library>
+    <library logical="Device">
+      <uri>/usr/share/kicad/symbols//Device.kicad_sym</uri>
+    </library>
+    <library logical="Motor">
+      <uri>/usr/share/kicad/symbols//Motor.kicad_sym</uri>
+    </library>
+    <library logical="Switch">
+      <uri>/usr/share/kicad/symbols//Switch.kicad_sym</uri>
     </library>
   </libraries>
   <nets>
@@ -408,13 +440,17 @@
       <node ref="J1" pin="1" pinfunction="Pin_1" pintype="passive"/>
       <node ref="U4" pin="5" pinfunction="VCC" pintype="power_in"/>
     </net>
-    <net code="2" name="/+5V_RAW">
+    <net code="2" name="/+5V_ADP">
+      <node ref="PS2" pin="1" pinfunction="+5V" pintype="power_out"/>
+      <node ref="SW1" pin="1" pinfunction="A" pintype="passive"/>
+    </net>
+    <net code="3" name="/+5V_RAW">
       <node ref="F1" pin="1" pintype="passive"/>
       <node ref="J3" pin="1" pinfunction="IN(+)" pintype="passive"/>
       <node ref="J3" pin="3" pinfunction="+선" pintype="passive"/>
-      <node ref="PS2" pin="1" pinfunction="+5V" pintype="power_out"/>
+      <node ref="SW1" pin="2" pinfunction="B" pintype="passive"/>
     </net>
-    <net code="3" name="/+5V_SERVO">
+    <net code="4" name="/+5V_SERVO">
       <node ref="C1" pin="1" pintype="passive"/>
       <node ref="F1" pin="2" pintype="passive"/>
       <node ref="M1" pin="2" pinfunction="+" pintype="passive"/>
@@ -423,15 +459,15 @@
       <node ref="U4" pin="16" pinfunction="CH0_V+" pintype="passive"/>
       <node ref="U4" pin="19" pinfunction="CH1_V+" pintype="passive"/>
     </net>
-    <net code="4" name="/DC_JETSON">
+    <net code="5" name="/DC_JETSON">
       <node ref="PS1" pin="1" pinfunction="DC_OUT" pintype="power_out"/>
       <node ref="U1" pin="1" pinfunction="DC_IN" pintype="power_in"/>
     </net>
-    <net code="5" name="/DP_LINK">
+    <net code="6" name="/DP_LINK">
       <node ref="A1" pin="1" pinfunction="DP" pintype="passive"/>
       <node ref="U1" pin="2" pinfunction="DP" pintype="passive"/>
     </net>
-    <net code="6" name="/GND">
+    <net code="7" name="/GND">
       <node ref="C1" pin="2" pintype="passive"/>
       <node ref="J1" pin="6" pinfunction="Pin_6" pintype="passive"/>
       <node ref="J3" pin="2" pinfunction="IN(-)" pintype="passive"/>
@@ -446,179 +482,179 @@
       <node ref="U4" pin="20" pinfunction="CH1_GND" pintype="power_in"/>
       <node ref="U4" pin="7" pinfunction="GND" pintype="power_in"/>
     </net>
-    <net code="7" name="/HDMI_LINK">
+    <net code="8" name="/HDMI_LINK">
       <node ref="A1" pin="2" pinfunction="HDMI" pintype="passive"/>
-      <node ref="U2" pin="1" pinfunction="miniHDMI_IN" pintype="passive"/>
+      <node ref="U2" pin="1" pinfunction="HDMI_IN" pintype="passive"/>
     </net>
-    <net code="8" name="/I2C_SCL">
+    <net code="9" name="/I2C_SCL">
       <node ref="J1" pin="5" pinfunction="Pin_5" pintype="passive"/>
       <node ref="U4" pin="3" pinfunction="SCL" pintype="bidirectional"/>
     </net>
-    <net code="9" name="/I2C_SDA">
+    <net code="10" name="/I2C_SDA">
       <node ref="J1" pin="3" pinfunction="Pin_3" pintype="passive"/>
       <node ref="U4" pin="4" pinfunction="SDA" pintype="bidirectional"/>
     </net>
-    <net code="10" name="/PCA_OE">
+    <net code="11" name="/PCA_OE">
       <node ref="JP1" pin="1" pinfunction="Pin_1" pintype="passive"/>
       <node ref="U4" pin="8" pinfunction="OE" pintype="input"/>
     </net>
-    <net code="11" name="/SERVO_L_PWM">
+    <net code="12" name="/SERVO_L_PWM">
       <node ref="M1" pin="1" pinfunction="PWM" pintype="passive"/>
       <node ref="U4" pin="15" pinfunction="CH0_PWM" pintype="output"/>
     </net>
-    <net code="12" name="/SERVO_R_PWM">
+    <net code="13" name="/SERVO_R_PWM">
       <node ref="M2" pin="1" pinfunction="PWM" pintype="passive"/>
       <node ref="U4" pin="18" pinfunction="CH1_PWM" pintype="output"/>
     </net>
-    <net code="13" name="/SPK_1">
+    <net code="14" name="/SPK_1">
       <node ref="LS1" pin="1" pinfunction="1" pintype="input"/>
       <node ref="U3" pin="2" pinfunction="SPK_1" pintype="passive"/>
     </net>
-    <net code="14" name="/SPK_2">
+    <net code="15" name="/SPK_2">
       <node ref="LS1" pin="2" pinfunction="2" pintype="input"/>
       <node ref="U3" pin="3" pinfunction="SPK_2" pintype="passive"/>
     </net>
-    <net code="15" name="/USB_LCD_PWR">
+    <net code="16" name="/USB_LCD_PWR">
       <node ref="U1" pin="3" pinfunction="USB_A1" pintype="passive"/>
-      <node ref="U2" pin="2" pinfunction="USB-C_TOUCH_PWR" pintype="passive"/>
+      <node ref="U2" pin="2" pinfunction="microUSB_TOUCH_PWR" pintype="passive"/>
     </net>
-    <net code="16" name="/USB_RESPEAKER">
+    <net code="17" name="/USB_RESPEAKER">
       <node ref="U1" pin="4" pinfunction="USB_A2" pintype="passive"/>
       <node ref="U3" pin="1" pinfunction="USB-C" pintype="passive"/>
     </net>
-    <net code="17" name="unconnected-(J1-Pin_2-Pad2)">
+    <net code="18" name="unconnected-(J1-Pin_2-Pad2)">
       <node ref="J1" pin="2" pinfunction="Pin_2" pintype="passive+no_connect"/>
     </net>
-    <net code="18" name="unconnected-(J1-Pin_4-Pad4)">
+    <net code="19" name="unconnected-(J1-Pin_4-Pad4)">
       <node ref="J1" pin="4" pinfunction="Pin_4" pintype="passive+no_connect"/>
     </net>
-    <net code="19" name="unconnected-(J1-Pin_7-Pad7)">
+    <net code="20" name="unconnected-(J1-Pin_7-Pad7)">
       <node ref="J1" pin="7" pinfunction="Pin_7" pintype="passive+no_connect"/>
     </net>
-    <net code="20" name="unconnected-(J1-Pin_8-Pad8)">
+    <net code="21" name="unconnected-(J1-Pin_8-Pad8)">
       <node ref="J1" pin="8" pinfunction="Pin_8" pintype="passive+no_connect"/>
     </net>
-    <net code="21" name="unconnected-(J1-Pin_9-Pad9)">
+    <net code="22" name="unconnected-(J1-Pin_9-Pad9)">
       <node ref="J1" pin="9" pinfunction="Pin_9" pintype="passive+no_connect"/>
     </net>
-    <net code="22" name="unconnected-(J1-Pin_10-Pad10)">
+    <net code="23" name="unconnected-(J1-Pin_10-Pad10)">
       <node ref="J1" pin="10" pinfunction="Pin_10" pintype="passive+no_connect"/>
     </net>
-    <net code="23" name="unconnected-(J1-Pin_11-Pad11)">
+    <net code="24" name="unconnected-(J1-Pin_11-Pad11)">
       <node ref="J1" pin="11" pinfunction="Pin_11" pintype="passive+no_connect"/>
     </net>
-    <net code="24" name="unconnected-(J1-Pin_12-Pad12)">
+    <net code="25" name="unconnected-(J1-Pin_12-Pad12)">
       <node ref="J1" pin="12" pinfunction="Pin_12" pintype="passive+no_connect"/>
     </net>
-    <net code="25" name="unconnected-(J1-Pin_13-Pad13)">
+    <net code="26" name="unconnected-(J1-Pin_13-Pad13)">
       <node ref="J1" pin="13" pinfunction="Pin_13" pintype="passive+no_connect"/>
     </net>
-    <net code="26" name="unconnected-(J1-Pin_14-Pad14)">
+    <net code="27" name="unconnected-(J1-Pin_14-Pad14)">
       <node ref="J1" pin="14" pinfunction="Pin_14" pintype="passive+no_connect"/>
     </net>
-    <net code="27" name="unconnected-(J1-Pin_15-Pad15)">
+    <net code="28" name="unconnected-(J1-Pin_15-Pad15)">
       <node ref="J1" pin="15" pinfunction="Pin_15" pintype="passive+no_connect"/>
     </net>
-    <net code="28" name="unconnected-(J1-Pin_16-Pad16)">
+    <net code="29" name="unconnected-(J1-Pin_16-Pad16)">
       <node ref="J1" pin="16" pinfunction="Pin_16" pintype="passive+no_connect"/>
     </net>
-    <net code="29" name="unconnected-(J1-Pin_17-Pad17)">
+    <net code="30" name="unconnected-(J1-Pin_17-Pad17)">
       <node ref="J1" pin="17" pinfunction="Pin_17" pintype="passive+no_connect"/>
     </net>
-    <net code="30" name="unconnected-(J1-Pin_18-Pad18)">
+    <net code="31" name="unconnected-(J1-Pin_18-Pad18)">
       <node ref="J1" pin="18" pinfunction="Pin_18" pintype="passive+no_connect"/>
     </net>
-    <net code="31" name="unconnected-(J1-Pin_19-Pad19)">
+    <net code="32" name="unconnected-(J1-Pin_19-Pad19)">
       <node ref="J1" pin="19" pinfunction="Pin_19" pintype="passive+no_connect"/>
     </net>
-    <net code="32" name="unconnected-(J1-Pin_20-Pad20)">
+    <net code="33" name="unconnected-(J1-Pin_20-Pad20)">
       <node ref="J1" pin="20" pinfunction="Pin_20" pintype="passive+no_connect"/>
     </net>
-    <net code="33" name="unconnected-(J1-Pin_21-Pad21)">
+    <net code="34" name="unconnected-(J1-Pin_21-Pad21)">
       <node ref="J1" pin="21" pinfunction="Pin_21" pintype="passive+no_connect"/>
     </net>
-    <net code="34" name="unconnected-(J1-Pin_22-Pad22)">
+    <net code="35" name="unconnected-(J1-Pin_22-Pad22)">
       <node ref="J1" pin="22" pinfunction="Pin_22" pintype="passive+no_connect"/>
     </net>
-    <net code="35" name="unconnected-(J1-Pin_23-Pad23)">
+    <net code="36" name="unconnected-(J1-Pin_23-Pad23)">
       <node ref="J1" pin="23" pinfunction="Pin_23" pintype="passive+no_connect"/>
     </net>
-    <net code="36" name="unconnected-(J1-Pin_24-Pad24)">
+    <net code="37" name="unconnected-(J1-Pin_24-Pad24)">
       <node ref="J1" pin="24" pinfunction="Pin_24" pintype="passive+no_connect"/>
     </net>
-    <net code="37" name="unconnected-(J1-Pin_25-Pad25)">
+    <net code="38" name="unconnected-(J1-Pin_25-Pad25)">
       <node ref="J1" pin="25" pinfunction="Pin_25" pintype="passive+no_connect"/>
     </net>
-    <net code="38" name="unconnected-(J1-Pin_26-Pad26)">
+    <net code="39" name="unconnected-(J1-Pin_26-Pad26)">
       <node ref="J1" pin="26" pinfunction="Pin_26" pintype="passive+no_connect"/>
     </net>
-    <net code="39" name="unconnected-(J1-Pin_27-Pad27)">
+    <net code="40" name="unconnected-(J1-Pin_27-Pad27)">
       <node ref="J1" pin="27" pinfunction="Pin_27" pintype="passive+no_connect"/>
     </net>
-    <net code="40" name="unconnected-(J1-Pin_28-Pad28)">
+    <net code="41" name="unconnected-(J1-Pin_28-Pad28)">
       <node ref="J1" pin="28" pinfunction="Pin_28" pintype="passive+no_connect"/>
     </net>
-    <net code="41" name="unconnected-(J1-Pin_29-Pad29)">
+    <net code="42" name="unconnected-(J1-Pin_29-Pad29)">
       <node ref="J1" pin="29" pinfunction="Pin_29" pintype="passive+no_connect"/>
     </net>
-    <net code="42" name="unconnected-(J1-Pin_30-Pad30)">
+    <net code="43" name="unconnected-(J1-Pin_30-Pad30)">
       <node ref="J1" pin="30" pinfunction="Pin_30" pintype="passive+no_connect"/>
     </net>
-    <net code="43" name="unconnected-(J1-Pin_31-Pad31)">
+    <net code="44" name="unconnected-(J1-Pin_31-Pad31)">
       <node ref="J1" pin="31" pinfunction="Pin_31" pintype="passive+no_connect"/>
     </net>
-    <net code="44" name="unconnected-(J1-Pin_32-Pad32)">
+    <net code="45" name="unconnected-(J1-Pin_32-Pad32)">
       <node ref="J1" pin="32" pinfunction="Pin_32" pintype="passive+no_connect"/>
     </net>
-    <net code="45" name="unconnected-(J1-Pin_33-Pad33)">
+    <net code="46" name="unconnected-(J1-Pin_33-Pad33)">
       <node ref="J1" pin="33" pinfunction="Pin_33" pintype="passive+no_connect"/>
     </net>
-    <net code="46" name="unconnected-(J1-Pin_34-Pad34)">
+    <net code="47" name="unconnected-(J1-Pin_34-Pad34)">
       <node ref="J1" pin="34" pinfunction="Pin_34" pintype="passive+no_connect"/>
     </net>
-    <net code="47" name="unconnected-(J1-Pin_35-Pad35)">
+    <net code="48" name="unconnected-(J1-Pin_35-Pad35)">
       <node ref="J1" pin="35" pinfunction="Pin_35" pintype="passive+no_connect"/>
     </net>
-    <net code="48" name="unconnected-(J1-Pin_36-Pad36)">
+    <net code="49" name="unconnected-(J1-Pin_36-Pad36)">
       <node ref="J1" pin="36" pinfunction="Pin_36" pintype="passive+no_connect"/>
     </net>
-    <net code="49" name="unconnected-(J1-Pin_37-Pad37)">
+    <net code="50" name="unconnected-(J1-Pin_37-Pad37)">
       <node ref="J1" pin="37" pinfunction="Pin_37" pintype="passive+no_connect"/>
     </net>
-    <net code="50" name="unconnected-(J1-Pin_38-Pad38)">
+    <net code="51" name="unconnected-(J1-Pin_38-Pad38)">
       <node ref="J1" pin="38" pinfunction="Pin_38" pintype="passive+no_connect"/>
     </net>
-    <net code="51" name="unconnected-(J1-Pin_39-Pad39)">
+    <net code="52" name="unconnected-(J1-Pin_39-Pad39)">
       <node ref="J1" pin="39" pinfunction="Pin_39" pintype="passive+no_connect"/>
     </net>
-    <net code="52" name="unconnected-(J1-Pin_40-Pad40)">
+    <net code="53" name="unconnected-(J1-Pin_40-Pad40)">
       <node ref="J1" pin="40" pinfunction="Pin_40" pintype="passive+no_connect"/>
     </net>
-    <net code="53" name="unconnected-(U1-USB_A3-Pad5)">
+    <net code="54" name="unconnected-(U1-USB_A3-Pad5)">
       <node ref="U1" pin="5" pinfunction="USB_A3" pintype="passive+no_connect"/>
     </net>
-    <net code="54" name="unconnected-(U1-USB_A4-Pad6)">
+    <net code="55" name="unconnected-(U1-USB_A4-Pad6)">
       <node ref="U1" pin="6" pinfunction="USB_A4" pintype="passive+no_connect"/>
     </net>
-    <net code="55" name="unconnected-(U3-3.5mm_JACK-Pad4)">
+    <net code="56" name="unconnected-(U3-3.5mm_JACK-Pad4)">
       <node ref="U3" pin="4" pinfunction="3.5mm_JACK" pintype="passive+no_connect"/>
     </net>
-    <net code="56" name="unconnected-(U4-OE-Pad2)">
+    <net code="57" name="unconnected-(U4-OE-Pad2)">
       <node ref="U4" pin="2" pinfunction="OE" pintype="input+no_connect"/>
     </net>
-    <net code="57" name="unconnected-(U4-SCL-Pad9)">
+    <net code="58" name="unconnected-(U4-SCL-Pad9)">
       <node ref="U4" pin="9" pinfunction="SCL" pintype="bidirectional+no_connect"/>
     </net>
-    <net code="58" name="unconnected-(U4-SDA-Pad10)">
+    <net code="59" name="unconnected-(U4-SDA-Pad10)">
       <node ref="U4" pin="10" pinfunction="SDA" pintype="bidirectional+no_connect"/>
     </net>
-    <net code="59" name="unconnected-(U4-V+-Pad6)">
+    <net code="60" name="unconnected-(U4-V+-Pad6)">
       <node ref="U4" pin="6" pinfunction="V+" pintype="passive+no_connect"/>
     </net>
-    <net code="60" name="unconnected-(U4-V+-Pad12)">
+    <net code="61" name="unconnected-(U4-V+-Pad12)">
       <node ref="U4" pin="12" pinfunction="V+" pintype="passive+no_connect"/>
     </net>
-    <net code="61" name="unconnected-(U4-VCC-Pad11)">
+    <net code="62" name="unconnected-(U4-VCC-Pad11)">
       <node ref="U4" pin="11" pinfunction="VCC" pintype="power_in+no_connect"/>
     </net>
   </nets>
