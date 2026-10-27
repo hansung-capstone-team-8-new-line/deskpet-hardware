@@ -8,6 +8,7 @@
 | --- | --- | --- |
 | [kicad-wiring/](kicad-wiring/README.md) | KiCad 회로도·넷리스트·BOM·배선 작업표, 생성·ERC·넷리스트 검증 도구 | rev C 전체 재생성(2026-10-27): 서보 전원 스위치 SW1 반영, ERC 오류 0·경고 0, 넷 17개 대조 통과, 틀린 회로 7종 검출, 작업표 19행 일치 |
 | [assembly-figures/](assembly-figures/README.md) | 조립 설명서 그림 15장과 케이스 배치 3면도 생성기. 케이스 계획 치수 표(`CASE`)를 한 곳에서 관리 | rev C 계획안 204 × 122 × 150 mm (LCD 실측 후 확정) |
+| [case-3d/](case-3d/README.md) | 케이스 3D 모델(build123d): 출력물 P1~P7 STL·조립 STEP, 실제 부품·배선 더미와 겹침·냉각·귀 회전·트레이 통로·출력 범위 자동 검사 | rev C 계획 치수로 모든 검사 통과. `[추정]` 치수는 부품 도착 후 실측해 고침 |
 
 ## 다시 만들기
 
