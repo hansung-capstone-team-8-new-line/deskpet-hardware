@@ -102,6 +102,7 @@ L_CAP = use_lib("Device", "C_Polarized")
 L_SPK = use_lib("Device", "Speaker")
 L_JP = use_lib("Connector_Generic", "Conn_01x02")
 L_FLAG = use_lib("power", "PWR_FLAG")
+L_SW = use_lib("Switch", "SW_SPST")
 
 # ref, lib_id, value, (gx, gy), footprint-less
 PARTS = {
@@ -116,8 +117,9 @@ PARTS = {
     "JP1": (L_JP, "OE↔GND 점퍼선", (106, 58)),
     "M1": (L_SERVO, "SG90 호환 왼쪽 귀", (110, 72)),
     "M2": (L_SERVO, "SG90 호환 오른쪽 귀", (110, 80)),
-    "PS2": (L_PS2, "5V 4A 어댑터(서보 전용)", (14, 92)),
-    "J3": (L_JACK, "DC 클립 터미널 암 TC5521F", (38, 92)),
+    "PS2": (L_PS2, "5V 4A 어댑터(서보 전용)", (10, 92)),
+    "SW1": (L_SW, "서보 전원 스위치 연장선 MT202", (26, 86)),
+    "J3": (L_JACK, "DC 클립 터미널 암 TC5521F", (42, 92)),
     "F1": (L_FUSE, "MINI 퓨즈 3A + 인라인 홀더 BE151", (58, 92)),
     "C1": (L_CAP, "1000µF 전해 (PCA9685 보드 내장)", (76, 92)),
     "#FLG01": (L_FLAG, "PWR_FLAG", (12, 52)),
@@ -134,7 +136,8 @@ NETS = {
     "PCA_OE": [("U4", "8"), ("JP1", "1")],
     "SERVO_L_PWM": [("U4", "15"), ("M1", "1")],
     "SERVO_R_PWM": [("U4", "18"), ("M2", "1")],
-    "+5V_RAW": [("PS2", "1"), ("J3", "1"), ("J3", "3"), ("F1", "1")],
+    "+5V_ADP": [("PS2", "1"), ("SW1", "1")],
+    "+5V_RAW": [("SW1", "2"), ("J3", "1"), ("J3", "3"), ("F1", "1")],
     "+5V_SERVO": [("F1", "2"), ("C1", "1"), ("U4", "13"), ("U4", "16"), ("U4", "19"), ("M1", "2"), ("M2", "2"), ("#FLG02", "1")],
     "DC_JETSON": [("PS1", "1"), ("U1", "1")],
     "DP_LINK": [("U1", "2"), ("A1", "1")],
@@ -155,6 +158,8 @@ elif MUT == "fuse_bypassed":
     NETS["+5V_RAW"].append(("U4", "13")); NETS["+5V_SERVO"].remove(("U4", "13"))
 elif MUT == "header_vplus_used":
     NETS["+5V_SERVO"].append(("U4", "12"))
+elif MUT == "switch_bypassed":
+    NETS["+5V_RAW"] = [("PS2", "1")] + NETS["+5V_RAW"]; NETS["+5V_ADP"] = [("SW1", "1")]
 elif MUT == "no_common_gnd":
     NETS["GND"].remove(("J1", "6")); NETS["JETSON_GND_ONLY"] = [("J1", "6")]
 # 의도적으로 비워 두는 핀 (No Connect)
@@ -171,7 +176,9 @@ def sym_instance(ref, lid, value, gx, gy):
     if lid in BOXTOP:                       # 직접 만든 상자: 위쪽에 부품 이름
         top = y - BOXTOP[lid]
         rx, ry, vx, vy, just = x, top - 3.6, x, top - 1.2, ""
-    else:                                   # 라이브러리 심볼: 오른쪽에 이름
+    elif lid == L_SW:                       # 가로 스위치: 양옆 라벨을 피해 위·아래에 이름
+        rx, ry, vx, vy, just = x, y - 3.0, x, y + 3.2, ""
+    else:                                  # 라이브러리 심볼: 오른쪽에 이름
         rx, ry, vx, vy, just = x + 3.2 * G, y - 1.0, x + 3.2 * G, y + 1.6, " (justify left)"
     items.append(
         f'(symbol (lib_id {q(lid)}) (at {x:.2f} {y:.2f} 0) (unit 1) (in_bom {"no" if virt else "yes"}) (on_board yes) (dnp no) (uuid {U()})\n'
@@ -220,18 +227,18 @@ for ref, num in NC - {m for v in NETS.values() for m in v}:
     items.append(f'(no_connect (at {x:.2f} {y:.2f}) (uuid {U()}))')
 
 # ------------------------------------------------------------------ 주석
-text("DeskPet 배선 회로도 — 2026-10-16 발주품 기준 (rev B, 2026-10-25)", 4, 3, 3.0, True)
+text("DeskPet 배선 회로도 — 2026-10-26 재구매 계획 기준 (rev C, 2026-10-27)", 4, 3, 3.0, True)
 text("같은 이름의 라벨끼리 연결된다. X 표시 핀에는 아무것도 연결하지 않는다.", 4, 6.2, 1.8)
 notes = [
     "배선 규칙 (회로가 망가지지 않게)",
     "1. J1 번호 = Jetson 40핀 물리 번호. 분배보드의 라즈베리파이 이름(GPIO2 등)은 무시.",
     "2. PCA9685 VCC는 J1-1(3.3V)에만. Jetson 5V 핀(2·4)은 어디에도 연결하지 않는다.",
-    "3. 서보 전기(+5V_SERVO)는 5V 4A 어댑터 → DC 클립 터미널 → 3A 퓨즈 → PCA9685 나사 단자로만.",
+    "3. 서보 전기(+5V_SERVO)는 5V 4A 어댑터 → 스위치 SW1 → DC 클립 터미널 → 3A 퓨즈 → PCA9685 나사 단자로만.",
     "4. PCA9685 헤더의 V+ 핀(6·12)은 연결 금지. Jetson과 서보 전원은 GND만 공유한다.",
     "5. OE는 오른쪽 헤더에서 GND와 점퍼(JP1) → 출력 항상 활성. 끄기는 프로그램이 담당.",
-    "6. C1은 극성 주의: + = 긴 다리 = +5V_SERVO, − = 띠 = GND. 정격 16V ≥ 5V.",
+    "6. C1(PCA9685 내장)은 극성 확인: + = +5V_SERVO, − = 띠 = GND. 없으면 1000µF 16V 추가.",
     "7. 꽂기 전 멀티미터: 클립 터미널 +/− 확인, +5V_RAW·+5V_SERVO·+3V3↔GND 단락 없음.",
-    "8. 연결·분리는 모든 전원을 끈 상태에서만. 켜는 순서: Jetson → 프로그램 → 서보 5V.",
+    "8. 연결·분리는 모든 전원을 끈 상태에서만. 켜는 순서: Jetson → 프로그램 → SW1 ON. 이상 시 SW1 OFF.",
     "",
     "전류·정격 점검",
     "· SG90 2개 동시 정지(스톨) 합계 약 1.5 A 이하 < 퓨즈 3 A < 어댑터 4 A",
@@ -244,7 +251,7 @@ for i, s in enumerate(notes):
 
 # ------------------------------------------------------------------ 파일 쓰기
 sch = (f'(kicad_sch (version 20230121) (generator eeschema)\n(uuid {ROOT})\n(paper "A3")\n'
-       f'(title_block (title "DeskPet wiring schematic - ordered parts") (date "2026-10-25") (rev "B") '
+       f'(title_block (title "DeskPet wiring schematic - rev C re-purchase") (date "2026-10-27") (rev "C") '
        f'(company "Hansung capstone team 8") (comment 1 "Jetson Orin Nano + PCA9685 + SG90 x2 + ReSpeaker Lite + 7in touch LCD (C) (rev C)"))\n'
        f'(lib_symbols\n' + "\n".join(LIBSYMS.values()) + '\n)\n' + "\n".join(items) +
        f'\n(sheet_instances (path "/" (page "1")))\n)\n')
