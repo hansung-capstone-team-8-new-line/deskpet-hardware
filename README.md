@@ -25,7 +25,7 @@ cd deskpet-hardware
 
 | 작업 | 원본 파일 |
 | --- | --- |
-| 표정·눈·입·한글 수정 | [display.cpp](src/display.cpp) |
+| 표정·눈·입·한글 수정 | [display.cpp](src/display.cpp), 도트 표정 시안 [설명](docs/face-catalog.md)·[일람 페이지](docs/face-catalog/index.html) |
 | 입력 필드·Swift 타입 확인 | [Contracts.swift](swift/Sources/DeskPetHardware/Contracts.swift) |
 | Swift에서 화면·음성·귀 호출 | [Adapters.swift](swift/Sources/DeskPetHardware/Adapters.swift) |
 | 전체 호출 흐름 예제 | [Swift 데모](swift/Sources/DeskPetHardwareDemo/main.swift) |
