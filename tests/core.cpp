@@ -27,7 +27,11 @@ int main() {
   expectError([]{ pwmTicks(999); }, "MOTION_RANGE");
   Config c; c.socketPath = "/tmp/test.sock"; c.validate(); c.right.channel = c.left.channel;
   expectError([&]{ c.validate(); }, "CONFIG_ERROR");
-  c.right.channel = 1; std::atomic_bool cancel{false};
+  c.right.channel = 1; c.dotSize = 3;
+  expectError([&]{ c.validate(); }, "CONFIG_ERROR");
+  c.dotSize = 8; c.mouth = "wide";
+  expectError([&]{ c.validate(); }, "CONFIG_ERROR");
+  c.mouth = "speaking"; c.validate(); std::atomic_bool cancel{false};
   auto output = makeOutput(c, Format{}); output->write(Bytes(640, 0), cancel);
   cancel = true; expectError([&]{ output->drain(cancel); }, "CANCELLED"); output->drop();
 #ifdef DESKPET_LINUX

@@ -107,7 +107,7 @@ code.i { font-family: var(--font-mono); font-size: .9em; }
 <div class="wrap">
   <header>
     <h1>DeskPet 표정 일람</h1>
-    <p class="lede">위키의 화면 명세(<code class="i">activity</code> · <code class="i">emotion</code> · <code class="i">actionStatus</code>)에서 나오는 모든 얼굴을 도트 LCD로 미리 그려 본 시안입니다. 기본은 눈만, 고양이 귀에 맞춰 수염을 더했습니다. 타일을 누르면 위 화면에서 크게 볼 수 있습니다.</p>
+    <p class="lede">위키의 화면 명세(<code class="i">activity</code> · <code class="i">emotion</code> · <code class="i">actionStatus</code>)에서 나오는 모든 얼굴을 도트 LCD로 미리 그려 본 페이지입니다. 같은 표정이 하드웨어 렌더러(display.cpp)에 들어가 있습니다. 기본은 눈만, 고양이 귀에 맞춰 수염을 더했습니다. 타일을 누르면 위 화면에서 크게 볼 수 있습니다.</p>
     <div class="spec-line">
       <span>7" LCD (C) 1024×600</span>
       <span id="dotInfo">도트 8px · 128×75</span>
@@ -160,14 +160,13 @@ code.i { font-family: var(--font-mono); font-size: .9em; }
   <div id="catalog" class="wrap" style="padding:0;gap:40px"></div>
 
   <section class="diff">
-    <h2>지금 렌더러(display.cpp)와 다른 점</h2>
+    <h2>렌더러 기본값과 규칙</h2>
     <ul>
-      <li>현재는 SDL로 매끈한 타원을 그립니다. 시안은 같은 도형을 도트 격자로 샘플링하고, 가장자리 도트를 작고 흐리게 찍어 부드럽게 보이게 합니다. C++에서도 도트마다 거리 함수를 계산하는 같은 방식으로 옮길 수 있습니다.</li>
-      <li>기쁜 눈은 현재 높이만 줄인 납작한 타원(0.07H)입니다. 시안은 <code class="i">^ ^</code> 모양 호로 바꿨습니다.</li>
-      <li>현재는 idle 미소·speaking 입·sad 처진 입을 모두 그립니다. 시안 기본값은 말할 때만 ω 입을 보이고, “입 → 명세대로”로 바꾸면 현재 동작과 같아집니다.</li>
-      <li>수염, 눈 반짝임 점, 땀방울(unknown), 반짝이(succeeded)는 명세에 없는 장식입니다. 모두 기존 값 조합만으로 그리므로 인터페이스를 바꿀 필요는 없습니다.</li>
-      <li>확장 후보 3종은 새 <code class="i">activity</code>/<code class="i">emotion</code> 값을 합의해야 쓸 수 있습니다(명세 Open Questions). 지금 보내면 렌더러가 무시하거나 거절합니다.</li>
-      <li>아래 문구는 실제 패널처럼 글꼴로 그렸습니다. 도트와 글자의 가독성은 LCD 도착 후 실물로 확인해야 합니다.</li>
+      <li>렌더러는 같은 도형을 도트 격자로 샘플링하고, 가장자리 도트를 작고 흐리게 찍어 부드럽게 보이게 합니다. 기본값은 8px 도트(128×75), 동그라미, 수염 보이기, 말할 때만 입, 번짐 켜기입니다.</li>
+      <li>설정은 <code class="i">display.face</code>의 <code class="i">dotSize</code>(4–16), <code class="i">whiskers</code>, <code class="i">mouth</code>(<code class="i">none</code>·<code class="i">speaking</code>·<code class="i">always</code>), <code class="i">glow</code>로 바꿉니다. “입 → 명세대로”가 <code class="i">always</code>입니다.</li>
+      <li>인터페이스는 바뀌지 않았습니다. 화면은 <code class="i">activity</code>·<code class="i">emotion</code>·<code class="i">actionStatus</code>만 보고 얼굴을 고릅니다.</li>
+      <li>쓰다듬기·졸림·놀람은 <code class="i">emotion: petted·sleepy·surprised</code> 확장 값으로 그립니다. 그 밖의 문자열은 neutral처럼 그립니다.</li>
+      <li>아래 문구는 도트가 아니라 글꼴(36px)로 그립니다. 도트와 글자의 가독성은 LCD 도착 후 실물로 확인해야 합니다.</li>
     </ul>
   </section>
 </div>
@@ -349,19 +348,19 @@ code.i { font-family: var(--font-mono); font-size: .9em; }
 
     { group: "proposal", id: "petted", kind: "petted", name: "쓰다듬기", caption: "",
       payload: { activity: "idle", emotion: "petted" },
-      spec: "없음 — 터치 원시 입력만 전달", note: "화면을 만지면 ^ ^ 눈, 볼 터치, 빠르게 씰룩이는 수염. 터치 LCD를 쓰는 김에 넣어 볼 만한 반응입니다." },
+      spec: "확장 값 — 터치했을 때 파이프라인이 보냄", note: "화면을 만지면 ^ ^ 눈, 볼 터치, 빠르게 씰룩이는 수염. 터치 LCD에 맞춘 반응입니다." },
     { group: "proposal", id: "sleepy", kind: "sleepy", name: "졸림", caption: "",
       payload: { activity: "idle", emotion: "sleepy" },
-      spec: "없음", note: "오래 대기하면 눈이 가늘게 감기고 Z가 떠오릅니다. 수염도 내려갑니다." },
+      spec: "확장 값 — 오래 대기할 때", note: "오래 대기하면 눈이 가늘게 감기고 Z가 떠오릅니다. 수염도 내려갑니다." },
     { group: "proposal", id: "surprised", kind: "surprised", name: "놀람", caption: "",
       payload: { activity: "idle", emotion: "surprised" },
-      spec: "없음 — 현재 surprised는 정규화 대상", note: "동그랗게 커진 눈과 o 입, 뻗친 수염. 호출어나 큰 소리에 반응할 때 후보입니다." },
+      spec: "확장 값 — 호출어·큰 소리에 반응할 때", note: "동그랗게 커진 눈과 o 입, 뻗친 수염. 호출어나 큰 소리에 반응할 때 씁니다." },
   ];
   const GROUPS = [
     ["activity", "활동 상태", "emotion은 neutral, 업무 결과 없음. 파이프라인이 대화 단계마다 보내는 기본 얼굴입니다."],
     ["emotion", "감정", "출력 모델이 정하는 emotion 값입니다. 지원 값은 neutral·happy·sad 세 가지입니다."],
     ["result", "업무 결과", "actionStatus를 보낼 때의 얼굴입니다. 명세 권장대로 감정을 함께 맞춰 보냅니다."],
-    ["proposal", "확장 후보", "명세에 없는 표정입니다. 새 값과 렌더러 확장을 팀이 합의해야 쓸 수 있습니다."],
+    ["proposal", "확장 감정", "명세의 세 감정에 더한 하드웨어 확장 값입니다. 출력 모델이 아니라 파이프라인이 터치·장시간 대기·호출어 같은 상황에 맞춰 보냅니다."],
   ];
   FACES.forEach((f, i) => f.phase = i * 1.37);
 
@@ -461,7 +460,7 @@ code.i { font-family: var(--font-mono); font-size: .9em; }
       b.type = "button"; b.className = "tile"; b.id = "tile-" + f.id; b.setAttribute("aria-pressed", "false");
       const code = Object.entries(f.payload).map(([k, v]) => `${k}: ${v}`).join(" · ");
       b.innerHTML = `<div class="lcd"><canvas aria-hidden="true"></canvas></div>
-        <div class="name">${f.name}${gid === "proposal" ? '<span class="badge prop">제안</span>' : ""}</div>
+        <div class="name">${f.name}${gid === "proposal" ? '<span class="badge prop">확장</span>' : ""}</div>
         <code>${code}</code><p class="note">${f.note}</p>`;
       gridEl.appendChild(b);
       const v = makeView(b.querySelector("canvas"), f); io.observe(v.cv);
@@ -476,12 +475,12 @@ code.i { font-family: var(--font-mono); font-size: .9em; }
     tiles.forEach(([g, b]) => b.setAttribute("aria-pressed", String(g === f)));
     $("pName").textContent = f.name;
     const prop = f.group === "proposal";
-    $("pBadge").textContent = prop ? "제안 · 명세 외" : "명세";
+    $("pBadge").textContent = prop ? "하드웨어 확장" : "명세";
     $("pBadge").className = "badge" + (prop ? " prop" : "");
     $("pSpec").textContent = f.spec; $("pNote").textContent = f.note;
     const body = JSON.stringify(f.payload, null, 2);
     $("pPayload").textContent = prop
-      ? "// 새 값 합의 필요 — 지금은 지원하지 않음\n" + body
+      ? "// 하드웨어 확장 값 — 파이프라인이 상황에 맞춰 보냄\n" + body
       : "// HardwareDisplayAdapter.show() 에 넣을 값\n" + body;
     if (innerWidth < 880 && document.activeElement && document.activeElement.classList.contains("tile")) stage.cv.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
   }

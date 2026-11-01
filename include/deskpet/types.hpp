@@ -39,6 +39,9 @@ struct Config {
   std::string i2cDevice, oeMode = "grounded";
   double playbackGain = 0.25;
   int width = 1024, height = 600, rotation = 0, fontSize = 36;
+  int dotSize = 8; // Face dot pitch in px; text screens stay vector.
+  bool whiskers = true, glow = true;
+  std::string mouth = "speaking"; // none | speaking | always
   int address = 0x40, frequency = 50, stepUs = 20;
   int leaseMs = 3000;
   Ear left, right{1};

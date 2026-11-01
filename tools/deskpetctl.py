@@ -151,13 +151,15 @@ class Client:
             with self.lock:
                 self.pending.pop(ident, None)
 
-    def show(self, activity="idle", text=None, status=None, output_id=None, reminder_key=None):
+    def show(self, activity="idle", text=None, status=None, output_id=None, reminder_key=None, emotion=None):
         self.revision += 1
         view = {"displayMode": "text" if text else "face", "activity": activity}
         if text:
             view["displayText"] = text
         if status:
             view["actionStatus"] = status
+        if emotion:
+            view["emotion"] = emotion
         identifiers = {"requestId": "cli-request", "outputId": output_id or str(uuid.uuid4())}
         if reminder_key is not None:
             identifiers["reminderKey"] = reminder_key
@@ -274,6 +276,10 @@ def calibrate(client, config_path):
         client.request("motion.calibration.end")
 
 
+# neutral/happy/sad are the spec values; the rest are hardware extensions (docs/face-catalog.md).
+EMOTIONS = ["neutral", "happy", "sad", "petted", "sleepy", "surprised"]
+
+
 def main():
     parser = argparse.ArgumentParser(description="DeskPet 장치 시험·모의 실행 도구")
     parser.add_argument("--socket", default=default_socket())
@@ -282,6 +288,7 @@ def main():
     face = sub.add_parser("face")
     face.add_argument("--activity", default="idle", choices=["idle", "listening", "processing", "speaking", "awaiting_answer"])
     face.add_argument("--status", choices=["succeeded", "failed", "unknown"])
+    face.add_argument("--emotion", choices=EMOTIONS)
     face.add_argument("--text")
     face.add_argument("--seconds", type=float, default=15)
     face.add_argument("--snapshot")
@@ -304,7 +311,7 @@ def main():
         if args.command == "health":
             print(json.dumps(client.request("health"), ensure_ascii=False, indent=2))
         elif args.command == "face":
-            client.show(args.activity, args.text, args.status)
+            client.show(args.activity, args.text, args.status, emotion=args.emotion)
             if args.snapshot:
                 client.request("display.snapshot", path=str(Path(args.snapshot).resolve()))
             time.sleep(max(0, args.seconds))

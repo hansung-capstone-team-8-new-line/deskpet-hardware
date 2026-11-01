@@ -51,7 +51,7 @@ deskpet-hardware doctor
 1. `audio.captureDevice`·`audio.playbackDevice`: doctor에 나온 USB 카드의 `plughw:CARD=<실제 카드 ID>,DEV=0` 이름. 두 장치를 모두 해당 USB 카드로 지정합니다. 동일 이름의 USB 장치가 여러 개면 장치 식별을 먼저 해결합니다.
 2. `servo.i2cDevice`: 물리 3·5번에 연결된 어댑터의 `/dev/i2c-N`. 번호만 추측하거나 모든 버스에 쓰지 않습니다.
 3. `servo.oeMode`: `grounded`. 예전 `gpioChipLabel`/`gpioLine` 설정은 오류로 거절하므로 기존 설정을 백업한 뒤 새 예제와 수동 병합한다.
-4. `display`: width=1024, height=600, rotation=0, fontSize=36. OS 회전과 중복 적용하지 않는다.
+4. `display`: width=1024, height=600, rotation=0, fontSize=36. OS 회전과 중복 적용하지 않는다. 표정 도트는 `display.face`(기본 dotSize 8, 수염, 말할 때만 입, 번짐)로 조정한다([도트 표정](face-catalog.md)).
 5. `audio.playbackGain`: 0–0.25. ReSpeaker Lite 카드의 입력·출력을 모두 선택하고 낮은 음량부터 확인한다.
 
 앱 내부 디자인 좌표는 기본 1024×600입니다. 실제 화면의 해상도는 Ubuntu 디스플레이 설정에서 먼저 확인합니다. 코드가 시스템 전체의 해상도를 임의로 변경하지 않습니다. 한국어 글꼴은 `fonts-noto-cjk` 패키지를 사용합니다.

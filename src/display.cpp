@@ -1,6 +1,7 @@
 #include "deskpet/display.hpp"
 #include <cmath>
 #include <filesystem>
+#include <functional>
 #include <set>
 #ifdef DESKPET_SDL
 #include <SDL.h>
@@ -8,6 +9,162 @@
 #endif
 
 namespace deskpet {
+#ifdef DESKPET_SDL
+namespace {
+// Faces are signed distance fields in a 1024x600 design space, sampled per dot.
+// The catalog page docs/face-catalog/index.html renders the same parameters.
+constexpr float kPi = 3.14159265f, kDesignW = 1024, kDesignH = 600;
+struct Rgb { uint8_t r, g, b; };
+constexpr Rgb kMint{112, 238, 215}, kPink{241, 142, 152}, kYellow{247, 199, 106}, kSpark{232, 246, 250};
+struct Layer {
+  Rgb color; float alpha, x0, y0, x1, y1;
+  std::function<float(float, float)> distance;
+};
+struct Face { std::vector<Layer> layers; std::string label; };
+
+float sdBox(float x, float y, float cx, float cy, float hw, float hh, float r) {
+  const float qx = std::abs(x - cx) - hw + r, qy = std::abs(y - cy) - hh + r;
+  return std::hypot(std::max(qx, 0.0f), std::max(qy, 0.0f)) + std::min(std::max(qx, qy), 0.0f) - r;
+}
+float sdCircle(float x, float y, float cx, float cy, float r) { return std::hypot(x - cx, y - cy) - r; }
+float sdSegment(float x, float y, float ax, float ay, float bx, float by) {
+  const float px = x - ax, py = y - ay, vx = bx - ax, vy = by - ay;
+  const float h = std::clamp((px * vx + py * vy) / (vx * vx + vy * vy), 0.0f, 1.0f);
+  return std::hypot(px - vx * h, py - vy * h);
+}
+float sdArc(float x, float y, float cx, float cy, float r, float a0, float a1, float th) {
+  const float dx = x - cx, dy = y - cy, angle = std::atan2(dy, dx);
+  if (angle >= a0 && angle <= a1) return std::abs(std::hypot(dx, dy) - r) - th;
+  return std::min(std::hypot(x - cx - r * std::cos(a0), y - cy - r * std::sin(a0)),
+                  std::hypot(x - cx - r * std::cos(a1), y - cy - r * std::sin(a1))) - th;
+}
+constexpr float kUp0 = -kPi + 0.5f, kUp1 = -0.5f, kDown0 = 0.35f, kDown1 = kPi - 0.35f;
+
+Layer arc(float cx, float cy, float r, float th, float a0, float a1, Rgb c, float alpha = 1) {
+  return {c, alpha, cx - r - th, cy - r - th, cx + r + th, cy + r + th,
+          [=](float x, float y) { return sdArc(x, y, cx, cy, r, a0, a1, th); }};
+}
+Layer segment(float ax, float ay, float bx, float by, float th, Rgb c, float alpha) {
+  return {c, alpha, std::min(ax, bx) - th, std::min(ay, by) - th, std::max(ax, bx) + th, std::max(ay, by) + th,
+          [=](float x, float y) { return sdSegment(x, y, ax, ay, bx, by) - th; }};
+}
+Layer eye(float cx, float cy, float hw, float hh, Rgb c, bool glint, bool sad, float side) {
+  const float r = std::min(hw, hh);
+  // Sad eyes drop toward the outside: cut the top with a slanted half-plane.
+  const float ix = cx - side * hw * 1.15f, iy = cy - hh * 0.8f, ox = cx + side * hw * 1.15f, oy = cy - hh * 0.05f;
+  const float len = std::hypot(ox - ix, oy - iy);
+  float nx = (oy - iy) / len, ny = -(ox - ix) / len;
+  if (ny > 0) { nx = -nx; ny = -ny; }
+  const bool shine = glint && hh > hw * 0.55f;
+  const float gx = sad ? cx - side * hw * 0.25f : cx + hw * 0.32f, gy = sad ? cy + hh * 0.3f : cy - hh * 0.42f, gr = r * 0.3f;
+  return {c, 1, cx - hw, cy - hh, cx + hw, cy + hh, [=](float x, float y) {
+    float d = sdBox(x, y, cx, cy, hw, hh, r);
+    if (sad) d = std::max(d, (x - ix) * nx + (y - iy) * ny);
+    if (shine) d = std::max(d, -sdCircle(x, y, gx, gy, gr));
+    return d;
+  }};
+}
+float glance(float v) { return (v < 0 ? -1.0f : 1.0f) * std::clamp((std::abs(v) - 0.75f) / 0.2f, 0.0f, 1.0f); }
+
+Face buildFace(const std::string& activity, const std::string& emotion, const std::string& status,
+               float t, bool whiskers, const std::string& mouthMode) {
+  Face face;
+  auto& L = face.layers;
+  const bool sad = emotion == "sad" || status == "failed";
+  const bool petted = emotion == "petted", sleepy = emotion == "sleepy", surprised = emotion == "surprised";
+  const bool happy = petted || emotion == "happy" || status == "succeeded";
+  const Rgb col = sad ? kPink : status == "unknown" ? kYellow : kMint;
+  float hw = 51, hh = 72, cy = 240, lookX = 0, lookY = 0, raiseRight = 0;
+  float bob = std::sin(t * 1.6f) * 3, lift = 0, twitch = std::sin(t * 1.3f) * 1.5f;
+  bool glint = true;
+  const float phase = std::fmod(t + 1.0f, 5.1f);
+  float blink = phase < 0.2f ? std::max(0.07f, std::abs(std::cos(phase / 0.2f * kPi))) : 1;
+
+  if (activity == "idle") lookX = 26 * glance(std::sin(t * 0.37f));
+  if (activity == "listening") { hh *= 1.15f; hw *= 1.08f; lift = -12; bob = std::sin(t * 2.4f) * 2; }
+  if (activity == "processing") { hh *= 0.6f; lookX = std::sin(t * 2.2f) * 46; glint = false; twitch = std::sin(t * 9) * 4; }
+  if (activity == "speaking") bob = -std::abs(std::sin(t * 6.5f)) * 6;
+  if (activity == "awaiting_answer") { raiseRight = -18; lookX = 12; lookY = -8; twitch = std::sin(t * 2.5f) * 4; }
+  if (sad) {
+    hh *= 0.9f; cy += 10; lift += 24; bob *= 0.5f;
+    blink = phase < 0.3f ? std::max(0.07f, std::abs(std::cos(phase / 0.3f * kPi))) : 1;
+  }
+  if (status == "unknown") { lookX = 26 + std::sin(t * 1.1f) * 6; lookY = -12; }
+  if (petted) { twitch = std::sin(t * 14) * 6; lift = -6; }
+  if (surprised) lift = -22;
+  if (sleepy) { lift = 14; bob = std::sin(t * 0.9f) * 5; }
+
+  for (const float side : {-1.0f, 1.0f}) {
+    const float cx = (side < 0 ? 348.0f : 676.0f) + lookX, ey = cy + bob + lookY + (side > 0 ? raiseRight : 0);
+    if (happy && activity != "processing") {
+      const float hop = -std::abs(std::sin(t * (petted ? 5.0f : 3.0f))) * 6;
+      L.push_back(arc(cx, ey + 26 + hop, hw * 1.1f, 11, kUp0, kUp1, col));
+    } else if (surprised) {
+      const float s = 62 * (1 + std::max(0.0f, std::sin(t * 4)) * 0.04f);
+      L.push_back(eye(cx, ey - 6, s, s * blink, col, true, false, side));
+    } else if (sleepy) {
+      L.push_back(eye(cx, ey + 34, hw * 1.05f, 7 + std::max(0.0f, std::sin(t * 0.7f + 1)) * 9, col, false, false, side));
+    } else {
+      L.push_back(eye(cx, ey, hw, hh * blink, col, glint && blink > 0.6f, sad, side));
+    }
+  }
+
+  if (whiskers) for (const float side : {-1.0f, 1.0f}) for (const float k : {-1.0f, 0.0f, 1.0f}) {
+    const float ix = 512 + side * 252, iy = 388 + k * 24 + lift * 0.25f;
+    const float wobble = twitch * (k == 0 ? 1 : -1) * side * 0.5f + twitch * 0.5f;
+    L.push_back(segment(ix, iy, 512 + side * 432, iy + k * 28 + lift + wobble, 3.2f, col, 0.55f));
+  }
+
+  const auto mouth = [&](float open) {
+    L.push_back(arc(497, 394, 15, 3.6f, kDown0, kDown1, col));
+    L.push_back(arc(527, 394, 15, 3.6f, kDown0, kDown1, col));
+    if (open > 0.12f) {
+      const float my = 412 + open * 7, mh = 4 + open * 9;
+      L.push_back({col, 0.9f, 495, 404, 529, 440, [=](float x, float y) { return sdBox(x, y, 512, my, 12, mh, std::min(mh, 12.0f)); }});
+    }
+  };
+  if (mouthMode != "none") {
+    if (surprised) L.push_back(arc(512, 412, 13, 4, -kPi, kPi, col));
+    else if (activity == "speaking")
+      mouth(std::clamp(0.5f + 0.5f * (std::sin(t * 10.5f) * 0.7f + std::sin(t * 6.3f + 1) * 0.5f), 0.0f, 1.0f));
+    else if (petted) mouth(0);
+    else if (mouthMode == "always") {
+      if (sad) L.push_back(arc(512, 428, 20, 3.6f, kUp0, kUp1, col));
+      else if (!sleepy) mouth(0);
+    }
+  }
+
+  if (status == "succeeded") {
+    const float spots[3][3] = {{792, 140, 0}, {852, 205, 1.7f}, {210, 160, 3.1f}};
+    for (const auto& p : spots) {
+      const float s = 6 + 12 * std::max(0.0f, std::sin(t * 2.6f + p[2])), x = p[0], y = p[1];
+      if (s > 7) L.push_back({kSpark, 1, x - s, y - s, x + s, y + s, [=](float px, float py) {
+        return std::min(sdBox(px, py, x, y, s * 0.17f, s, s * 0.17f), sdBox(px, py, x, y, s, s * 0.17f, s * 0.17f)); }});
+    }
+  }
+  if (status == "unknown") {
+    const float x = 430, y = 150 + std::fmod(t * 18, 30.0f);
+    L.push_back({kSpark, 0.85f, x - 12, y - 22, x + 12, y + 18, [=](float px, float py) {
+      return std::min(sdCircle(px, py, x, y + 4, 10), sdSegment(px, py, x, y - 14, x, y + 2) - 3.5f - (py - y + 14) * 0.2f); }});
+  }
+  if (petted) for (const float x : {320.0f, 704.0f})
+    L.push_back({kPink, 0.45f, x - 30, 308, x + 30, 368, [=](float px, float py) { return sdCircle(px, py, x, 338, 30); }});
+  if (sleepy) for (int i = 0; i < 2; ++i) {
+    const float q = std::fmod(t * 0.35f + i * 0.5f, 1.0f), x = 760 + q * 70 + i * 20, y = 210 - q * 110, h = (22 + q * 18 + i * 6) / 2;
+    L.push_back({col, std::sin(q * kPi), x - h - 4, y - h - 4, x + h + 4, y + h + 4, [=](float px, float py) {
+      return std::min({sdSegment(px, py, x - h, y - h, x + h, y - h), sdSegment(px, py, x + h, y - h, x - h, y + h),
+                       sdSegment(px, py, x - h, y + h, x + h, y + h)}) - 3.5f; }});
+  }
+
+  if (activity == "listening") face.label = "듣고 있어요";
+  if (activity == "processing") face.label = "생각하고 있어요";
+  if (activity == "awaiting_answer") face.label = "대답을 기다려요";
+  if (status == "unknown") face.label = "결과를 확인해야 해요";
+  return face;
+}
+}
+#endif
+
 struct Display::Impl {
   Config config;
   Json view = {{"displayMode", "face"}, {"activity", "idle"}};
@@ -48,10 +205,18 @@ struct Display::Impl {
   SDL_Renderer* renderer = nullptr;
   SDL_Texture* canvas = nullptr;
   SDL_Texture* presented = nullptr;
+  SDL_Texture* dot = nullptr;    // white anti-aliased disc, tinted per dot
+  SDL_Texture* unlit = nullptr;  // background with the dim dot grid
+  SDL_Texture* glow = nullptr;   // half-resolution lit dots, stretched for bloom
   TTF_Font* font = nullptr;
   bool sdl = false, ttf = false;
   std::vector<std::string> lines;
+  std::vector<float> level;
+  std::vector<Rgb> tint;
   ~Impl() {
+    if (dot) SDL_DestroyTexture(dot);
+    if (unlit) SDL_DestroyTexture(unlit);
+    if (glow) SDL_DestroyTexture(glow);
     if (font) TTF_CloseFont(font);
     if (canvas) SDL_DestroyTexture(canvas);
     if (presented) SDL_DestroyTexture(presented);
@@ -61,10 +226,84 @@ struct Display::Impl {
     if (sdl) SDL_QuitSubSystem(SDL_INIT_VIDEO);
   }
   void color(int r, int g, int b) { SDL_SetRenderDrawColor(renderer, uint8_t(r), uint8_t(g), uint8_t(b), 255); }
-  void ellipse(float cx, float cy, float rx, float ry) {
-    for (int y = -int(ry); y <= int(ry); ++y) {
-      float x = rx * std::sqrt(std::max(0.0f, 1.0f - float(y * y) / (ry * ry)));
-      SDL_RenderDrawLineF(renderer, cx - x, cy + y, cx + x, cy + y);
+  struct Grid { int cols, rows; float cell, top; };
+  Grid grid() const {
+    const int cols = std::max(1, int(std::lround(float(config.width) / float(config.dotSize))));
+    const float cell = float(config.width) / float(cols);
+    const int rows = int(float(config.height) / cell);
+    return {cols, rows, cell, (float(config.height) - float(rows) * cell) / 2};
+  }
+  void stamp(float cx, float cy, float r, Rgb c, uint8_t alpha) {
+    SDL_SetTextureColorMod(dot, c.r, c.g, c.b); SDL_SetTextureAlphaMod(dot, alpha);
+    SDL_FRect dst{cx - r, cy - r, 2 * r, 2 * r};
+    SDL_RenderCopyF(renderer, dot, nullptr, &dst);
+  }
+  void prepareDots(const Grid& g) {
+    constexpr int size = 64;
+    SDL_Surface* s = SDL_CreateRGBSurfaceWithFormat(0, size, size, 32, SDL_PIXELFORMAT_ARGB8888);
+    if (!s) throw Error("DISPLAY_ERROR", SDL_GetError());
+    for (int y = 0; y < size; ++y) for (int x = 0; x < size; ++x) {
+      const float d = std::hypot(x + 0.5f - size / 2.0f, y + 0.5f - size / 2.0f);
+      const auto a = uint32_t(std::clamp(size / 2.0f - d + 0.5f, 0.0f, 1.0f) * 255);
+      static_cast<uint32_t*>(s->pixels)[y * s->pitch / 4 + x] = (a << 24) | 0xffffff;
+    }
+    dot = SDL_CreateTextureFromSurface(renderer, s); SDL_FreeSurface(s);
+    if (!dot) throw Error("DISPLAY_ERROR", SDL_GetError());
+    SDL_SetTextureBlendMode(dot, SDL_BLENDMODE_BLEND);
+    unlit = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, config.width, config.height);
+    if (!unlit || SDL_SetRenderTarget(renderer, unlit) < 0) throw Error("DISPLAY_ERROR", SDL_GetError());
+    color(10, 19, 29); SDL_RenderClear(renderer);
+    for (int j = 0; j < g.rows; ++j) for (int i = 0; i < g.cols; ++i)
+      stamp((i + 0.5f) * g.cell, g.top + (j + 0.5f) * g.cell, g.cell * 0.4f, {60, 92, 112}, 46);
+    glow = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, (g.cols + 1) / 2, (g.rows + 1) / 2);
+    if (!glow) throw Error("DISPLAY_ERROR", SDL_GetError());
+    SDL_SetTextureBlendMode(glow, SDL_BLENDMODE_BLEND);
+    SDL_SetTextureScaleMode(glow, SDL_ScaleModeLinear);
+  }
+  // Sample each layer at dot centres; edge dots get smaller and dimmer instead of aliasing.
+  void drawFace(const Face& face) {
+    const Grid g = grid();
+    const size_t n = size_t(g.cols) * size_t(g.rows);
+    level.assign(n, 0); tint.resize(n);
+    const float sx = kDesignW / float(config.width), sy = kDesignH / float(config.height), soft = g.cell * sx * 1.35f;
+    for (const auto& layer : face.layers) {
+      const int i0 = std::max(0, int(layer.x0 / sx / g.cell) - 2), i1 = std::min(g.cols - 1, int(layer.x1 / sx / g.cell) + 2);
+      const int j0 = std::max(0, int((layer.y0 / sy - g.top) / g.cell) - 2), j1 = std::min(g.rows - 1, int((layer.y1 / sy - g.top) / g.cell) + 2);
+      for (int j = j0; j <= j1; ++j) {
+        const float y = (g.top + (j + 0.5f) * g.cell) * sy;
+        for (int i = i0; i <= i1; ++i) {
+          float c = 0.5f - layer.distance((i + 0.5f) * g.cell * sx, y) / soft;
+          if (c <= 0) continue;
+          c = std::min(c, 1.0f) * layer.alpha;
+          const size_t k = size_t(j) * size_t(g.cols) + size_t(i);
+          if (c > level[k]) { level[k] = c; tint[k] = layer.color; }
+        }
+      }
+    }
+    SDL_RenderCopy(renderer, unlit, nullptr, nullptr);
+    if (config.glow) {
+      int gw = 0, gh = 0, pitch = 0; void* pixels = nullptr;
+      SDL_QueryTexture(glow, nullptr, nullptr, &gw, &gh);
+      if (SDL_LockTexture(glow, nullptr, &pixels, &pitch) == 0) {
+        for (int y = 0; y < gh; ++y) for (int x = 0; x < gw; ++x) {
+          float best = 0; Rgb c{0, 0, 0};
+          for (int j = 2 * y; j < std::min(2 * y + 2, g.rows); ++j) for (int i = 2 * x; i < std::min(2 * x + 2, g.cols); ++i) {
+            const size_t k = size_t(j) * size_t(g.cols) + size_t(i);
+            if (level[k] > best) { best = level[k]; c = tint[k]; }
+          }
+          static_cast<uint32_t*>(pixels)[y * pitch / 4 + x] = (uint32_t(best * 255) << 24) | (c.r << 16) | (c.g << 8) | c.b;
+        }
+        SDL_UnlockTexture(glow);
+        SDL_SetTextureAlphaMod(glow, 140);
+        SDL_FRect dst{0, g.top, float(gw * 2) * g.cell, float(gh * 2) * g.cell};
+        SDL_RenderCopyF(renderer, glow, nullptr, &dst);
+      }
+    }
+    for (size_t k = 0; k < n; ++k) {
+      if (level[k] < 0.06f) continue;
+      const float f = float(std::min(7, int(level[k] * 8)) + 1) / 8;
+      const int i = int(k % size_t(g.cols)), j = int(k / size_t(g.cols));
+      stamp((i + 0.5f) * g.cell, g.top + (j + 0.5f) * g.cell, g.cell * 0.44f * (0.45f + 0.55f * f), tint[k], uint8_t((0.3f + 0.7f * f) * 255));
     }
   }
   void text(const std::string& s, int x, int y) {
@@ -96,6 +335,7 @@ struct Display::Impl {
     return result;
   }
   void draw() {
+    if (!dot) prepareDots(grid());
     if (SDL_SetRenderTarget(renderer, canvas) < 0) throw Error("DISPLAY_ERROR", SDL_GetError());
     color(10, 19, 29); SDL_RenderClear(renderer);
     if (view.value("displayMode", "face") == "text") {
@@ -103,42 +343,13 @@ struct Display::Impl {
       int y = 130;
       for (const auto& line : lines) { text(line, 80, y); y += TTF_FontLineSkip(font); }
     } else {
-      const float w = float(config.width), h = float(config.height);
-      const auto activity = view.value("activity", "idle");
-      const auto status = view.value("actionStatus", "");
-      const auto emotion = view.value("emotion", "neutral");
       const double seconds = std::chrono::duration<double>(Clock::now() - start).count();
-      const float blink = std::fmod(seconds + 1.0, 5.1) < 0.14 ? 0.1f : 1.0f;
-      const bool sad = status == "failed" || emotion == "sad";
-      const bool happy = status == "succeeded" || emotion == "happy";
-      if (sad) color(241, 142, 152);
-      else if (status == "unknown") color(247, 199, 106);
-      else color(112, 238, 215);
-      float eyeHeight = h * (happy ? 0.07f : 0.12f) * blink;
-      if (activity == "listening") eyeHeight *= 1.15f;
-      if (activity == "processing") eyeHeight *= 0.6f;
-      float offset = activity == "processing" ? float(std::sin(seconds * 2) * 18) : 0;
-      ellipse(w * 0.34f + offset, h * 0.40f, w * 0.05f, eyeHeight);
-      ellipse(w * 0.66f + offset, h * (activity == "awaiting_answer" ? 0.37f : 0.40f), w * 0.05f, eyeHeight);
-      if (activity == "speaking") ellipse(w * 0.5f, h * 0.67f, w * 0.034f, h * float(0.025 + 0.035 * (1 + std::sin(seconds * 12))));
-      else {
-        for (int t = -3; t <= 3; ++t) {
-          float previousX = w * 0.43f, previousY = h * 0.64f;
-          for (int i = 1; i <= 50; ++i) {
-            float x = w * (0.43f + 0.14f * float(i) / 50);
-            float y = h * (0.64f + (sad ? -0.035f : 0.035f) * std::sin(float(i) / 50 * 3.14159f));
-            SDL_RenderDrawLineF(renderer, previousX, previousY + t, x, y + t); previousX = x; previousY = y;
-          }
-        }
-      }
-      std::string label = "";
-      if (activity == "listening") label = "듣고 있어요";
-      if (activity == "processing") label = "생각하고 있어요";
-      if (activity == "awaiting_answer") label = "대답을 기다려요";
-      if (status == "unknown") label = "결과를 확인해야 해요";
-      if (!label.empty() && font) {
-        int tw = 0; TTF_SizeUTF8(font, label.c_str(), &tw, nullptr);
-        text(label, (config.width - tw) / 2, int(h * 0.83f));
+      const Face face = buildFace(view.value("activity", "idle"), view.value("emotion", "neutral"), view.value("actionStatus", ""),
+                                  float(seconds), config.whiskers, config.mouth);
+      drawFace(face);
+      if (!face.label.empty() && font) {
+        int tw = 0; TTF_SizeUTF8(font, face.label.c_str(), &tw, nullptr);
+        text(face.label, (config.width - tw) / 2, int(float(config.height) * 0.83f));
       }
     }
     if (SDL_SetRenderTarget(renderer, presented) < 0) throw Error("DISPLAY_ERROR", SDL_GetError());
