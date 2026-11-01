@@ -27,10 +27,12 @@ python3 tools/deskpetctl.py face --activity speaking --status succeeded --second
 python3 tools/deskpetctl.py face --activity speaking --status failed --seconds 2
 python3 tools/deskpetctl.py face --status unknown --seconds 2
 python3 tools/deskpetctl.py face --activity awaiting_answer --seconds 2
+python3 tools/deskpetctl.py face --emotion happy --seconds 2
+python3 tools/deskpetctl.py face --emotion sleepy --seconds 2
 python3 tools/deskpetctl.py face --text '음성 대신 이 문구를 보여줘요.' --seconds 2
 ```
 
-`face --activity speaking`은 입만 움직이는 화면 시험입니다. 실제 음성 재생은 `play`나 Swift 스피커 어댑터로 별도 실행합니다. CLI의 `face` 명령에는 `--emotion` 인자가 없으며 감정을 직접 시험하려면 Swift `OutputEvent`나 프로토콜의 `view.emotion`을 사용합니다.
+`face --activity speaking`은 입만 움직이는 화면 시험입니다. 실제 음성 재생은 `play`나 Swift 스피커 어댑터로 별도 실행합니다. 감정은 `--emotion`(neutral·happy·sad와 확장 값 petted·sleepy·surprised)으로 시험합니다. 표정 목록과 도트 설정은 [도트 표정](face-catalog.md)을 참고하세요.
 
 ## 처음 실행할 때 흔한 문제
 

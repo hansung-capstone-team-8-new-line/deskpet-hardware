@@ -8,7 +8,8 @@
     "height": 600,
     "rotation": 0,
     "font": "",
-    "fontSize": 36
+    "fontSize": 36,
+    "face": {"dotSize": 8, "whiskers": true, "mouth": "speaking", "glow": true}
   },
   "audio": {
     "wavInput": "",

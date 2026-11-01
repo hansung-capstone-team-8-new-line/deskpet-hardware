@@ -26,6 +26,8 @@ void Config::validate() const {
   if (width < 240 || height < 240 || width > 4096 || height > 4096 ||
       (rotation != 0 && rotation != 90 && rotation != 180 && rotation != 270) || fontSize < 16 || fontSize > 128)
     throw Error("CONFIG_ERROR", "Invalid display dimensions, rotation or font size");
+  if (dotSize < 4 || dotSize > 16 || (mouth != "none" && mouth != "speaking" && mouth != "always"))
+    throw Error("CONFIG_ERROR", "Face dotSize must be 4..16 and mouth none, speaking or always");
   if (address < 0x03 || address > 0x77 || frequency != 50 || stepUs < 1 || stepUs > 50 || leaseMs < 1000 || leaseMs > 30000)
     throw Error("CONFIG_ERROR", "Invalid servo or connection lease settings");
   for (auto e : {left, right}) {
@@ -50,6 +52,9 @@ Config Config::load(const std::string& file) {
     c.headless = d.value("headless", false); c.fullscreen = d.value("fullscreen", false);
     c.width = d.value("width", 1024); c.height = d.value("height", 600);
     c.rotation = d.value("rotation", 0); c.font = d.value("font", ""); c.fontSize = d.value("fontSize", 36);
+    const auto f = d.value("face", Json::object());
+    c.dotSize = f.value("dotSize", 8); c.whiskers = f.value("whiskers", true);
+    c.glow = f.value("glow", true); c.mouth = f.value("mouth", "speaking");
     const auto a = j.value("audio", Json::object());
     c.captureDevice = a.value("captureDevice", ""); c.playbackDevice = a.value("playbackDevice", ""); c.wavInput = a.value("wavInput", "");
     c.playbackGain = a.value("playbackGain", 0.25);
