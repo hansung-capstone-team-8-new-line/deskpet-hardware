@@ -3,520 +3,601 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>DeskPet 표정 일람</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: 위에 큰 LCD 스테이지 + 설명 패널, 아래로 명세 그룹별 타일 격자. 화면 자체(LCD)는 테마와 무관하게 실제 패널 색. */
+/* 표정 일람: 위에 큰 LCD + 설명·조작 패널, 아래로 상태별 타일. LCD 자체는 테마와 무관하게 실제 패널 색. */
 :root {
-  --bg: #edf3f1;
-  --surface: #ffffff;
-  --ink: #13232a;
-  --muted: #586b70;
-  --line: #d2dedb;
-  --accent: #128a76;
-  --accent-soft: #d6f2ec;
-  --warn: #9a6a12;
-  --warn-soft: #fbefd6;
-  --lcd: #0a131d;
-  --bezel: #1b262e;
+  --bg: #edf3f1; --surface: #ffffff; --ink: #13232a; --muted: #586b70; --line: #d2dedb;
+  --accent: #128a76; --accent-soft: #d6f2ec; --warn: #9a6a12; --warn-soft: #fbefd6;
+  --lcd: #0a131d; --bezel: #1b262e;
   --font-display: "Jua", "IBM Plex Sans KR", system-ui, sans-serif;
   --font-body: "IBM Plex Sans KR", system-ui, -apple-system, "Malgun Gothic", sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0d1418; --surface: #141f25; --ink: #e2eef0; --muted: #8ea2a7; --line: #23343b;
-    --accent: #70eed7; --accent-soft: #163a36; --warn: #f7c76a; --warn-soft: #3a2f17;
-    --bezel: #26353f; color-scheme: dark;
+    --accent: #70eed7; --accent-soft: #163a36; --warn: #f7c76a; --warn-soft: #3a2f17; --bezel: #26353f; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0d1418; --surface: #141f25; --ink: #e2eef0; --muted: #8ea2a7; --line: #23343b;
-  --accent: #70eed7; --accent-soft: #163a36; --warn: #f7c76a; --warn-soft: #3a2f17;
-  --bezel: #26353f; color-scheme: dark;
+  --accent: #70eed7; --accent-soft: #163a36; --warn: #f7c76a; --warn-soft: #3a2f17; --bezel: #26353f; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.6; }
-.wrap {
-  max-width: 1200px; margin: 0 auto;
-  padding-block: 32px 64px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-  display: grid; gap: 40px;
-}
-h1, h2, h3 { font-family: var(--font-display); font-weight: 400; margin: 0; text-wrap: balance; line-height: 1.2; }
+.wrap { max-width: 1200px; margin: 0 auto; padding-block: 32px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 40px; }
+h1, h2 { font-family: var(--font-display); font-weight: 400; margin: 0; line-height: 1.2; text-wrap: balance; }
 h1 { font-size: clamp(30px, 5vw, 44px); }
 h2 { font-size: 26px; }
-h3 { font-size: 20px; }
 p { margin: 0; }
-.lede { color: var(--muted); max-width: 64ch; }
+.lede { color: var(--muted); max-width: 66ch; }
 header { display: grid; gap: 10px; }
-.spec-line { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-.spec-line span { font-family: var(--font-mono); font-size: 12.5px; padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-variant-numeric: tabular-nums; }
-
-/* stage */
 .stage { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); gap: 24px; align-items: start; }
 @media (max-width: 880px) { .stage { grid-template-columns: minmax(0, 1fr); } }
 .lcd { background: var(--bezel); border-radius: 16px; padding: 10px; }
-.lcd canvas { display: block; width: 100%; aspect-ratio: 1024 / 600; max-width: 100%; background: var(--lcd); border-radius: 6px; }
-.panel { display: grid; gap: 16px; min-width: 0; }
+.lcd canvas { display: block; width: 100%; aspect-ratio: 1024 / 600; background: var(--lcd); border-radius: 6px; }
+.panel { display: grid; gap: 14px; min-width: 0; }
 .panel .head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.badge { font-size: 12px; font-weight: 600; letter-spacing: .04em; padding: 2px 8px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
+.badge { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
 .badge.prop { background: var(--warn-soft); color: var(--warn); }
-.kv { display: grid; grid-template-columns: 4.5em minmax(0, 1fr); gap: 4px 12px; font-size: 14px; }
-.kv dt { color: var(--muted); }
-.kv dd { margin: 0; }
-pre { margin: 0; font-family: var(--font-mono); font-size: 13px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow-x: auto; }
-
-/* controls */
-.controls { display: grid; gap: 12px; padding-top: 4px; border-top: 1px solid var(--line); }
+.now { font-family: var(--font-mono); font-size: 13px; padding: 8px 12px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); }
+.now b { font-family: var(--font-body); font-weight: 600; color: var(--accent); }
+.vars { display: flex; flex-wrap: wrap; gap: 6px; }
+.vars span { font-size: 12.5px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.vars span.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.actions button, .seg button { font: inherit; font-size: 13px; padding: 5px 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.actions button.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); }
 .ctl { display: grid; grid-template-columns: 5.5em minmax(0, 1fr); align-items: center; gap: 10px; }
 .ctl > span { font-size: 13px; color: var(--muted); }
-.seg { display: flex; flex-wrap: wrap; gap: 4px; }
-.seg button {
-  font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 8px; cursor: pointer;
-  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
-}
-.seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); }
-.seg button:focus-visible, .tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-/* catalog */
+.controls { display: grid; gap: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .group { display: grid; gap: 16px; }
 .group > header { gap: 4px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 18px; }
-.tile {
-  font: inherit; color: inherit; text-align: left; cursor: pointer;
-  display: grid; gap: 10px; align-content: start; padding: 0; border: 0; background: none; border-radius: 18px;
-}
+.tile { font: inherit; color: inherit; text-align: left; cursor: pointer; display: grid; gap: 8px; align-content: start; padding: 0; border: 0; background: none; border-radius: 18px; }
 .tile .lcd { padding: 7px; border-radius: 14px; outline: 2px solid transparent; transition: outline-color .15s; }
 .tile[aria-pressed="true"] .lcd { outline-color: var(--accent); }
 .tile:hover .lcd { outline-color: var(--line); }
-.tile[aria-pressed="true"]:hover .lcd { outline-color: var(--accent); }
 .tile .name { font-family: var(--font-display); font-size: 19px; display: flex; gap: 8px; align-items: center; }
-.tile code { font-family: var(--font-mono); font-size: 12px; color: var(--muted); display: block; overflow-wrap: anywhere; }
 .tile .note { font-size: 13.5px; color: var(--muted); }
-
-.diff { display: grid; gap: 10px; }
-.diff ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; max-width: 72ch; }
-.diff li::marker { color: var(--accent); }
-code.i { font-family: var(--font-mono); font-size: .9em; }
+.tile .cur { font-size: 12.5px; color: var(--accent); min-height: 1.6em; }
+.principles ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; max-width: 74ch; }
+.principles li::marker { color: var(--accent); }
+.principles { display: grid; gap: 12px; }
 </style>
 
 <div class="wrap">
   <header>
     <h1>DeskPet 표정 일람</h1>
-    <p class="lede">위키의 화면 명세(<code class="i">activity</code> · <code class="i">emotion</code> · <code class="i">actionStatus</code>)에서 나오는 모든 얼굴을 도트 LCD로 미리 그려 본 페이지입니다. 같은 표정이 하드웨어 렌더러(display.cpp)에 들어가 있습니다. 기본은 눈만, 고양이 귀에 맞춰 수염을 더했습니다. 타일을 누르면 위 화면에서 크게 볼 수 있습니다.</p>
-    <div class="spec-line">
-      <span>7" LCD (C) 1024×600</span>
-      <span id="dotInfo">도트 8px · 128×75</span>
-      <span>렌더 약 30fps</span>
-      <span>fontSize 36</span>
-    </div>
+    <p class="lede">상태는 <strong>시선과 움직임</strong>으로, 감정은 <strong>눈꺼풀 모양</strong>으로 약하게 나타냅니다. 상태마다 기본 자세가 몇 가지 있고, 그 위에 작은 변형 동작 여러 개가 무작위로 나옵니다. 같은 상태라도 매번 조금씩 다르게 움직입니다. 같은 자세·변형·도형이 하드웨어 렌더러(display.cpp)에 들어가 있습니다.</p>
   </header>
 
   <section class="stage" aria-label="선택한 표정 미리보기">
     <div class="lcd"><canvas id="stage" aria-label="선택한 표정 애니메이션"></canvas></div>
     <div class="panel">
       <div class="head"><h2 id="pName">대기</h2><span class="badge" id="pBadge">명세</span></div>
-      <dl class="kv">
-        <dt>명세</dt><dd id="pSpec"></dd>
-        <dt>시안</dt><dd id="pNote"></dd>
-      </dl>
-      <pre id="pPayload"></pre>
+      <p id="pNote" class="lede"></p>
+      <div class="now" aria-live="polite">지금 변형: <b id="pNow">—</b></div>
+      <div class="vars" id="pVars"></div>
+      <div class="actions">
+        <button type="button" id="btnNext">다른 변형 보기</button>
+        <button type="button" id="btnFlow" class="primary">대화 흐름 재생</button>
+      </div>
       <div class="controls">
-        <div class="ctl"><span>도트 크기</span><div class="seg" data-key="dot">
-          <button type="button" id="dot6" data-v="6">6px</button>
-          <button type="button" id="dot8" data-v="8">8px</button>
-          <button type="button" id="dot10" data-v="10">10px</button>
-          <button type="button" id="dot12" data-v="12">12px</button>
-        </div></div>
-        <div class="ctl"><span>도트 모양</span><div class="seg" data-key="shape">
-          <button type="button" id="shRound" data-v="round">동그라미</button>
-          <button type="button" id="shSquare" data-v="square">둥근 네모</button>
-        </div></div>
+        <div class="ctl"><span>무작위 변형</span><div class="seg" data-key="vary">
+          <button type="button" data-v="1">켜기</button><button type="button" data-v="0">끄기</button></div></div>
         <div class="ctl"><span>수염</span><div class="seg" data-key="whiskers">
-          <button type="button" id="whOn" data-v="1">보이기</button>
-          <button type="button" id="whOff" data-v="0">숨기기</button>
-        </div></div>
-        <div class="ctl"><span>입</span><div class="seg" data-key="mouth">
-          <button type="button" id="mNone" data-v="none">없음</button>
-          <button type="button" id="mTalk" data-v="talk">말할 때만</button>
-          <button type="button" id="mSpec" data-v="spec">명세대로</button>
-        </div></div>
+          <button type="button" data-v="1">보이기</button><button type="button" data-v="0">숨기기</button></div></div>
         <div class="ctl"><span>번짐</span><div class="seg" data-key="glow">
-          <button type="button" id="glOn" data-v="1">켜기</button>
-          <button type="button" id="glOff" data-v="0">끄기</button>
-        </div></div>
+          <button type="button" data-v="1">켜기</button><button type="button" data-v="0">끄기</button></div></div>
         <div class="ctl"><span>움직임</span><div class="seg" data-key="motion">
-          <button type="button" id="moOn" data-v="1">재생</button>
-          <button type="button" id="moOff" data-v="0">정지</button>
-        </div></div>
+          <button type="button" data-v="1">재생</button><button type="button" data-v="0">정지</button></div></div>
       </div>
     </div>
   </section>
 
   <div id="catalog" class="wrap" style="padding:0;gap:40px"></div>
 
-  <section class="diff">
-    <h2>렌더러 기본값과 규칙</h2>
+  <section class="principles">
+    <h2>설계 원칙</h2>
     <ul>
-      <li>렌더러는 같은 도형을 도트 격자로 샘플링하고, 가장자리 도트를 작고 흐리게 찍어 부드럽게 보이게 합니다. 기본값은 8px 도트(128×75), 동그라미, 수염 보이기, 말할 때만 입, 번짐 켜기입니다.</li>
-      <li>설정은 <code class="i">display.face</code>의 <code class="i">dotSize</code>(4–16), <code class="i">whiskers</code>, <code class="i">mouth</code>(<code class="i">none</code>·<code class="i">speaking</code>·<code class="i">always</code>), <code class="i">glow</code>로 바꿉니다. “입 → 명세대로”가 <code class="i">always</code>입니다.</li>
-      <li>인터페이스는 바뀌지 않았습니다. 화면은 <code class="i">activity</code>·<code class="i">emotion</code>·<code class="i">actionStatus</code>만 보고 얼굴을 고릅니다.</li>
-      <li>쓰다듬기·졸림·놀람은 <code class="i">emotion: petted·sleepy·surprised</code> 확장 값으로 그립니다. 그 밖의 문자열은 neutral처럼 그립니다.</li>
-      <li>아래 문구는 도트가 아니라 글꼴(36px)로 그립니다. 도트와 글자의 가독성은 LCD 도착 후 실물로 확인해야 합니다.</li>
+      <li><strong>생기 있는 눈, 과하지 않게.</strong> 둥근 눈에 작고 옅은 반사광 하나만 넣었습니다(눈동자처럼 보이지 않게). 빛은 고정이라 시선을 옮기면 반사광이 살짝 반대로 밀리고, 눈이 아주 살짝 숨 쉬듯 커졌다 작아집니다.</li>
+      <li><strong>상태는 시선과 움직임.</strong> 듣는 중: 사용자를 보고 다가옴·끄덕임. 생각 중: 위쪽 옆을 봄(사람이 생각할 때 시선을 피하는 것과 같음)·시선이 휙휙. 말하는 중: 다시 사용자를 보고 입을 움직임. 대답 기다림: 고개를 갸웃.</li>
+      <li><strong>감정은 약하게.</strong> 기쁨은 눈이 조금 납작해지며 올라간 웃는 눈(크게 웃는 순간에만 ^ ^), 슬픔은 바깥쪽 눈꺼풀이 처진 눈. 색은 슬픔·실패(분홍)와 결과 미확인(노랑)에만 씁니다.</li>
+      <li><strong>상태가 바뀔 때 먼저 깜박임.</strong> 애니메이터가 장면 전환을 숨기는 방식이라 자연스럽습니다.</li>
+      <li><strong>부드러운 움직임.</strong> 모든 값은 스프링으로 따라가서 살짝 넘쳤다 돌아옵니다. 눈 깜박임 간격도 무작위(가끔 두 번 연속)입니다.</li>
+      <li><strong>무작위 변형.</strong> 상태마다 기본 자세(예: 생각할 때 왼쪽 위/오른쪽 위)를 무작위로 고르고, 쉬는 간격도 무작위로 두며 같은 변형이 연달아 나오지 않게 합니다.</li>
     </ul>
   </section>
 </div>
 
 <script>
 (() => {
-  const W = 1024, H = 600;
-  const COLORS = [[112, 238, 215], [241, 142, 152], [247, 199, 106], [232, 246, 250]];
-  const MINT = 0, PINK = 1, YEL = 2, WHITE = 3;
+  // 자세·변형·도형은 src/display.cpp 의 Director·buildFace 와 같아야 합니다.
+  const W = 1024, H = 600, DOT = 8, COLS = W / DOT, ROWS = H / DOT;
+  const MINT = [100, 206, 250], PINK = [241, 142, 152], YELLOW = [247, 199, 106];
   const LCD_BG = "#0a131d", TEXT = "#dfedf2";
 
-  // ---------- 거리 함수 (1024×600 좌표, px) ----------
+  // ---------- 수학 ----------
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  const ss = x => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
+  const env = (u, a = 0.2, b = 0.8) => u < a ? ss(u / a) : u > b ? ss((1 - u) / (1 - b)) : 1;
+  const bump = u => Math.sin(Math.PI * clamp(u, 0, 1));
+  const rr = (a, b) => a + Math.random() * (b - a);
+  const sgn = () => Math.random() < 0.5 ? -1 : 1;
   const hyp = Math.hypot;
   function sdBox(x, y, cx, cy, hw, hh, r) {
     const qx = Math.abs(x - cx) - hw + r, qy = Math.abs(y - cy) - hh + r;
     return hyp(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r;
   }
   const sdCircle = (x, y, cx, cy, r) => hyp(x - cx, y - cy) - r;
-  function sdSeg(x, y, ax, ay, bx, by) {
+  function sdTaper(x, y, ax, ay, bx, by, t0, t1) {
     const px = x - ax, py = y - ay, vx = bx - ax, vy = by - ay;
-    const h = clamp((px * vx + py * vy) / (vx * vx + vy * vy), 0, 1);
-    return hyp(px - vx * h, py - vy * h);
+    const h = clamp((px * vx + py * vy) / (vx * vx + vy * vy || 1), 0, 1);
+    return hyp(px - vx * h, py - vy * h) - (t0 + (t1 - t0) * h);
   }
   function sdArc(x, y, cx, cy, R, a0, a1, th) {
     const dx = x - cx, dy = y - cy, ang = Math.atan2(dy, dx);
     if (ang >= a0 && ang <= a1) return Math.abs(hyp(dx, dy) - R) - th;
-    return Math.min(
-      hyp(x - cx - R * Math.cos(a0), y - cy - R * Math.sin(a0)),
-      hyp(x - cx - R * Math.cos(a1), y - cy - R * Math.sin(a1))) - th;
+    return Math.min(hyp(x - cx - R * Math.cos(a0), y - cy - R * Math.sin(a0)), hyp(x - cx - R * Math.cos(a1), y - cy - R * Math.sin(a1))) - th;
   }
-  const UP = [-Math.PI + 0.5, -0.5], DOWN = [0.35, Math.PI - 0.35];
+  const DOWN = [0.35, Math.PI - 0.35];
 
-  // ---------- 레이어 ----------
-  const layer = (col, a, bb, d) => ({ col, a, bb, d });
-  function eyeLayer(cx, cy, hw, hh, col, { glint = false, sad = 0, side = 1 } = {}) {
-    const r = Math.min(hw, hh);
-    let n = null, p = null;
-    if (sad) { // 바깥쪽이 처지도록 위쪽을 비스듬히 잘라냄
-      const ix = cx - side * hw * 1.15, iy = cy - hh * 0.8, ox = cx + side * hw * 1.15, oy = cy - hh * 0.05;
-      let dx = ox - ix, dy = oy - iy; const l = hyp(dx, dy); dx /= l; dy /= l;
-      n = [dy, -dx]; if (n[1] > 0) n = [-n[0], -n[1]];
-      p = [ix, iy];
+  // ---------- 자세(pose) ----------
+  // 모든 표정은 이 숫자들의 조합. 목표값이 바뀌면 스프링으로 따라감.
+  const BASE = {
+    lookX: 0, lookY: 0, scale: 1, tilt: 0, bob: 0,
+    eyeW: 1, eyeH: 1, lidTop: 0, lidTopR: 0, lidSad: 0, lidHappy: 0, raiseR: 0,
+    mCat: 1, mSmile: 0.3, mOpen: 0, mW: 1, mX: 0, mWave: 0, whisk: 0, blush: 0, zz: 0,
+  };
+  const STIFF = { mOpen: 700, lookX: 220, lookY: 220, tilt: 70, bob: 110, lidSad: 60, lidHappy: 90, blush: 40, zz: 30 };
+
+  // ---------- 상태별 기본 자세와 변형 ----------
+  // f(u, p): u = 0..1 진행도, p = 시작할 때 정한 무작위 값. 반환값은 기본 자세에 더해짐.
+  const V = (name, dur, f, w = 1, extra = {}) => ({ name, dur, f, w, ...extra });
+  const nod = (n, depth) => u => ({ bob: depth * Math.max(0, Math.sin(u * Math.PI * 2 * n)) * env(u, 0.05, 0.9) });
+  const ACT = {
+    idle: {
+      gap: [1.2, 3.6], base: () => ({}),
+      vars: [
+        V("두리번", [1.6, 2.8], (u, p) => ({ lookX: p.s * 48 * env(u), lookY: p.k * 10 * env(u) })),
+        V("양옆 살피기", [2.6, 3.4], u => ({ lookX: 44 * Math.sin(u * Math.PI * 2) * env(u, 0.1, 0.9) })),
+        V("느긋한 눈감기", [1.4, 2.2], u => ({ lidTop: 0.5 * env(u, 0.35, 0.65), mSmile: 0.2 * env(u) })),
+        V("갸웃", [1.8, 2.6], (u, p) => ({ tilt: p.s * 0.08 * env(u), lookX: p.s * 10 * env(u) })),
+        V("하품", [2.0, 2.6], u => ({ mOpen: 0.75 * env(u, 0.3, 0.6), mCat: -1 * env(u, 0.2, 0.8), lidHappy: 0.8 * env(u, 0.3, 0.6), scale: 0.03 * env(u) }), 0.5),
+        V("수염 씰룩", [0.7, 1.0], u => ({ whisk: 7 * Math.sin(u * Math.PI * 8) * env(u, 0.1, 0.9) })),
+        V("살짝 다가옴", [1.6, 2.4], u => ({ scale: 0.045 * env(u), lookY: 6 * env(u) })),
+      ],
+    },
+    listening: {
+      gap: [0.8, 2.4], base: () => ({ scale: 1.05, eyeH: 1.12, eyeW: 1.04, lookY: -4, mCat: 0, mSmile: 0.15, mW: 0.45, whisk: -8 }),
+      vars: [
+        V("끄덕", [0.6, 0.8], nod(1, 12)),
+        V("응응", [1.0, 1.3], nod(2, 9)),
+        V("갸웃하며 듣기", [1.8, 2.6], (u, p) => ({ tilt: p.s * 0.06 * env(u) })),
+        V("집중", [1.4, 2.0], u => ({ eyeH: 0.08 * env(u), scale: 0.03 * env(u) })),
+        V("귀 기울이기", [1.4, 2.0], (u, p) => ({ lookX: p.s * 16 * env(u), tilt: p.s * 0.04 * env(u), whisk: -6 * env(u) })),
+      ],
+    },
+    processing: {
+      gap: [0.5, 2.0], base: s => ({ lookX: 84 * s, lookY: -58, eyeH: 0.9, eyeW: 0.96, mCat: 0, mSmile: -0.15, mW: 0.5, mX: 16 * s, tilt: 0.03 * s }),
+      sides: true,
+      vars: [
+        V("휙휙", [0.5, 0.8], (u, p) => ({ lookX: -p.side * 40 * env(u, 0.08, 0.6) })),
+        V("반대편 보기", [1.8, 2.6], (u, p) => ({ lookX: -p.side * 168 * env(u, 0.15, 0.8), mX: -p.side * 32 * env(u, 0.15, 0.8), tilt: -p.side * 0.06 * env(u, 0.15, 0.8) })),
+        V("음…", [1.3, 1.8], u => ({ mX: 8 * Math.sin(u * Math.PI * 2), mWave: 0.7 * env(u) })),
+        V("골똘", [1.6, 2.4], u => ({ lidTop: 0.24 * env(u), eyeW: -0.05 * env(u), scale: -0.02 * env(u) })),
+        V("갸우뚱 생각", [1.8, 2.4], (u, p) => ({ tilt: p.side * 0.06 * env(u) })),
+        V("아래 훑기", [1.2, 1.6], u => ({ lookY: 80 * env(u) }), 0.6),
+      ],
+    },
+    speaking: {
+      gap: [0.8, 2.4], base: () => ({ mCat: 0, mSmile: 0.25, mW: 0.8 }), talk: true,
+      vars: [
+        V("강조", [0.45, 0.6], u => ({ scale: 0.04 * bump(u), eyeH: 0.06 * bump(u) })),
+        V("말하며 시선 돌림", [0.9, 1.4], (u, p) => ({ lookX: p.s * 30 * env(u), lookY: -8 * env(u) })),
+        V("눈 크게", [0.8, 1.1], u => ({ eyeH: 0.1 * env(u) })),
+        V("끄덕이며 말하기", [0.6, 0.8], nod(1, 9)),
+        V("갸웃하며 말하기", [1.2, 1.8], (u, p) => ({ tilt: p.s * 0.05 * env(u) })),
+      ],
+    },
+    awaiting_answer: {
+      gap: [1.0, 3.0], base: s => ({ tilt: 0.13 * s, eyeH: 1.06, mCat: 0, mSmile: 0.55, mW: 0.55, lookY: -4 }),
+      sides: true,
+      vars: [
+        V("반대로 갸웃", [2.2, 3.0], (u, p) => ({ tilt: -2 * p.side * 0.13 * env(u, 0.25, 0.75) })),
+        V("빤히", [1.4, 2.0], u => ({ scale: 0.045 * env(u), eyeH: 0.05 * env(u) })),
+        V("깜박깜박", [0.6, 0.8], () => ({}), 1, { blinks: 2 }),
+        V("통", [0.45, 0.6], u => ({ bob: -10 * bump(u) })),
+        V("기대", [1.4, 2.0], u => ({ mSmile: 0.3 * env(u), lidHappy: 0.3 * env(u) })),
+      ],
+    },
+  };
+  const EMO = {
+    happy: {
+      set: { lidHappy: 0.5, mSmile: 0.6, mCat: 0, mW: 0.85 }, add: {},
+      vars: [
+        V("통통", [0.8, 1.0], u => ({ bob: -6 * Math.abs(Math.sin(u * Math.PI * 2)) })),
+        V("좌우 흔들", [1.2, 1.6], u => ({ tilt: 0.04 * Math.sin(u * Math.PI * 4) * env(u, 0.1, 0.9) })),
+        V("방긋", [0.9, 1.2], u => ({ mOpen: 0.18 * env(u), lidHappy: 0.15 * env(u), scale: 0.02 * env(u) })),
+      ],
+    },
+    sad: {
+      set: { lidSad: 0.8, mSmile: -0.75, mCat: 0, mW: 0.7 }, add: { bob: 14, lookY: 10, eyeH: -0.08, whisk: 10 },
+      vars: [
+        V("한숨", [2.0, 2.6], u => ({ lidTop: 0.35 * env(u, 0.3, 0.6), bob: 6 * env(u, 0.3, 0.6) })),
+        V("힐끔", [1.2, 1.6], (u, p) => ({ lookY: -16 * env(u), lookX: p.s * 18 * env(u) })),
+        V("울먹", [1.4, 1.8], u => ({ mWave: 0.5 * env(u) })),
+      ],
+    },
+    unknown: {
+      set: { lidTopR: 0.3, mWave: 0.8, mCat: 0, mW: 0.8, mSmile: 0 }, add: { lookX: 30, lookY: -12 },
+      vars: [
+        V("어리둥절", [1.8, 2.4], u => ({ lookX: -64 * env(u) })),
+        V("갸웃", [1.6, 2.2], (u, p) => ({ tilt: p.s * 0.08 * env(u) })),
+      ],
+    },
+    petted: {
+      set: { lidHappy: 0.5, blush: 0.6, mCat: 1, mSmile: 0.4 }, add: { whisk: 4 },
+      vars: [
+        V("비비기", [1.2, 1.6], u => ({ tilt: 0.045 * Math.sin(u * Math.PI * 4) * env(u, 0.1, 0.9) })),
+        V("수염 씰룩", [0.6, 0.9], u => ({ whisk: 4 * Math.sin(u * Math.PI * 8) })),
+        V("좋아", [1.0, 1.4], u => ({ scale: 0.02 * env(u), bob: -4 * env(u), lidHappy: 0.2 * env(u) })),
+      ],
+    },
+    sleepy: {
+      set: { lidTop: 0.68, mCat: 0, mSmile: 0.1, mW: 0.4, mOpen: 0.05 }, add: { bob: 10, whisk: 8 },
+      vars: [
+        V("꾸벅", [2.6, 3.4], u => ({ lidTop: 0.32 * env(u, 0.55, 0.85), bob: 22 * env(u, 0.6, 0.85) })),
+        V("하품", [2.0, 2.6], u => ({ mOpen: 0.7 * env(u, 0.3, 0.6), lidTop: 0.2 * env(u, 0.3, 0.6), scale: 0.03 * env(u) })),
+        V("Z", [2.4, 3.0], u => ({ zz: env(u, 0.15, 0.7) }), 1, { track: true }),
+      ],
+    },
+    surprised: {
+      set: { eyeW: 1.18, eyeH: 0.92, mCat: 0, mOpen: 0.65, mW: 0.85 }, add: { scale: 0.05, whisk: -10 },
+      vars: [
+        V("깜짝 깜박", [0.6, 0.8], () => ({}), 1, { blinks: 2 }),
+        V("부르르", [0.5, 0.6], u => ({ lookX: 5 * Math.sin(u * Math.PI * 12) * env(u, 0.1, 0.9) })),
+      ],
+    },
+  };
+  function moodOf(p) {
+    if (p.emotion === "sad" || p.actionStatus === "failed") return "sad";
+    if (p.actionStatus === "unknown") return "unknown";
+    if (p.emotion === "happy" || p.actionStatus === "succeeded") return "happy";
+    return EMO[p.emotion] ? p.emotion : null;
+  }
+  const LABEL = { listening: "듣고 있어요", processing: "생각하고 있어요", awaiting_answer: "대답을 기다려요" };
+
+  // ---------- 연출(Director): 상태 하나를 맡아 자세를 계산 ----------
+  class Director {
+    constructor(face) { this.t = 0; this.pose = { ...BASE }; this.vel = {}; this.col = MINT.slice(); this.snap = true; this.set(face); }
+    set(face) {
+      this.face = face; const p = face.payload;
+      this.act = ACT[p.activity] || ACT.idle; this.mood = moodOf(p); this.emo = this.mood ? EMO[this.mood] : null;
+      this.side = sgn(); this.beh = null; this.last = null;
+      this.nextBeh = this.t + rr(0.6, 1.4);
+      this.blinks = []; this.blink(0);  // 상태가 바뀌면 먼저 깜박임
+      this.nextBlink = this.t + rr(2, 5);
+      this.talk = 0; this.nextTalk = 0; this.micro = [0, 0]; this.nextMicro = this.t + rr(0.3, 1.2);
+      this.label = p.actionStatus === "unknown" ? "결과를 확인해야 해요" : LABEL[p.activity] || "";
+      this.colTarget = this.mood === "sad" ? PINK : this.mood === "unknown" ? YELLOW : MINT;
     }
-    const g = glint && hh > hw * 0.55;
-    const gx = sad ? cx - side * hw * 0.25 : cx + hw * 0.32, gy = sad ? cy + hh * 0.3 : cy - hh * 0.42, gr = r * 0.3;
-    return layer(col, 1, [cx - hw, cy - hh, cx + hw, cy + hh], (x, y) => {
-      let d = sdBox(x, y, cx, cy, hw, hh, r);
-      if (n) d = Math.max(d, (x - p[0]) * n[0] + (y - p[1]) * n[1]);
-      if (g) d = Math.max(d, -sdCircle(x, y, gx, gy, gr));
-      return d;
-    });
-  }
-  const arcLayer = (cx, cy, R, th, [a0, a1], col, a = 1) =>
-    layer(col, a, [cx - R - th, cy - R - th, cx + R + th, cy + R + th], (x, y) => sdArc(x, y, cx, cy, R, a0, a1, th));
-  const segLayer = (ax, ay, bx, by, th, col, a = 1) =>
-    layer(col, a, [Math.min(ax, bx) - th, Math.min(ay, by) - th, Math.max(ax, bx) + th, Math.max(ay, by) + th], (x, y) => sdSeg(x, y, ax, ay, bx, by) - th);
-  const circleLayer = (cx, cy, r, col, a = 1) => layer(col, a, [cx - r, cy - r, cx + r, cy + r], (x, y) => sdCircle(x, y, cx, cy, r));
-  const sparkle = (cx, cy, s, col) => layer(col, 1, [cx - s, cy - s, cx + s, cy + s], (x, y) =>
-    Math.min(sdBox(x, y, cx, cy, s * 0.17, s, s * 0.17), sdBox(x, y, cx, cy, s, s * 0.17, s * 0.17)));
-  const drop = (cx, cy, col) => layer(col, 0.85, [cx - 12, cy - 22, cx + 12, cy + 18], (x, y) =>
-    Math.min(sdCircle(x, y, cx, cy + 4, 10), sdSeg(x, y, cx, cy - 14, cx, cy + 2) - 3.5 - (y - cy + 14) * 0.2));
-  function zLayer(cx, cy, s, col, a) {
-    const h = s / 2;
-    return layer(col, a, [cx - h - 4, cy - h - 4, cx + h + 4, cy + h + 4], (x, y) => Math.min(
-      sdSeg(x, y, cx - h, cy - h, cx + h, cy - h), sdSeg(x, y, cx + h, cy - h, cx - h, cy + h), sdSeg(x, y, cx - h, cy + h, cx + h, cy + h)) - 3.5);
-  }
-
-  // ---------- 표정 정의 ----------
-  const soft = v => Math.sign(v) * clamp((Math.abs(v) - 0.75) / 0.2, 0, 1);
-  const CAPTION = { listening: "듣고 있어요", processing: "생각하고 있어요", awaiting_answer: "대답을 기다려요" };
-
-  function build(f, t, o) {
-    const L = [], { activity: act, emotion: emo, actionStatus: st } = f.payload, kind = f.kind, ph = f.phase;
-    const sad = emo === "sad" || st === "failed";
-    const col = sad ? PINK : st === "unknown" ? YEL : MINT;
-    const happy = kind === "petted" || emo === "happy" || st === "succeeded";
-    let hw = 51, hh = 72, cy = 240, lookX = 0, lookY = 0, dyR = 0, glint = true;
-    let bob = Math.sin(t * 1.6 + ph) * 3, lift = 0, tw = Math.sin(t * 1.3 + ph) * 1.5;
-    const bp = ((t + ph) % 5.1 + 5.1) % 5.1;
-    let blink = bp < 0.2 ? Math.max(0.07, Math.abs(Math.cos(bp / 0.2 * Math.PI))) : 1;
-
-    switch (act) {
-      case "idle": lookX = 26 * soft(Math.sin(t * 0.37 + ph * 2)); break;
-      case "listening": hh *= 1.15; hw *= 1.08; lift = -12; bob = Math.sin(t * 2.4 + ph) * 2; break;
-      case "processing": hh *= 0.6; lookX = Math.sin(t * 2.2) * 46; glint = false; tw = Math.sin(t * 9) * 4; break;
-      case "speaking": bob = -Math.abs(Math.sin(t * 6.5)) * 6; break;
-      case "awaiting_answer": dyR = -18; lookX = 12; lookY = -8; tw = Math.sin(t * 2.5) * 4; break;
+    pool() { return this.act.vars.concat(this.emo ? this.emo.vars : []); }
+    blink(delay = 0, dur = this.mood === "sleepy" ? 0.32 : 0.17) { this.blinks.push([this.t + delay, dur]); }
+    start(force) {
+      const pool = this.pool().filter(v => v !== this.last || this.pool().length === 1);
+      let r = Math.random() * pool.reduce((s, v) => s + v.w, 0), v = pool[0];
+      for (const c of pool) { r -= c.w; if (r <= 0) { v = c; break; } }
+      const dur = rr(v.dur[0], v.dur[1]);
+      this.beh = { v, t0: this.t, dur, p: { s: sgn(), k: rr(-1, 1), side: this.side } };
+      this.last = v;
+      if (v.blinks) for (let i = 0; i < v.blinks; i++) this.blink(i * 0.26);
     }
-    if (sad) { hh *= 0.9; cy += 10; lift += 24; bob *= 0.5; blink = bp < 0.3 ? Math.max(0.07, Math.abs(Math.cos(bp / 0.3 * Math.PI))) : 1; }
-    if (st === "unknown") { lookX = 26 + Math.sin(t * 1.1) * 6; lookY = -12; }
-    if (kind === "petted") { tw = Math.sin(t * 14) * 6; lift = -6; }
-    if (kind === "surprised") lift = -22;
-    if (kind === "sleepy") { lift = 14; bob = Math.sin(t * 0.9) * 5; }
+    update(dt, opt) {
+      this.t += dt; const t = this.t;
+      // 변형 고르기
+      if (this.beh && t > this.beh.t0 + this.beh.dur) { this.beh = null; this.nextBeh = t + rr(...this.act.gap); }
+      if (!this.beh && opt.vary && t >= this.nextBeh) this.start();
+      // 목표 자세
+      const g = { ...BASE, ...this.act.base(this.side) };
+      if (this.emo) { Object.assign(g, this.emo.set); for (const k in this.emo.add) g[k] += this.emo.add[k]; }
+      if (this.act.talk) {
+        if (t >= this.nextTalk) { this.talk = Math.random() < 0.16 ? 0 : rr(0.25, 1); this.nextTalk = t + (this.talk ? rr(0.08, 0.16) : rr(0.18, 0.35)); }
+        g.mOpen = this.talk * (this.mood === "sad" ? 0.7 : 1);
+      }
+      // 미세 시선: 살아 있는 눈은 가만히 멈춰 있지 않음
+      if (t >= this.nextMicro) {
+        const amp = this.mood === "sleepy" ? 1.5 : 5;
+        this.micro = [rr(-amp, amp), rr(-amp * 0.6, amp * 0.6)]; this.nextMicro = t + rr(0.35, 1.6);
+      }
+      g.lookX += this.micro[0]; g.lookY += this.micro[1];
+      if (this.beh) { const d = this.beh.v.f((t - this.beh.t0) / this.beh.dur, this.beh.p); for (const k in d) g[k] += d[k]; }
+      // 스프링
+      const steps = 2, h = Math.min(dt, 1 / 20) / steps;
+      for (const k in g) {
+        if (this.snap) { this.pose[k] = g[k]; this.vel[k] = 0; continue; }
+        const K = STIFF[k] || 150, C = 2 * Math.sqrt(K) * 0.78;
+        let x = this.pose[k], v = this.vel[k] || 0;
+        for (let i = 0; i < steps; i++) { v += (K * (g[k] - x) - C * v) * h; x += v * h; }
+        this.pose[k] = x; this.vel[k] = v;
+      }
+      for (let i = 0; i < 3; i++) this.col[i] += (this.colTarget[i] - this.col[i]) * (this.snap ? 1 : Math.min(1, dt * 6));
+      this.snap = false;
+      // 깜박임 (무작위 간격, 가끔 두 번)
+      if (t >= this.nextBlink) { this.blink(); if (Math.random() < 0.22) this.blink(0.28); this.nextBlink = t + rr(2.2, 6); }
+      let b = 0;
+      this.blinks = this.blinks.filter(([s, d]) => t < s + d + 0.05);
+      for (const [s, d] of this.blinks) if (t >= s && t <= s + d) b = Math.max(b, Math.sin(Math.PI * (t - s) / d));
+      this.pose.blink = b;
+      this.pose.zzU = this.beh && this.beh.v.track ? (t - this.beh.t0) / this.beh.dur : 0;
+      return this.pose;
+    }
+    nowName() { return this.beh ? this.beh.v.name : "쉬는 중"; }
+  }
 
+  // ---------- 자세 → 레이어 (얼굴 좌표, 1024×600) ----------
+  const layer = (col, a, bb, d, af) => ({ col, a, bb, d, af });
+  function buildLayers(P, col, t, opt) {
+    const L = [];
     for (const side of [-1, 1]) {
-      const cx = (side < 0 ? 348 : 676) + lookX, ecy = cy + bob + lookY + (side > 0 ? dyR : 0);
-      if (happy && act !== "processing") {
-        const b = -Math.abs(Math.sin(t * (kind === "petted" ? 5 : 3) + ph)) * 6;
-        L.push(arcLayer(cx, ecy + 26 + b, hw * 1.1, 11, UP, col));
-      } else if (kind === "surprised") {
-        const s = 1 + Math.max(0, Math.sin(t * 4)) * 0.04;
-        L.push(eyeLayer(cx, ecy - 6, 62 * s, 62 * s * blink, col, { glint: true }));
-      } else if (kind === "sleepy") {
-        const open = 7 + Math.max(0, Math.sin(t * 0.7 + 1)) * 9;
-        L.push(eyeLayer(cx, ecy + 34, hw * 1.05, open, col));
-      } else {
-        L.push(eyeLayer(cx, ecy, hw, hh * blink, col, { glint: glint && blink > 0.6, sad, side }));
+      // 웃으면 눈이 조금 납작해지며 올라감(아래를 깎으면 볼이 부푼 것처럼 보였음).
+      // 아주 크게 웃을 때(lidHappy 0.56 이상, 예: 방긋)만 감은 ^ 아치 눈이 됨.
+      const hap = clamp(P.lidHappy, 0, 1.1), squash = Math.min(hap, 0.8), arcK = ss((hap - 0.56) / 0.08);
+      const cx = (side < 0 ? 348 : 676) + P.lookX, cy = 240 + P.lookY - 12 * hap;
+      const breath = 1 + 0.012 * Math.sin(t * 1.7);  // 눈이 아주 살짝 숨 쉼
+      const hw = 64 * Math.max(0.5, P.eyeW) * (1 + 0.08 * squash);
+      const hh = Math.max(4, 90 * Math.max(0.4, P.eyeH) * breath * (1 - 0.36 * squash) * (1 - 0.94 * P.blink));
+      const r = Math.min(hw, hh);
+      const lid = clamp(P.lidTop + (side > 0 ? P.lidTopR : 0), 0, 0.92), sad = clamp(P.lidSad, 0, 1);
+      const yl = cy - hh + 2 * hh * lid + sad * 0.45 * hh, m = sad * 0.8 * hh * side / hw, mn = Math.hypot(1, m);
+      const eyeD = (x, y) => {
+        const d = sdBox(x, y, cx, cy, hw, hh, r);
+        return lid > 0.001 || sad > 0.001 ? Math.max(d, (yl + m * (x - cx) - y) / mn) : d;
+      };
+      if (arcK > 0.02) {
+        const ay = 270 + P.lookY, ar = hw * 0.95;
+        L.push(layer(col, arcK, [cx - ar - 14, ay - ar - 14, cx + ar + 14, ay + 14], (x, y) => sdArc(x, y, cx, ay, ar, -Math.PI + 0.5, -0.5, 12)));
       }
-    }
-
-    if (o.whiskers) for (const side of [-1, 1]) for (const k of [-1, 0, 1]) {
-      const ix = 512 + side * 252, iy = 388 + k * 24 + lift * 0.25;
-      const wob = tw * (k === 0 ? 1 : -1) * (side > 0 ? 1 : -1) * 0.5 + tw * 0.5;
-      L.push(segLayer(ix, iy, 512 + side * 432, iy + k * 28 + lift + wob, 3.2, col, 0.55));
-    }
-
-    // 입
-    const mouth = (open) => {
-      L.push(arcLayer(497, 394, 15, 3.6, DOWN, col), arcLayer(527, 394, 15, 3.6, DOWN, col));
-      if (open > 0.12) L.push(layer(col, 0.9, [495, 404, 529, 440], (x, y) => sdBox(x, y, 512, 412 + open * 7, 12, 4 + open * 9, 4 + Math.min(12, open * 9))));
-    };
-    if (o.mouth !== "none") {
-      if (kind === "surprised") L.push(arcLayer(512, 412, 13, 4, [-Math.PI, Math.PI], col));
-      else if (act === "speaking") mouth(clamp(0.5 + 0.5 * (Math.sin(t * 10.5) * 0.7 + Math.sin(t * 6.3 + 1) * 0.5), 0, 1));
-      else if (kind === "petted") mouth(0);
-      else if (o.mouth === "spec") {
-        if (sad) L.push(arcLayer(512, 428, 20, 3.6, UP, col));
-        else if (kind !== "sleepy") mouth(0);
+      if (arcK > 0.98) continue;
+      // 반사광 하나: 작고 옅은 색이라 눈동자로 보이지 않음. 빛은 고정이라 시선과 반대로 살짝 밀림.
+      if (hh > 34) {
+        const gx = cx + hw * 0.3 - P.lookX * 0.08, gy = cy - hh * 0.4, gr = r * 0.3;
+        const glint = col.map((c, i) => Math.round(c * 0.35 + [240, 250, 255][i] * 0.65));
+        L.push(layer(glint, 1 - arcK, [gx - gr, gy - gr, gx + gr, gy + gr], (x, y) => Math.max(sdCircle(x, y, gx, gy, gr), eyeD(x, y) + 6)));
       }
+      L.push(layer(col, 1 - arcK, [cx - hw, cy - hh, cx + hw, cy + hh], eyeD, (x, y) => 1 - 0.28 * ss((y - (cy - hh * 0.3)) / (hh * 1.3))));
     }
-
-    // 장식
-    if (st === "succeeded") {
-      [[792, 140, 0], [852, 205, 1.7], [210, 160, 3.1]].forEach(([x, y, p]) => {
-        const s = 6 + 12 * Math.max(0, Math.sin(t * 2.6 + p));
-        if (s > 7) L.push(sparkle(x, y, s, WHITE));
-      });
-    }
-    if (st === "unknown") L.push(drop(430, 150 + ((t * 18) % 30), WHITE));
-    if (kind === "petted") L.push(circleLayer(320, 338, 30, PINK, 0.45), circleLayer(704, 338, 30, PINK, 0.45));
-    if (kind === "sleepy") for (let i = 0; i < 2; i++) {
-      const q = ((t * 0.35 + i * 0.5) % 1);
-      L.push(zLayer(760 + q * 70 + i * 20, 210 - q * 110, 22 + q * 18 + i * 6, col, Math.sin(q * Math.PI)));
-    }
-
-    let caption = st === "unknown" ? "결과를 확인해야 해요" : CAPTION[act] || "";
-    if (kind) caption = f.caption || "";
-    return { layers: L, caption };
-  }
-
-  const FACES = [
-    { group: "activity", id: "idle", name: "대기", payload: { activity: "idle", emotion: "neutral" },
-      spec: "기본 눈·미소·자동 깜박임", note: "눈만 표시. 5.1초마다 깜박이고, 가끔 좌우로 시선을 옮기며 숨 쉬듯 오르내립니다." },
-    { group: "activity", id: "listening", name: "듣는 중", payload: { activity: "listening", emotion: "neutral" },
-      spec: "기본보다 큰 눈 · ‘듣고 있어요’", note: "눈을 1.15배로 키우고 반짝임 점을 넣었습니다. 수염이 위로 쫑긋 섭니다." },
-    { group: "activity", id: "processing", name: "생각 중", payload: { activity: "processing", emotion: "neutral" },
-      spec: "눈을 낮추고 좌우로 움직임 · ‘생각하고 있어요’", note: "눈 높이를 0.6배로 줄여 좌우를 훑습니다. 수염이 파르르 떨립니다." },
-    { group: "activity", id: "speaking", name: "말하는 중", payload: { activity: "speaking", emotion: "neutral" },
-      spec: "입을 주기적으로 열고 닫음", note: "눈이 통통 튀고 ω 입이 열렸다 닫힙니다. 음량에 맞춘 립싱크는 아닙니다." },
-    { group: "activity", id: "awaiting", name: "대답 기다림", payload: { activity: "awaiting_answer", emotion: "neutral" },
-      spec: "오른쪽 눈을 약간 높임 · ‘대답을 기다려요’", note: "오른쪽 눈을 18px 올리고 시선도 살짝 위로 두어 고개를 갸웃한 느낌을 냅니다." },
-
-    { group: "emotion", id: "happy", name: "기쁨", payload: { activity: "idle", emotion: "happy" },
-      spec: "눈 높이를 줄인 기쁜 얼굴", note: "^ ^ 모양 눈이 통통 튑니다." },
-    { group: "emotion", id: "sad", name: "슬픔·위로", payload: { activity: "idle", emotion: "sad" },
-      spec: "분홍색 · 말하지 않을 때 처진 입", note: "바깥쪽이 처진 눈에 아래쪽 반짝임을 넣어 촉촉하게 보이게 했습니다. 수염이 축 처집니다." },
-    { group: "emotion", id: "happy-talk", name: "기쁘게 말하기", payload: { activity: "speaking", emotion: "happy" },
-      spec: "기쁜 눈 + 움직이는 입", note: "^ ^ 눈과 ω 입이 함께 움직입니다." },
-    { group: "emotion", id: "sad-talk", name: "위로하며 말하기", payload: { activity: "speaking", emotion: "sad" },
-      spec: "분홍색 + 움직이는 입", note: "처진 눈은 그대로 두고 입만 움직입니다." },
-
-    { group: "result", id: "succeeded", name: "업무 성공", payload: { activity: "idle", emotion: "happy", actionStatus: "succeeded" },
-      spec: "민트색 기쁜 눈", note: "^ ^ 눈 주변에 반짝이 세 개가 번갈아 빛납니다." },
-    { group: "result", id: "failed", name: "업무 실패", payload: { activity: "idle", emotion: "sad", actionStatus: "failed" },
-      spec: "분홍색 · 처진 입 (sad와 같음)", note: "슬픔과 같은 얼굴입니다. 실패를 말할 때는 activity를 speaking으로 바꿉니다." },
-    { group: "result", id: "unknown", name: "결과 미확인", payload: { activity: "idle", emotion: "neutral", actionStatus: "unknown" },
-      spec: "노란색 · ‘결과를 확인해야 해요’", note: "노란 눈이 위쪽을 보고, 땀방울이 흘러내립니다." },
-
-    { group: "proposal", id: "petted", kind: "petted", name: "쓰다듬기", caption: "",
-      payload: { activity: "idle", emotion: "petted" },
-      spec: "확장 값 — 터치했을 때 파이프라인이 보냄", note: "화면을 만지면 ^ ^ 눈, 볼 터치, 빠르게 씰룩이는 수염. 터치 LCD에 맞춘 반응입니다." },
-    { group: "proposal", id: "sleepy", kind: "sleepy", name: "졸림", caption: "",
-      payload: { activity: "idle", emotion: "sleepy" },
-      spec: "확장 값 — 오래 대기할 때", note: "오래 대기하면 눈이 가늘게 감기고 Z가 떠오릅니다. 수염도 내려갑니다." },
-    { group: "proposal", id: "surprised", kind: "surprised", name: "놀람", caption: "",
-      payload: { activity: "idle", emotion: "surprised" },
-      spec: "확장 값 — 호출어·큰 소리에 반응할 때", note: "동그랗게 커진 눈과 o 입, 뻗친 수염. 호출어나 큰 소리에 반응할 때 씁니다." },
-  ];
-  const GROUPS = [
-    ["activity", "활동 상태", "emotion은 neutral, 업무 결과 없음. 파이프라인이 대화 단계마다 보내는 기본 얼굴입니다."],
-    ["emotion", "감정", "출력 모델이 정하는 emotion 값입니다. 지원 값은 neutral·happy·sad 세 가지입니다."],
-    ["result", "업무 결과", "actionStatus를 보낼 때의 얼굴입니다. 명세 권장대로 감정을 함께 맞춰 보냅니다."],
-    ["proposal", "확장 감정", "명세의 세 감정에 더한 하드웨어 확장 값입니다. 출력 모델이 아니라 파이프라인이 터치·장시간 대기·호출어 같은 상황에 맞춰 보냅니다."],
-  ];
-  FACES.forEach((f, i) => f.phase = i * 1.37);
-
-  // ---------- 옵션 ----------
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const opt = { dot: 8, shape: "round", whiskers: true, mouth: "talk", glow: true, motion: !reduce };
-  try { Object.assign(opt, JSON.parse(localStorage.getItem("deskpet-face-opt") || "{}")); } catch (e) {}
-  const save = () => { try { localStorage.setItem("deskpet-face-opt", JSON.stringify(opt)); } catch (e) {} };
-
-  // ---------- 렌더러 ----------
-  const views = [];
-  function makeView(cv, face) {
-    const v = { cv, ctx: cv.getContext("2d"), face, lit: document.createElement("canvas"), bg: null, bgKey: "", visible: true, last: -1 };
-    v.lctx = v.lit.getContext("2d");
-    new ResizeObserver(() => resize(v)).observe(cv);
-    views.push(v);
-    return v;
-  }
-  function resize(v) {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const w = Math.max(1, Math.round(v.cv.clientWidth * dpr));
-    v.cv.width = w; v.cv.height = Math.round(w * H / W);
-    v.lit.width = v.cv.width; v.lit.height = v.cv.height;
-    v.bgKey = ""; v.last = -1;
-  }
-  function grid() { const cols = Math.round(W / opt.dot), cs = W / cols; return { cols, rows: Math.floor(H / cs), cs }; }
-  function dotPath(p, x, y, r, square) {
-    if (square) { const k = r * 0.35; p.roundRect ? p.roundRect(x - r, y - r, 2 * r, 2 * r, k) : p.rect(x - r, y - r, 2 * r, 2 * r); }
-    else { p.moveTo(x + r, y); p.arc(x, y, r, 0, Math.PI * 2); }
-  }
-  function background(v, g, sc) {
-    const key = v.cv.width + "|" + g.cols + "|" + opt.shape;
-    if (v.bgKey === key) return v.bg;
-    const c = document.createElement("canvas"); c.width = v.cv.width; c.height = v.cv.height;
-    const x = c.getContext("2d"); x.fillStyle = LCD_BG; x.fillRect(0, 0, c.width, c.height);
-    const cp = g.cs * sc, oy = (H - g.rows * g.cs) / 2 * sc, p = new Path2D();
-    for (let j = 0; j < g.rows; j++) for (let i = 0; i < g.cols; i++) dotPath(p, (i + 0.5) * cp, oy + (j + 0.5) * cp, cp * 0.4, opt.shape === "square");
-    x.fillStyle = "rgba(60, 92, 112, 0.18)"; x.fill(p);
-    v.bg = c; v.bgKey = key; return c;
-  }
-  let val = new Float32Array(0), colI = new Uint8Array(0);
-  function paint(v, t) {
-    const g = grid(), n = g.cols * g.rows, sc = v.cv.width / W, cp = g.cs * sc, oy = (H - g.rows * g.cs) / 2;
-    if (val.length < n) { val = new Float32Array(n); colI = new Uint8Array(n); }
-    val.fill(0, 0, n);
-    const { layers, caption } = build(v.face, t, opt);
-    const softK = 1.35;
-    for (const l of layers) {
-      const i0 = Math.max(0, Math.floor(l.bb[0] / g.cs) - 2), i1 = Math.min(g.cols - 1, Math.ceil(l.bb[2] / g.cs) + 2);
-      const j0 = Math.max(0, Math.floor((l.bb[1] - oy) / g.cs) - 2), j1 = Math.min(g.rows - 1, Math.ceil((l.bb[3] - oy) / g.cs) + 2);
-      for (let j = j0; j <= j1; j++) {
-        const py = oy + (j + 0.5) * g.cs;
-        for (let i = i0; i <= i1; i++) {
-          let c = 0.5 - l.d((i + 0.5) * g.cs, py) / (g.cs * softK);
-          if (c <= 0) continue;
-          c = (c > 1 ? 1 : c) * l.a;
-          const k = j * g.cols + i;
-          if (c > val[k]) { val[k] = c; colI[k] = l.col; }
+    // 입: 고개 돌림을 흉내 내려고 시선의 일부만 따라감
+    const mx = 512 + P.lookX * 0.35 + P.mX, my = 392 + P.lookY * 0.3, mw = Math.max(0.3, P.mW);
+    const open = clamp(P.mOpen, 0, 1), lip = 1 - ss((open - 0.1) / 0.14), cat = clamp(P.mCat, 0, 1);
+    if (lip > 0.02) {
+      if (cat > 0.02) {
+        const ar = 27 * mw;
+        for (const s of [-1, 1]) L.push(layer(col, cat * lip, [mx + s * ar - ar - 6, my - 10, mx + s * ar + ar + 6, my + ar + 6],
+          (x, y) => sdArc(x, y, mx + s * ar, my - 6, ar, DOWN[0], DOWN[1], 5)));
+      }
+      if (cat < 0.98) {
+        const hwm = 52 * mw, pts = [];
+        for (let i = 0; i <= 10; i++) {
+          const s = i / 5 - 1;
+          pts.push([mx + s * hwm, my + P.mSmile * 14 * (1 - s * s) - P.mSmile * 7 + P.mWave * 5 * Math.sin(s * Math.PI * 2.5 + t * 5)]);
+        }
+        for (let i = 0; i < 10; i++) {
+          const [a, b] = [pts[i], pts[i + 1]];
+          L.push(layer(col, (1 - cat) * lip, [Math.min(a[0], b[0]) - 7, Math.min(a[1], b[1]) - 7, Math.max(a[0], b[0]) + 7, Math.max(a[1], b[1]) + 7],
+            (x, y) => sdTaper(x, y, a[0], a[1], b[0], b[1], 5, 5)));
         }
       }
     }
-    const paths = new Map(), sq = opt.shape === "square";
-    for (let k = 0; k < n; k++) {
-      const vv = val[k]; if (vv < 0.06) continue;
-      const lvl = Math.min(7, (vv * 8) | 0), key = colI[k] * 8 + lvl;
+    if (open > 0.03) {
+      const oh = 6 + open * 24, ow = Math.max(16, 40 * mw - open * 8), oy = my - 6 + oh;
+      L.push(layer(col, ss(open * 6), [mx - ow, oy - oh, mx + ow, oy + oh], (x, y) => sdBox(x, y, mx, oy, ow, oh, Math.min(ow, oh))));
+    }
+    // 수염: 휘어지고 끝이 가늘어지는 곡선, 천천히 흔들림
+    if (opt.whiskers) for (const side of [-1, 1]) for (const k of [-1, 0, 1]) {
+      const ix = 512 + side * 222 + P.lookX * 0.25, iy = 392 + k * 18 + P.whisk * 0.25 + P.lookY * 0.2;
+      const sway = Math.sin(t * 1.1 + k * 0.9 + side) * 3;
+      const bx = 512 + side * 404 + P.lookX * 0.25, by = iy + k * 26 + P.whisk + sway, bow = 9 + k * 4;
+      const qx = (ix + bx) / 2, qy = (iy + by) / 2 + bow;
+      let px = ix, py = iy;
+      for (let i = 1; i <= 6; i++) {
+        const u = i / 6, v = 1 - u, t0 = 3 - 2 * (i - 1) / 6, t1 = 3 - 2 * u;
+        const nx = v * v * ix + 2 * v * u * qx + u * u * bx, ny = v * v * iy + 2 * v * u * qy + u * u * by;
+        const a = [px, py, nx, ny];
+        L.push(layer(col, 0.55, [Math.min(a[0], a[2]) - 4, Math.min(a[1], a[3]) - 4, Math.max(a[0], a[2]) + 4, Math.max(a[1], a[3]) + 4],
+          (x, y) => sdTaper(x, y, a[0], a[1], a[2], a[3], t0, t1)));
+        px = nx; py = ny;
+      }
+    }
+    if (P.blush > 0.02) for (const x of [318, 706]) L.push(layer(PINK, 0.32 * P.blush, [x - 30, 308, x + 30, 368], (px, py) => sdCircle(px, py, x, 338, 28)));
+    if (P.zz > 0.02) for (let i = 0; i < 2; i++) {
+      const q = clamp(P.zzU * 1.3 - i * 0.3, 0, 1), x = 770 + q * 50 + i * 28, y = 190 - q * 80 - i * 30, h = 11 + i * 4;
+      L.push(layer(col, P.zz * 0.8 * bump(q), [x - h - 5, y - h - 5, x + h + 5, y + h + 5], (px, py) => Math.min(
+        sdTaper(px, py, x - h, y - h, x + h, y - h, 3, 3), sdTaper(px, py, x + h, y - h, x - h, y + h, 3, 3), sdTaper(px, py, x - h, y + h, x + h, y + h, 3, 3))));
+    }
+    return L;
+  }
+
+  // ---------- 렌더러: 모든 도트 같은 모양, 밝기만 다름 ----------
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const opt = { vary: true, whiskers: true, glow: true, motion: !reduce };
+  try { Object.assign(opt, JSON.parse(localStorage.getItem("deskpet-proto-opt") || "{}")); } catch (e) {}
+  const save = () => { try { localStorage.setItem("deskpet-proto-opt", JSON.stringify(opt)); } catch (e) {} };
+
+  const views = [];
+  function makeView(cv, face) {
+    const v = { cv, ctx: cv.getContext("2d"), face, dir: new Director(face), lit: document.createElement("canvas"), bg: null, bgW: 0, visible: true, last: 0 };
+    new ResizeObserver(() => { const dpr = Math.min(devicePixelRatio || 1, 2), w = Math.max(1, Math.round(cv.clientWidth * dpr));
+      cv.width = w; cv.height = Math.round(w * H / W); v.lit.width = w; v.lit.height = cv.height; v.bgW = 0; }).observe(cv);
+    views.push(v); return v;
+  }
+  function background(v) {
+    if (v.bgW === v.cv.width) return v.bg;
+    const c = document.createElement("canvas"); c.width = v.cv.width; c.height = v.cv.height;
+    const x = c.getContext("2d"), sc = c.width / W, p = new Path2D();
+    x.fillStyle = LCD_BG; x.fillRect(0, 0, c.width, c.height);
+    for (let j = 0; j < ROWS; j++) for (let i = 0; i < COLS; i++) { const cx = (i + 0.5) * DOT * sc, cy = (j + 0.5) * DOT * sc, r = DOT * 0.42 * sc; p.moveTo(cx + r, cy); p.arc(cx, cy, r, 0, Math.PI * 2); }
+    x.fillStyle = "rgba(60, 92, 112, 0.16)"; x.fill(p);
+    v.bg = c; v.bgW = c.width; return c;
+  }
+  const val = new Float32Array(COLS * ROWS), tint = new Array(COLS * ROWS);
+  function paint(v, P) {
+    const col = v.dir.col.map(Math.round), L = buildLayers(P, col, v.dir.t, opt);
+    const cx0 = 512, cy0 = 300, cos = Math.cos(P.tilt), sin = Math.sin(P.tilt), s = P.scale;
+    const toScreen = (x, y) => { const dx = x - cx0, dy = y - cy0; return [cx0 + s * (cos * dx - sin * dy), cy0 + s * (sin * dx + cos * dy) + P.bob]; };
+    val.fill(0);
+    const soft = DOT * 1.1;
+    for (const l of L) {
+      const c = [toScreen(l.bb[0], l.bb[1]), toScreen(l.bb[2], l.bb[1]), toScreen(l.bb[0], l.bb[3]), toScreen(l.bb[2], l.bb[3])];
+      const i0 = Math.max(0, Math.floor(Math.min(...c.map(p => p[0])) / DOT) - 2), i1 = Math.min(COLS - 1, Math.ceil(Math.max(...c.map(p => p[0])) / DOT) + 2);
+      const j0 = Math.max(0, Math.floor(Math.min(...c.map(p => p[1])) / DOT) - 2), j1 = Math.min(ROWS - 1, Math.ceil(Math.max(...c.map(p => p[1])) / DOT) + 2);
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+        const dx = (i + 0.5) * DOT - cx0, dy = (j + 0.5) * DOT - cy0 - P.bob;
+        const lx = cx0 + (cos * dx + sin * dy) / s, ly = cy0 + (-sin * dx + cos * dy) / s;
+        let a = 0.5 - l.d(lx, ly) * s / soft;
+        if (a <= 0) continue;
+        a = Math.min(a, 1) * l.a * (l.af ? l.af(lx, ly) : 1);
+        const k = j * COLS + i;
+        if (a > val[k]) { val[k] = a; tint[k] = l.col; }
+      }
+    }
+    const sc = v.cv.width / W, cp = DOT * sc, paths = new Map();
+    for (let k = 0; k < val.length; k++) {
+      if (val[k] < 0.04) continue;
+      const key = tint[k].join(",") + "|" + Math.min(15, (val[k] * 16) | 0);
       let p = paths.get(key); if (!p) paths.set(key, p = new Path2D());
-      const i = k % g.cols, j = (k / g.cols) | 0, f = (lvl + 1) / 8;
-      dotPath(p, (i + 0.5) * cp, (oy + (j + 0.5) * g.cs) * sc, cp * 0.44 * (0.45 + 0.55 * f), sq);
+      const x = ((k % COLS) + 0.5) * cp, y = (((k / COLS) | 0) + 0.5) * cp, r = cp * 0.42;
+      p.moveTo(x + r, y); p.arc(x, y, r, 0, Math.PI * 2);
     }
-    const lc = v.lctx; lc.clearRect(0, 0, v.lit.width, v.lit.height);
-    for (const [key, p] of paths) {
-      const c = COLORS[(key / 8) | 0], f = ((key % 8) + 1) / 8;
-      lc.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${0.3 + 0.7 * f})`; lc.fill(p);
-    }
+    const lc = v.lit.getContext("2d"); lc.clearRect(0, 0, v.lit.width, v.lit.height);
+    for (const [key, p] of paths) { const [rgb, lv] = key.split("|"); lc.fillStyle = `rgba(${rgb},${(+lv + 1) / 16})`; lc.fill(p); }
     const ctx = v.ctx;
-    ctx.drawImage(background(v, g, sc), 0, 0);
-    if (opt.glow) { ctx.save(); ctx.filter = `blur(${cp * 1.4}px)`; ctx.globalAlpha = 0.55; ctx.drawImage(v.lit, 0, 0); ctx.restore(); }
+    ctx.drawImage(background(v), 0, 0);
+    if (opt.glow) { ctx.save(); ctx.filter = `blur(${cp * 1.4}px)`; ctx.globalAlpha = 0.5; ctx.drawImage(v.lit, 0, 0); ctx.restore(); }
     ctx.drawImage(v.lit, 0, 0);
-    if (caption) {
+    if (v.dir.label) {
       ctx.fillStyle = TEXT; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.font = `${36 * sc}px Jua, "IBM Plex Sans KR", sans-serif`;
-      ctx.fillText(caption, W / 2 * sc, 530 * sc);
+      ctx.font = `${36 * sc}px Jua, "IBM Plex Sans KR", sans-serif`; ctx.fillText(v.dir.label, W / 2 * sc, 530 * sc);
     }
   }
+
+  // ---------- 표정 목록 ----------
+  const FACES = [
+    { group: "activity", id: "idle", name: "대기", payload: { activity: "idle", emotion: "neutral" },
+      note: "편안한 눈과 ω 입. 가끔 두리번거리고, 갸웃하고, 하품하고, 살짝 다가옵니다." },
+    { group: "activity", id: "listening", name: "듣는 중", payload: { activity: "listening", emotion: "neutral" },
+      note: "사용자를 똑바로 보고 얼굴이 조금 다가옵니다. 입을 다물고 끄덕이거나 귀를 기울입니다." },
+    { group: "activity", id: "processing", name: "생각 중", payload: { activity: "processing", emotion: "neutral" },
+      note: "왼쪽 위 또는 오른쪽 위를 보고 생각합니다(무작위). 시선이 휙휙 움직이고, 입은 한쪽으로 모입니다." },
+    { group: "activity", id: "speaking", name: "말하는 중", payload: { activity: "speaking", emotion: "neutral" },
+      note: "다시 사용자를 보고 입이 음절처럼 불규칙하게 열립니다. 가끔 강조하거나 시선을 돌립니다." },
+    { group: "activity", id: "awaiting", name: "대답 기다림", payload: { activity: "awaiting_answer", emotion: "neutral" },
+      note: "얼굴 전체를 8°쯤 기울여 갸웃합니다(왼쪽/오른쪽 무작위). 빤히 보거나 깜박깜박합니다." },
+    { group: "emotion", id: "happy", name: "기쁨", payload: { activity: "idle", emotion: "happy" },
+      note: "눈이 조금 납작해지며 올라간 웃는 눈과 작은 미소. 방긋할 때만 잠깐 ^ ^ 눈이 되고, 가볍게 통통 튀거나 살짝 흔듭니다." },
+    { group: "emotion", id: "sad", name: "슬픔·위로", payload: { activity: "idle", emotion: "sad" },
+      note: "바깥쪽 눈꺼풀이 처지고 얼굴이 조금 내려갑니다. 한숨을 쉬거나 힐끔 올려다봅니다." },
+    { group: "emotion", id: "happy-talk", name: "기쁘게 말하기", payload: { activity: "speaking", emotion: "happy" },
+      note: "웃는 눈으로 말합니다." },
+    { group: "emotion", id: "sad-talk", name: "위로하며 말하기", payload: { activity: "speaking", emotion: "sad" },
+      note: "처진 눈으로 입을 작게 움직이며 말합니다." },
+    { group: "result", id: "succeeded", name: "업무 성공", payload: { activity: "idle", emotion: "happy", actionStatus: "succeeded" },
+      note: "기쁨과 같은 얼굴입니다. 반짝이 장식은 뺐습니다." },
+    { group: "result", id: "failed", name: "업무 실패", payload: { activity: "idle", emotion: "sad", actionStatus: "failed" },
+      note: "슬픔과 같은 얼굴(분홍)입니다." },
+    { group: "result", id: "unknown", name: "결과 미확인", payload: { activity: "idle", emotion: "neutral", actionStatus: "unknown" },
+      note: "노란 얼굴에 한쪽 눈꺼풀이 내려오고 입이 물결칩니다. 어리둥절하게 두리번거립니다." },
+    { group: "proposal", id: "petted", name: "쓰다듬기", payload: { activity: "idle", emotion: "petted" },
+      note: "납작하게 웃는 눈과 옅은 볼 터치. '좋아' 할 때만 잠깐 ^ ^ 눈이 되고, 살짝 비비고 수염이 씰룩입니다." },
+    { group: "proposal", id: "sleepy", name: "졸림", payload: { activity: "idle", emotion: "sleepy" },
+      note: "눈이 반쯤 감겼고, 가끔 꾸벅 졸거나 하품하거나 z가 떠오릅니다." },
+    { group: "proposal", id: "surprised", name: "놀람", payload: { activity: "idle", emotion: "surprised" },
+      note: "눈이 둥글고 커지고 입이 o. 깜짝 깜박이거나 부르르 떱니다." },
+  ];
+  const GROUPS = [
+    ["activity", "활동 상태", "파이프라인이 대화 단계마다 보내는 기본 얼굴입니다. 시선과 움직임으로 구분합니다."],
+    ["emotion", "감정", "출력 모델이 정하는 emotion 값입니다. 눈꺼풀과 입 모양만 약하게 바뀝니다."],
+    ["result", "업무 결과", "actionStatus를 보낼 때의 얼굴입니다."],
+    ["proposal", "확장 감정", "하드웨어 확장 값입니다. 파이프라인이 터치·장시간 대기·호출어에 맞춰 보냅니다."],
+  ];
+  const FLOW = [["idle", 3.5], ["listening", 4], ["processing", 3.5], ["happy-talk", 4], ["awaiting", 4], ["listening", 3], ["processing", 3], ["sad-talk", 3.5], ["idle", 3]];
 
   // ---------- DOM ----------
   const $ = id => document.getElementById(id);
   const stage = makeView($("stage"), FACES[0]);
   const catalog = $("catalog"), tiles = [];
-  const io = new IntersectionObserver(es => es.forEach(e => { const v = views.find(v => v.cv === e.target); if (v) { v.visible = e.isIntersecting; v.last = -1; } }));
+  const io = new IntersectionObserver(es => es.forEach(e => { const v = views.find(v => v.cv === e.target); if (v) v.visible = e.isIntersecting; }));
   for (const [gid, title, desc] of GROUPS) {
     const sec = document.createElement("section"); sec.className = "group";
     sec.innerHTML = `<header><h2>${title}</h2><p class="lede">${desc}</p></header><div class="grid"></div>`;
-    const gridEl = sec.querySelector(".grid");
     for (const f of FACES.filter(f => f.group === gid)) {
       const b = document.createElement("button");
-      b.type = "button"; b.className = "tile"; b.id = "tile-" + f.id; b.setAttribute("aria-pressed", "false");
-      const code = Object.entries(f.payload).map(([k, v]) => `${k}: ${v}`).join(" · ");
+      b.type = "button"; b.className = "tile"; b.setAttribute("aria-pressed", "false");
       b.innerHTML = `<div class="lcd"><canvas aria-hidden="true"></canvas></div>
         <div class="name">${f.name}${gid === "proposal" ? '<span class="badge prop">확장</span>' : ""}</div>
-        <code>${code}</code><p class="note">${f.note}</p>`;
-      gridEl.appendChild(b);
-      const v = makeView(b.querySelector("canvas"), f); io.observe(v.cv);
-      b.addEventListener("click", () => select(f));
+        <div class="cur"></div><p class="note">${f.note}</p>`;
+      sec.querySelector(".grid").appendChild(b);
+      const v = makeView(b.querySelector("canvas"), f); v.cur = b.querySelector(".cur"); io.observe(v.cv);
+      b.addEventListener("click", () => { stopFlow(); select(f); });
       tiles.push([f, b]);
     }
     catalog.appendChild(sec);
   }
-
   function select(f) {
-    stage.face = f; stage.last = -1;
+    stage.face = f; stage.dir.set(f);
     tiles.forEach(([g, b]) => b.setAttribute("aria-pressed", String(g === f)));
     $("pName").textContent = f.name;
     const prop = f.group === "proposal";
-    $("pBadge").textContent = prop ? "하드웨어 확장" : "명세";
-    $("pBadge").className = "badge" + (prop ? " prop" : "");
-    $("pSpec").textContent = f.spec; $("pNote").textContent = f.note;
-    const body = JSON.stringify(f.payload, null, 2);
-    $("pPayload").textContent = prop
-      ? "// 하드웨어 확장 값 — 파이프라인이 상황에 맞춰 보냄\n" + body
-      : "// HardwareDisplayAdapter.show() 에 넣을 값\n" + body;
-    if (innerWidth < 880 && document.activeElement && document.activeElement.classList.contains("tile")) stage.cv.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+    $("pBadge").textContent = prop ? "하드웨어 확장" : "명세"; $("pBadge").className = "badge" + (prop ? " prop" : "");
+    $("pNote").textContent = f.note;
+    $("pVars").innerHTML = stage.dir.pool().map(v => `<span>${v.name}</span>`).join("");
   }
+  let flow = null;
+  function stopFlow() { flow = null; $("btnFlow").textContent = "대화 흐름 재생"; }
+  $("btnFlow").addEventListener("click", () => {
+    if (flow) return stopFlow();
+    flow = { i: 0, t: 0 }; $("btnFlow").textContent = "흐름 멈추기";
+    select(FACES.find(f => f.id === FLOW[0][0]));
+  });
+  $("btnNext").addEventListener("click", () => { stage.dir.start(); });
 
   function syncControls() {
-    document.querySelectorAll(".seg").forEach(seg => {
-      const key = seg.dataset.key, cur = opt[key];
-      seg.querySelectorAll("button").forEach(b => {
-        const v = b.dataset.v, on = typeof cur === "boolean" ? (v === "1") === cur : String(cur) === v;
-        b.setAttribute("aria-pressed", String(on));
-      });
-    });
-    const g = grid(); $("dotInfo").textContent = `도트 ${opt.dot}px · ${g.cols}×${g.rows}`;
-    views.forEach(v => v.last = -1);
+    document.querySelectorAll(".seg").forEach(seg => seg.querySelectorAll("button").forEach(b =>
+      b.setAttribute("aria-pressed", String((b.dataset.v === "1") === opt[seg.dataset.key]))));
   }
   document.querySelectorAll(".seg").forEach(seg => seg.addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
-    const key = seg.dataset.key, v = b.dataset.v;
-    opt[key] = typeof opt[key] === "boolean" ? v === "1" : key === "dot" ? +v : v;
-    save(); syncControls();
+    opt[seg.dataset.key] = b.dataset.v === "1"; save(); syncControls();
   }));
 
   // ---------- 루프 ----------
-  const FROZEN = 2.4;
+  let prev = performance.now();
   function frame(now) {
-    const t = opt.motion ? now / 1000 : FROZEN;
+    const dt = Math.min(0.1, (now - prev) / 1000); prev = now;
+    if (flow && opt.motion) {
+      flow.t += dt;
+      if (flow.t > FLOW[flow.i][1]) { flow.t = 0; flow.i = (flow.i + 1) % FLOW.length; select(FACES.find(f => f.id === FLOW[flow.i][0])); }
+    }
     for (const v of views) {
       if (!v.visible || !v.cv.width) continue;
-      const fps = v === stage ? 30 : 20;
-      if (opt.motion ? now - v.last < 1000 / fps : v.last >= 0) continue;
-      v.last = now; paint(v, t);
+      const P = v.dir.update(opt.motion ? dt : 0, opt);
+      const fps = v === stage ? 60 : 24;
+      if (now - v.last < 1000 / fps - 2) continue;
+      v.last = now; paint(v, P);
+      if (v.cur) v.cur.textContent = "▸ " + v.dir.nowName();
     }
+    $("pNow").textContent = stage.dir.nowName();
+    document.querySelectorAll("#pVars span").forEach(s => s.classList.toggle("on", s.textContent === stage.dir.nowName()));
     requestAnimationFrame(frame);
   }
   syncControls(); select(FACES[0]);
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => views.forEach(v => v.last = -1));
   requestAnimationFrame(frame);
 })();
 </script>

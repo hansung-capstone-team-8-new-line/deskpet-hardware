@@ -54,6 +54,7 @@ for rotation in (0, 90):
                 assert health["display"]["available"], health
                 for name, activity, text, status, emotion in scenes:
                     client.show(activity, text, status, emotion=emotion)
+                    time.sleep(0.3)  # let the 0.25 s cross-fade from the previous face finish
                     target = output / f"{name}-{rotation}.bmp"
                     client.request("display.snapshot", path=str(target))
                     with target.open("rb") as image:

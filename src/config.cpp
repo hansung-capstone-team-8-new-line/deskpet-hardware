@@ -54,7 +54,7 @@ Config Config::load(const std::string& file) {
     c.rotation = d.value("rotation", 0); c.font = d.value("font", ""); c.fontSize = d.value("fontSize", 36);
     const auto f = d.value("face", Json::object());
     c.dotSize = f.value("dotSize", 8); c.whiskers = f.value("whiskers", true);
-    c.glow = f.value("glow", true); c.mouth = f.value("mouth", "speaking");
+    c.glow = f.value("glow", true); c.mouth = f.value("mouth", "always");
     const auto a = j.value("audio", Json::object());
     c.captureDevice = a.value("captureDevice", ""); c.playbackDevice = a.value("playbackDevice", ""); c.wavInput = a.value("wavInput", "");
     c.playbackGain = a.value("playbackGain", 0.25);
