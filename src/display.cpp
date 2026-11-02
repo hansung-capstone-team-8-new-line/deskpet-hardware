@@ -5,6 +5,7 @@
 #include <array>
 #include <functional>
 #include <map>
+#include <mutex>
 #include <random>
 #include <set>
 #ifdef DESKPET_SDL
@@ -197,14 +198,16 @@ public:
     label_ = status == "unknown" ? "결과를 확인해야 해요" : activity_->label;
     target_ = mood_ == "sad" ? kPink : mood_ == "unknown" ? kYellow : kBlue;
   }
-  void update(float dt) {
+  // `speech` is the measured mouth opening of the audio playing now; without it, speaking falls back to a random rhythm.
+  void update(float dt, std::optional<float> speech) {
     t_ += dt;
     if (current_ && t_ > current_->start + current_->duration) { current_.reset(); nextVariation_ = t_ + range(activity_->gap0, activity_->gap1); }
     if (!current_ && t_ >= nextVariation_) start();
     Pose g = kRest;
     activity_->base(side_, g);
     if (moodTable_) { for (const auto& [k, v] : moodTable_->set) g[k] = v; for (const auto& [k, v] : moodTable_->add) g[k] += v; }
-    if (activity_->talk) {
+    if (activity_->talk && speech) g[MouthOpen] = *speech * (mood_ == "sad" ? 0.7f : 1);
+    else if (activity_->talk) {
       if (t_ >= nextTalk_) {
         talk_ = random() < 0.16f ? 0 : range(0.25f, 1);
         nextTalk_ = t_ + (talk_ > 0 ? range(0.08f, 0.16f) : range(0.18f, 0.35f));
@@ -399,6 +402,26 @@ struct Display::Impl {
     emit(event(*touchSubscription, "touch.event", fields));
     if (phase == "down") contacts[id] = fields; else contacts.erase(id);
   }
+  // Mouth opening per 20 ms of queued speech, placed on the playback clock.
+  struct Speech {
+    mutable std::mutex mutex;
+    bool active = false, started = false;
+    Format format; Clock::time_point start;
+    std::vector<float> levels;
+    double sum = 0; size_t count = 0;  // the window being filled
+    void reset() { active = started = false; levels.clear(); sum = 0; count = 0; }
+  } speech;
+  std::optional<float> speechLevel(Clock::time_point now) const {
+    std::lock_guard lock(speech.mutex);
+    if (!speech.active) return std::nullopt;
+    if (!speech.started) return 0.0f;
+    const double ms = std::chrono::duration<double, std::milli>(now - speech.start).count() - config.lipSyncDelayMs;
+    if (ms < 0) return 0.0f;
+    const size_t i = size_t(ms / 20);
+    if (i >= speech.levels.size()) return 0.0f;
+    const float next = i + 1 < speech.levels.size() ? speech.levels[i + 1] : 0, f = float(ms / 20 - double(i));
+    return speech.levels[i] + (next - speech.levels[i]) * f;
+  }
   uint64_t revision = 0;
   bool revisionSet = false, failNext = false;
   std::string error;
@@ -559,7 +582,7 @@ struct Display::Impl {
       for (const auto& line : lines) { text(line, 80, y); y += TTF_FontLineSkip(font); }
     } else {
       const auto now = Clock::now();
-      director.update(std::chrono::duration<float>(now - frameAt).count());
+      director.update(std::chrono::duration<float>(now - frameAt).count(), speechLevel(now));
       frameAt = now;
       drawFace(buildFace(director, config.whiskers, config.mouth, view.value("activity", "idle") == "speaking"));
       if (font && !director.label().empty()) {
@@ -711,6 +734,33 @@ void Display::injectTouch(const Packet& command, Emit emit) {
     command.meta.at("x").get<double>(), command.meta.at("y").get<double>(), true, emit);
 }
 void Display::injectFailure() { impl_->failNext = true; }
+void Display::speechBegin(const Format& format) {
+  auto& s = impl_->speech; std::lock_guard lock(s.mutex);
+  s.reset(); s.active = true; s.format = format;
+}
+void Display::speechAudio(const Bytes& pcm) {
+  auto& s = impl_->speech; std::lock_guard lock(s.mutex);
+  if (!s.active) return;
+  // RMS per 20 ms window, mapped from -48..-14 dBFS to a closed..open mouth (before playback gain).
+  const size_t window = size_t(s.format.rate / 50) * size_t(s.format.channels);
+  for (size_t i = 0; i + 1 < pcm.size(); i += 2) {
+    const double v = double(int16_t(uint16_t(pcm[i]) | uint16_t(pcm[i + 1]) << 8)) / 32768;
+    s.sum += v * v;
+    if (++s.count < window) continue;
+    const double db = 20 * std::log10(std::sqrt(s.sum / double(s.count)) + 1e-9);
+    s.levels.push_back(float(std::clamp((db + 48) / 34, 0.0, 1.0)));
+    s.sum = 0; s.count = 0;
+  }
+}
+void Display::speechStarted(Clock::time_point when) {
+  auto& s = impl_->speech; std::lock_guard lock(s.mutex);
+  if (s.active && !s.started) { s.started = true; s.start = when; }
+}
+void Display::speechEnd() {
+  auto& s = impl_->speech; std::lock_guard lock(s.mutex);
+  s.reset();
+}
+std::optional<float> Display::speechLevel(Clock::time_point now) const { return impl_->speechLevel(now); }
 Json Display::health() const { return {{"available", impl_->error.empty()}, {"error", impl_->error}, {"simulated", impl_->config.mock}}; }
 void Display::snapshot(const std::string& path) {
 #ifdef DESKPET_SDL
