@@ -9,7 +9,7 @@
     "rotation": 0,
     "font": "",
     "fontSize": 36,
-    "face": {"dotSize": 8, "whiskers": true, "mouth": "speaking", "glow": true}
+    "face": {"dotSize": 8, "whiskers": true, "mouth": "always", "glow": true}
   },
   "audio": {
     "wavInput": "",
