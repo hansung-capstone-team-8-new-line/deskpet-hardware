@@ -107,9 +107,9 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   <section class="principles">
     <h2>설계 원칙</h2>
     <ul>
-      <li><strong>눈동자·반짝임 없음.</strong> 둥근 통짜 눈만 씁니다. Vector·EMO처럼 눈의 모양과 눈꺼풀로만 표현합니다.</li>
+      <li><strong>생기 있는 눈, 과하지 않게.</strong> 둥근 눈에 작고 옅은 반사광 하나만 넣었습니다(눈동자처럼 보이지 않게). 빛은 고정이라 시선을 옮기면 반사광이 살짝 반대로 밀리고, 눈이 아주 살짝 숨 쉬듯 커졌다 작아집니다.</li>
       <li><strong>상태는 시선과 움직임.</strong> 듣는 중: 사용자를 보고 다가옴·끄덕임. 생각 중: 위쪽 옆을 봄(사람이 생각할 때 시선을 피하는 것과 같음)·시선이 휙휙. 말하는 중: 다시 사용자를 보고 입을 움직임. 대답 기다림: 고개를 갸웃.</li>
-      <li><strong>감정은 약하게.</strong> 기쁨은 아래 눈꺼풀이 올라온 웃는 눈, 슬픔은 바깥쪽 눈꺼풀이 처진 눈. 색은 슬픔·실패(분홍)와 결과 미확인(노랑)에만 씁니다.</li>
+      <li><strong>감정은 약하게.</strong> 기쁨은 눈이 조금 납작해지며 올라간 웃는 눈(크게 웃는 순간에만 ^ ^), 슬픔은 바깥쪽 눈꺼풀이 처진 눈. 색은 슬픔·실패(분홍)와 결과 미확인(노랑)에만 씁니다.</li>
       <li><strong>상태가 바뀔 때 먼저 깜박임.</strong> 애니메이터가 장면 전환을 숨기는 방식이라 자연스럽습니다.</li>
       <li><strong>부드러운 움직임.</strong> 모든 값은 스프링으로 따라가서 살짝 넘쳤다 돌아옵니다. 눈 깜박임 간격도 무작위(가끔 두 번 연속)입니다.</li>
       <li><strong>무작위 변형.</strong> 상태마다 기본 자세(예: 생각할 때 왼쪽 위/오른쪽 위)를 무작위로 고르고, 쉬는 간격도 무작위로 두며 같은 변형이 연달아 나오지 않게 합니다.</li>
@@ -221,11 +221,11 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   };
   const EMO = {
     happy: {
-      set: { lidHappy: 0.85, mSmile: 0.9, mCat: 0, mW: 0.95 }, add: { mOpen: 0.12 },
+      set: { lidHappy: 0.5, mSmile: 0.6, mCat: 0, mW: 0.85 }, add: {},
       vars: [
-        V("통통", [0.8, 1.0], u => ({ bob: -10 * Math.abs(Math.sin(u * Math.PI * 2)) })),
-        V("좌우 흔들", [1.2, 1.6], u => ({ tilt: 0.07 * Math.sin(u * Math.PI * 4) * env(u, 0.1, 0.9) })),
-        V("방긋", [0.9, 1.2], u => ({ mOpen: 0.3 * env(u), scale: 0.03 * env(u) })),
+        V("통통", [0.8, 1.0], u => ({ bob: -6 * Math.abs(Math.sin(u * Math.PI * 2)) })),
+        V("좌우 흔들", [1.2, 1.6], u => ({ tilt: 0.04 * Math.sin(u * Math.PI * 4) * env(u, 0.1, 0.9) })),
+        V("방긋", [0.9, 1.2], u => ({ mOpen: 0.18 * env(u), lidHappy: 0.15 * env(u), scale: 0.02 * env(u) })),
       ],
     },
     sad: {
@@ -244,11 +244,11 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       ],
     },
     petted: {
-      set: { lidHappy: 1.0, blush: 1, mCat: 1, mSmile: 0.4 }, add: { whisk: 6 },
+      set: { lidHappy: 0.5, blush: 0.6, mCat: 1, mSmile: 0.4 }, add: { whisk: 4 },
       vars: [
-        V("비비기", [1.2, 1.6], u => ({ tilt: 0.08 * Math.sin(u * Math.PI * 4) * env(u, 0.1, 0.9) })),
-        V("수염 씰룩", [0.6, 0.9], u => ({ whisk: 7 * Math.sin(u * Math.PI * 8) })),
-        V("좋아", [1.0, 1.4], u => ({ scale: 0.035 * env(u), bob: -6 * env(u) })),
+        V("비비기", [1.2, 1.6], u => ({ tilt: 0.045 * Math.sin(u * Math.PI * 4) * env(u, 0.1, 0.9) })),
+        V("수염 씰룩", [0.6, 0.9], u => ({ whisk: 4 * Math.sin(u * Math.PI * 8) })),
+        V("좋아", [1.0, 1.4], u => ({ scale: 0.02 * env(u), bob: -4 * env(u), lidHappy: 0.2 * env(u) })),
       ],
     },
     sleepy: {
@@ -347,18 +347,32 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   function buildLayers(P, col, t, opt) {
     const L = [];
     for (const side of [-1, 1]) {
-      const cx = (side < 0 ? 348 : 676) + P.lookX, cy = 240 + P.lookY + (side > 0 ? P.raiseR : 0);
-      const hw = 64 * Math.max(0.5, P.eyeW), hh = Math.max(4, 90 * Math.max(0.4, P.eyeH) * (1 - 0.94 * P.blink));
+      // 웃으면 눈이 조금 납작해지며 올라감(아래를 깎으면 볼이 부푼 것처럼 보였음).
+      // 아주 크게 웃을 때(lidHappy 0.56 이상, 예: 방긋)만 감은 ^ 아치 눈이 됨.
+      const hap = clamp(P.lidHappy, 0, 1.1), squash = Math.min(hap, 0.8), arcK = ss((hap - 0.56) / 0.08);
+      const cx = (side < 0 ? 348 : 676) + P.lookX, cy = 240 + P.lookY - 12 * hap;
+      const breath = 1 + 0.012 * Math.sin(t * 1.7);  // 눈이 아주 살짝 숨 쉼
+      const hw = 64 * Math.max(0.5, P.eyeW) * (1 + 0.08 * squash);
+      const hh = Math.max(4, 90 * Math.max(0.4, P.eyeH) * breath * (1 - 0.36 * squash) * (1 - 0.94 * P.blink));
       const r = Math.min(hw, hh);
-      const lid = clamp(P.lidTop + (side > 0 ? P.lidTopR : 0), 0, 0.92), sad = clamp(P.lidSad, 0, 1), hap = clamp(P.lidHappy, 0, 1.1);
+      const lid = clamp(P.lidTop + (side > 0 ? P.lidTopR : 0), 0, 0.92), sad = clamp(P.lidSad, 0, 1);
       const yl = cy - hh + 2 * hh * lid + sad * 0.45 * hh, m = sad * 0.8 * hh * side / hw, mn = Math.hypot(1, m);
-      const R = hw * 1.3, cyc = cy + hh + R - hap * 1.3 * hh;
-      L.push(layer(col, 1, [cx - hw, cy - hh, cx + hw, cy + hh], (x, y) => {
-        let d = sdBox(x, y, cx, cy, hw, hh, r);
-        if (lid > 0.001 || sad > 0.001) d = Math.max(d, (yl + m * (x - cx) - y) / mn);
-        if (hap > 0.001) d = Math.max(d, -sdCircle(x, y, cx, cyc, R));
-        return d;
-      }, (x, y) => 1 - 0.28 * ss((y - (cy - hh * 0.3)) / (hh * 1.3))));
+      const eyeD = (x, y) => {
+        const d = sdBox(x, y, cx, cy, hw, hh, r);
+        return lid > 0.001 || sad > 0.001 ? Math.max(d, (yl + m * (x - cx) - y) / mn) : d;
+      };
+      if (arcK > 0.02) {
+        const ay = 270 + P.lookY, ar = hw * 0.95;
+        L.push(layer(col, arcK, [cx - ar - 14, ay - ar - 14, cx + ar + 14, ay + 14], (x, y) => sdArc(x, y, cx, ay, ar, -Math.PI + 0.5, -0.5, 12)));
+      }
+      if (arcK > 0.98) continue;
+      // 반사광 하나: 작고 옅은 색이라 눈동자로 보이지 않음. 빛은 고정이라 시선과 반대로 살짝 밀림.
+      if (hh > 34) {
+        const gx = cx + hw * 0.3 - P.lookX * 0.08, gy = cy - hh * 0.4, gr = r * 0.3;
+        const glint = col.map((c, i) => Math.round(c * 0.35 + [240, 250, 255][i] * 0.65));
+        L.push(layer(glint, 1 - arcK, [gx - gr, gy - gr, gx + gr, gy + gr], (x, y) => Math.max(sdCircle(x, y, gx, gy, gr), eyeD(x, y) + 6)));
+      }
+      L.push(layer(col, 1 - arcK, [cx - hw, cy - hh, cx + hw, cy + hh], eyeD, (x, y) => 1 - 0.28 * ss((y - (cy - hh * 0.3)) / (hh * 1.3))));
     }
     // 입: 고개 돌림을 흉내 내려고 시선의 일부만 따라감
     const mx = 512 + P.lookX * 0.35 + P.mX, my = 392 + P.lookY * 0.3, mw = Math.max(0.3, P.mW);
@@ -487,7 +501,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     { group: "activity", id: "awaiting", name: "대답 기다림", payload: { activity: "awaiting_answer", emotion: "neutral" },
       note: "얼굴 전체를 8°쯤 기울여 갸웃합니다(왼쪽/오른쪽 무작위). 빤히 보거나 깜박깜박합니다." },
     { group: "emotion", id: "happy", name: "기쁨", payload: { activity: "idle", emotion: "happy" },
-      note: "아래 눈꺼풀이 올라온 웃는 눈과 작은 미소. 통통 튀거나 좌우로 흔듭니다." },
+      note: "눈이 조금 납작해지며 올라간 웃는 눈과 작은 미소. 방긋할 때만 잠깐 ^ ^ 눈이 되고, 가볍게 통통 튀거나 살짝 흔듭니다." },
     { group: "emotion", id: "sad", name: "슬픔·위로", payload: { activity: "idle", emotion: "sad" },
       note: "바깥쪽 눈꺼풀이 처지고 얼굴이 조금 내려갑니다. 한숨을 쉬거나 힐끔 올려다봅니다." },
     { group: "emotion", id: "happy-talk", name: "기쁘게 말하기", payload: { activity: "speaking", emotion: "happy" },
@@ -501,7 +515,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     { group: "result", id: "unknown", name: "결과 미확인", payload: { activity: "idle", emotion: "neutral", actionStatus: "unknown" },
       note: "노란 얼굴에 한쪽 눈꺼풀이 내려오고 입이 물결칩니다. 어리둥절하게 두리번거립니다." },
     { group: "proposal", id: "petted", name: "쓰다듬기", payload: { activity: "idle", emotion: "petted" },
-      note: "눈을 감고 웃으며 옅은 볼 터치. 좌우로 비비고 수염이 씰룩입니다." },
+      note: "납작하게 웃는 눈과 옅은 볼 터치. '좋아' 할 때만 잠깐 ^ ^ 눈이 되고, 살짝 비비고 수염이 씰룩입니다." },
     { group: "proposal", id: "sleepy", name: "졸림", payload: { activity: "idle", emotion: "sleepy" },
       note: "눈이 반쯤 감겼고, 가끔 꾸벅 졸거나 하품하거나 z가 떠오릅니다." },
     { group: "proposal", id: "surprised", name: "놀람", payload: { activity: "idle", emotion: "surprised" },

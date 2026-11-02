@@ -145,10 +145,11 @@ const Activity& activityFor(const std::string& name) {
 const Mood* moodFor(const std::string& name) {
   using P = const Pick&;
   static const std::map<std::string, Mood> table{
-    {"happy", {{{LidHappy, 0.85f}, {MouthSmile, 0.9f}, {MouthCat, 0}, {MouthWidth, 0.95f}}, {{MouthOpen, 0.12f}}, {
-      var("통통", 0.8f, 1.0f, [](float u, P, Pose& d) { d[Bob] -= 10 * std::abs(std::sin(u * kPi * 2)); }),
-      var("좌우 흔들", 1.2f, 1.6f, [](float u, P, Pose& d) { d[Tilt] += 0.07f * std::sin(u * kPi * 4) * envelope(u, 0.1f, 0.9f); }),
-      var("방긋", 0.9f, 1.2f, [](float u, P, Pose& d) { d[MouthOpen] += 0.3f * envelope(u); d[Scale] += 0.03f * envelope(u); }),
+    {"happy", {{{LidHappy, 0.5f}, {MouthSmile, 0.6f}, {MouthCat, 0}, {MouthWidth, 0.85f}}, {}, {
+      var("통통", 0.8f, 1.0f, [](float u, P, Pose& d) { d[Bob] -= 6 * std::abs(std::sin(u * kPi * 2)); }),
+      var("좌우 흔들", 1.2f, 1.6f, [](float u, P, Pose& d) { d[Tilt] += 0.04f * std::sin(u * kPi * 4) * envelope(u, 0.1f, 0.9f); }),
+      var("방긋", 0.9f, 1.2f, [](float u, P, Pose& d) {
+        d[MouthOpen] += 0.18f * envelope(u); d[LidHappy] += 0.15f * envelope(u); d[Scale] += 0.02f * envelope(u); }),
     }}},
     {"sad", {{{LidSad, 0.8f}, {MouthSmile, -0.75f}, {MouthCat, 0}, {MouthWidth, 0.7f}}, {{Bob, 14}, {LookY, 10}, {EyeH, -0.08f}, {Whisk, 10}}, {
       var("한숨", 2.0f, 2.6f, [](float u, P, Pose& d) { d[LidTop] += 0.35f * envelope(u, 0.3f, 0.6f); d[Bob] += 6 * envelope(u, 0.3f, 0.6f); }),
@@ -159,10 +160,11 @@ const Mood* moodFor(const std::string& name) {
       var("어리둥절", 1.8f, 2.4f, [](float u, P, Pose& d) { d[LookX] -= 64 * envelope(u); }),
       var("갸웃", 1.6f, 2.2f, [](float u, P p, Pose& d) { d[Tilt] += p.s * 0.08f * envelope(u); }),
     }}},
-    {"petted", {{{LidHappy, 1}, {Blush, 1}, {MouthCat, 1}, {MouthSmile, 0.4f}}, {{Whisk, 6}}, {
-      var("비비기", 1.2f, 1.6f, [](float u, P, Pose& d) { d[Tilt] += 0.08f * std::sin(u * kPi * 4) * envelope(u, 0.1f, 0.9f); }),
-      var("수염 씰룩", 0.6f, 0.9f, [](float u, P, Pose& d) { d[Whisk] += 7 * std::sin(u * kPi * 8); }),
-      var("좋아", 1.0f, 1.4f, [](float u, P, Pose& d) { d[Scale] += 0.035f * envelope(u); d[Bob] -= 6 * envelope(u); }),
+    {"petted", {{{LidHappy, 0.5f}, {Blush, 0.6f}, {MouthCat, 1}, {MouthSmile, 0.4f}}, {{Whisk, 4}}, {
+      var("비비기", 1.2f, 1.6f, [](float u, P, Pose& d) { d[Tilt] += 0.045f * std::sin(u * kPi * 4) * envelope(u, 0.1f, 0.9f); }),
+      var("수염 씰룩", 0.6f, 0.9f, [](float u, P, Pose& d) { d[Whisk] += 4 * std::sin(u * kPi * 8); }),
+      var("좋아", 1.0f, 1.4f, [](float u, P, Pose& d) {
+        d[Scale] += 0.02f * envelope(u); d[Bob] -= 4 * envelope(u); d[LidHappy] += 0.2f * envelope(u); }),
     }}},
     {"sleepy", {{{LidTop, 0.68f}, {MouthCat, 0}, {MouthSmile, 0.1f}, {MouthWidth, 0.4f}, {MouthOpen, 0.05f}}, {{Bob, 10}, {Whisk, 8}}, {
       var("꾸벅", 2.6f, 3.4f, [](float u, P, Pose& d) { d[LidTop] += 0.32f * envelope(u, 0.55f, 0.85f); d[Bob] += 22 * envelope(u, 0.6f, 0.85f); }),
@@ -277,21 +279,37 @@ Face buildFace(const Director& director, bool whiskers, const std::string& mouth
   const float t = director.time(), blink = director.blinkClosure();
   face.tilt = P[Tilt]; face.scale = P[Scale]; face.bob = P[Bob];
   for (const float side : {-1.0f, 1.0f}) {
-    const float cx = (side < 0 ? 348.0f : 676.0f) + P[LookX], cy = 240 + P[LookY];
-    const float hw = 64 * std::max(0.5f, P[EyeW]), hh = std::max(4.0f, 90 * std::max(0.4f, P[EyeH]) * (1 - 0.94f * blink));
+    // Smiling squashes the eye a little and lifts it (cutting it from below read as puffed cheeks).
+    // Only a strong smile (LidHappy above ~0.56, e.g. a beaming moment) turns it into a closed ^ arc.
+    const float happy = std::clamp(P[LidHappy], 0.0f, 1.1f), squash = std::min(happy, 0.8f), arcK = smooth((happy - 0.56f) / 0.08f);
+    const float cx = (side < 0 ? 348.0f : 676.0f) + P[LookX], cy = 240 + P[LookY] - 12 * happy;
+    const float breath = 1 + 0.012f * std::sin(t * 1.7f);  // the eyes breathe very slightly
+    const float hw = 64 * std::max(0.5f, P[EyeW]) * (1 + 0.08f * squash);
+    const float hh = std::max(4.0f, 90 * std::max(0.4f, P[EyeH]) * breath * (1 - 0.36f * squash) * (1 - 0.94f * blink));
     const float r = std::min(hw, hh);
-    const float lid = std::clamp(P[LidTop] + (side > 0 ? P[LidTopR] : 0), 0.0f, 0.92f);
-    const float sad = std::clamp(P[LidSad], 0.0f, 1.0f), happy = std::clamp(P[LidHappy], 0.0f, 1.1f);
+    const float lid = std::clamp(P[LidTop] + (side > 0 ? P[LidTopR] : 0), 0.0f, 0.92f), sad = std::clamp(P[LidSad], 0.0f, 1.0f);
     // Upper lid: a half-plane, slanted down toward the outer corner when sad.
     const float yl = cy - hh + 2 * hh * lid + sad * 0.45f * hh, m = sad * 0.8f * hh * side / hw, mn = std::hypot(1.0f, m);
-    // Lower lid: a large circle pushing up from below makes a smiling eye.
-    const float R = hw * 1.3f, cyc = cy + hh + R - happy * 1.3f * hh;
-    L.push_back({col, 1, cx - hw, cy - hh, cx + hw, cy + hh, [=](float x, float y) {
-      float d = sdBox(x, y, cx, cy, hw, hh, r);
-      if (lid > 0.001f || sad > 0.001f) d = std::max(d, (yl + m * (x - cx) - y) / mn);
-      if (happy > 0.001f) d = std::max(d, -sdCircle(x, y, cx, cyc, R));
-      return d;
-    }, [=](float, float y) { return 1 - 0.28f * smooth((y - (cy - hh * 0.3f)) / (hh * 1.3f)); }});  // soft shade reads as volume
+    const auto eyeDistance = [=](float x, float y) {
+      const float d = sdBox(x, y, cx, cy, hw, hh, r);
+      return lid > 0.001f || sad > 0.001f ? std::max(d, (yl + m * (x - cx) - y) / mn) : d;
+    };
+    if (arcK > 0.02f) {
+      const float ay = 270 + P[LookY], ar = hw * 0.95f;
+      L.push_back({col, arcK, cx - ar - 14, ay - ar - 14, cx + ar + 14, ay + 14,
+                   [=](float x, float y) { return sdArc(x, y, cx, ay, ar, -kPi + 0.5f, -0.5f, 12); }, nullptr});
+    }
+    if (arcK > 0.98f) continue;
+    // One small, pale catchlight: enough to look alive without reading as a pupil. The light is fixed,
+    // so it drifts slightly against the gaze. It goes first so the eye cannot overwrite it on ties.
+    if (hh > 34) {
+      const float gx = cx + hw * 0.3f - P[LookX] * 0.08f, gy = cy - hh * 0.4f, gr = r * 0.3f;
+      const Rgb glint{uint8_t(col.r * 0.35f + 240 * 0.65f), uint8_t(col.g * 0.35f + 250 * 0.65f), uint8_t(col.b * 0.35f + 255 * 0.65f)};
+      L.push_back({glint, 1 - arcK, gx - gr, gy - gr, gx + gr, gy + gr,
+                   [=](float x, float y) { return std::max(sdCircle(x, y, gx, gy, gr), eyeDistance(x, y) + 6); }, nullptr});
+    }
+    L.push_back({col, 1 - arcK, cx - hw, cy - hh, cx + hw, cy + hh, eyeDistance,
+                 [=](float, float y) { return 1 - 0.28f * smooth((y - (cy - hh * 0.3f)) / (hh * 1.3f)); }});  // soft shade reads as volume
   }
 
   // The mouth follows only part of the gaze, which reads as a head turn.
