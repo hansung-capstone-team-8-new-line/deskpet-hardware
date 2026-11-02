@@ -194,7 +194,6 @@ public:
     nextVariation_ = t_ + range(0.6f, 1.4f);
     blink(0);  // a state change starts with a blink, the way animators hide a cut
     nextBlink_ = t_ + range(2, 5);
-    talk_ = 0; nextTalk_ = 0;
     label_ = status == "unknown" ? "결과를 확인해야 해요" : activity_->label;
     target_ = mood_ == "sad" ? kPink : mood_ == "unknown" ? kYellow : kBlue;
   }
@@ -206,14 +205,8 @@ public:
     Pose g = kRest;
     activity_->base(side_, g);
     if (moodTable_) { for (const auto& [k, v] : moodTable_->set) g[k] = v; for (const auto& [k, v] : moodTable_->add) g[k] += v; }
-    if (activity_->talk && speech) g[MouthOpen] = *speech * (mood_ == "sad" ? 0.7f : 1);
-    else if (activity_->talk) {
-      if (t_ >= nextTalk_) {
-        talk_ = random() < 0.16f ? 0 : range(0.25f, 1);
-        nextTalk_ = t_ + (talk_ > 0 ? range(0.08f, 0.16f) : range(0.18f, 0.35f));
-      }
-      g[MouthOpen] = talk_ * (mood_ == "sad" ? 0.7f : 1);
-    }
+    // Without audio playing the mouth stays closed rather than guessing a rhythm.
+    if (activity_->talk) g[MouthOpen] = speech ? *speech * (mood_ == "sad" ? 0.7f : 1) : 0;
     // Living eyes never hold perfectly still.
     if (t_ >= nextMicro_) {
       const float amp = mood_ == "sleepy" ? 1.5f : 5;
@@ -261,7 +254,7 @@ private:
     for (int i = 0; i < chosen->blinks; ++i) blink(float(i) * 0.26f);
   }
   std::mt19937 rng_{std::random_device{}()};
-  float t_ = 0, side_ = 1, nextVariation_ = 0, nextBlink_ = 0, talk_ = 0, nextTalk_ = 0, nextMicro_ = 0, closure_ = 0, zzPhase_ = 0;
+  float t_ = 0, side_ = 1, nextVariation_ = 0, nextBlink_ = 0, nextMicro_ = 0, closure_ = 0, zzPhase_ = 0;
   float micro_[2] = {0, 0}, color_[3] = {kBlue.r, kBlue.g, kBlue.b};
   bool snap_ = true;
   std::string mood_, label_;
