@@ -1,4 +1,5 @@
 #include "deskpet/backends.hpp"
+#include "deskpet/display.hpp"
 #include "deskpet/protocol.hpp"
 #include <cassert>
 #include <cmath>
@@ -31,7 +32,9 @@ int main() {
   expectError([&]{ c.validate(); }, "CONFIG_ERROR");
   c.dotSize = 8; c.mouth = "wide";
   expectError([&]{ c.validate(); }, "CONFIG_ERROR");
-  c.mouth = "speaking"; c.validate(); std::atomic_bool cancel{false};
+  c.mouth = "speaking"; c.lipSyncDelayMs = 501;
+  expectError([&]{ c.validate(); }, "CONFIG_ERROR");
+  c.lipSyncDelayMs = 0; c.validate(); std::atomic_bool cancel{false};
   auto output = makeOutput(c, Format{}); output->write(Bytes(640, 0), cancel);
   cancel = true; expectError([&]{ output->drain(cancel); }, "CANCELLED"); output->drop();
 #ifdef DESKPET_LINUX
@@ -43,5 +46,22 @@ int main() {
   if (!alsa->started()) alsa->start();
   alsa->drain(cancel);
 #endif
+  // Speech envelope: silence keeps the mouth shut, a loud tone opens it on the playback clock.
+  Config faceConfig; faceConfig.headless = true; faceConfig.socketPath = "/tmp/test.sock";
+  Display face(faceConfig);
+  if (face.speechLevel(Clock::now())) return 20;
+  face.speechBegin(Format{});
+  Bytes speech(3200 * 2, 0);  // 100 ms silence, then 100 ms tone at 16 kHz mono
+  for (size_t i = 1600; i < 3200; ++i) {
+    const auto v = uint16_t(int16_t(12000 * std::sin(double(i) * 0.3)));
+    speech[2 * i] = uint8_t(v & 0xff); speech[2 * i + 1] = uint8_t(v >> 8);
+  }
+  face.speechAudio(speech);
+  if (face.speechLevel(Clock::now()) != 0.0f) return 21;  // queued but not playing yet
+  const auto t0 = Clock::now(); face.speechStarted(t0);
+  if (*face.speechLevel(t0 + std::chrono::milliseconds(50)) > 0.05f) return 22;
+  if (*face.speechLevel(t0 + std::chrono::milliseconds(150)) < 0.6f) return 23;
+  face.speechEnd();
+  if (face.speechLevel(t0)) return 24;
   std::cout << "Protocol, PCM, calibration bounds and cancellation checks passed\n";
 }

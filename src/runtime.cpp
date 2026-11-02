@@ -93,6 +93,7 @@ struct Runtime::Impl {
       std::string code, message;
       try {
         output = makeOutput(config, job->format); checkCancelled(job->cancel);
+        display.speechBegin(job->format);
         emit(reply(job->begin, {{"ready", true}, {"simulated", config.mock}})); acknowledged = true;
         for (;;) {
           Bytes bytes; bool finish = false;
@@ -105,7 +106,11 @@ struct Runtime::Impl {
             else finish = job->finish.has_value();
           }
           if (!bytes.empty()) {
+            display.speechAudio(bytes);
+            // The write that starts the device plays the queued samples from about this moment.
+            const auto beforeWrite = Clock::now();
             output->write(bytes, job->cancel);
+            if (output->started()) display.speechStarted(beforeWrite);
             wrote = true;
             if (!started && output->started()) { emit(event(job->begin, "audio.started", {{"simulated", config.mock}})); started = true; }
           }
@@ -113,7 +118,7 @@ struct Runtime::Impl {
             if (!wrote) throw Error("NO_AUDIO", "An empty audio job cannot be delivered");
             output->finishInput(job->cancel);
             if (!started) {
-              checkCancelled(job->cancel); output->start();
+              checkCancelled(job->cancel); display.speechStarted(Clock::now()); output->start();
               emit(event(job->begin, "audio.started", {{"simulated", config.mock}})); started = true;
             }
             output->drain(job->cancel); completed = true; break;
@@ -121,6 +126,7 @@ struct Runtime::Impl {
         }
       } catch (const Error& e) { code = e.code; message = e.what(); }
       catch (const std::exception& e) { code = "AUDIO_OUTPUT_ERROR"; message = e.what(); }
+      display.speechEnd();
       bool stoppedConfirmed = completed || !output || output->drop();
       if (stopFault.exchange(false)) stoppedConfirmed = false;
       std::optional<Packet> finish, stop;
