@@ -53,9 +53,9 @@ float sdArc(float x, float y, float cx, float cy, float r, float a0, float a1, f
 constexpr float kDown0 = 0.35f, kDown1 = kPi - 0.35f;
 
 enum Key { LookX, LookY, Scale, Tilt, Bob, EyeW, EyeH, LidTop, LidTopR, LidSad, LidHappy,
-           MouthCat, MouthSmile, MouthOpen, MouthWidth, MouthX, MouthWave, Whisk, Blush, Zz, kKeys };
+           MouthSmile, MouthOpen, MouthX, MouthWave, Whisk, Blush, Zz, kKeys };
 using Pose = std::array<float, kKeys>;
-constexpr Pose kRest{0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0.3f, 0, 1, 0, 0, 0, 0, 0};
+constexpr Pose kRest{0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0.3f, 0, 0, 0, 0, 0, 0};
 float stiffness(int k) {
   switch (k) {
     case MouthOpen: return 700;
@@ -97,13 +97,13 @@ const Activity& activityFor(const std::string& name) {
       var("느긋한 눈감기", 1.4f, 2.2f, [](float u, P, Pose& d) { d[LidTop] += 0.5f * envelope(u, 0.35f, 0.65f); d[MouthSmile] += 0.2f * envelope(u); }),
       var("갸웃", 1.8f, 2.6f, [](float u, P p, Pose& d) { d[Tilt] += p.s * 0.08f * envelope(u); d[LookX] += p.s * 10 * envelope(u); }),
       var("하품", 2.0f, 2.6f, [](float u, P, Pose& d) {
-        d[MouthOpen] += 0.75f * envelope(u, 0.3f, 0.6f); d[MouthCat] -= envelope(u, 0.2f, 0.8f);
+        d[MouthOpen] += 0.75f * envelope(u, 0.3f, 0.6f);
         d[LidHappy] += 0.8f * envelope(u, 0.3f, 0.6f); d[Scale] += 0.03f * envelope(u); }, 0.5f),
       var("수염 씰룩", 0.7f, 1.0f, [](float u, P, Pose& d) { d[Whisk] += 7 * std::sin(u * kPi * 8) * envelope(u, 0.1f, 0.9f); }),
       var("살짝 다가옴", 1.6f, 2.4f, [](float u, P, Pose& d) { d[Scale] += 0.045f * envelope(u); d[LookY] += 6 * envelope(u); }),
     }, ""}},
     {"listening", {0.8f, 2.4f, false, [](float, Pose& g) {
-      g[Scale] = 1.05f; g[EyeH] = 1.12f; g[EyeW] = 1.04f; g[LookY] = -4; g[MouthCat] = 0; g[MouthSmile] = 0.15f; g[MouthWidth] = 0.45f; g[Whisk] = -8; }, {
+      g[Scale] = 1.05f; g[EyeH] = 1.12f; g[EyeW] = 1.04f; g[LookY] = -4; g[MouthSmile] = 0.15f; g[Whisk] = -8; }, {
       var("끄덕", 0.6f, 0.8f, nod(1, 12)),
       var("응응", 1.0f, 1.3f, nod(2, 9)),
       var("갸웃하며 듣기", 1.8f, 2.6f, [](float u, P p, Pose& d) { d[Tilt] += p.s * 0.06f * envelope(u); }),
@@ -113,8 +113,8 @@ const Activity& activityFor(const std::string& name) {
     }, "듣고 있어요"}},
     // Thinking looks up and away, as people do; the side is picked at random on entry.
     {"processing", {0.5f, 2.0f, false, [](float s, Pose& g) {
-      g[LookX] = 84 * s; g[LookY] = -58; g[EyeH] = 0.9f; g[EyeW] = 0.96f; g[MouthCat] = 0; g[MouthSmile] = -0.15f;
-      g[MouthWidth] = 0.5f; g[MouthX] = 16 * s; g[Tilt] = 0.03f * s; }, {
+      g[LookX] = 84 * s; g[LookY] = -58; g[EyeH] = 0.9f; g[EyeW] = 0.96f; g[MouthSmile] = -0.15f;
+      g[MouthX] = 16 * s; g[Tilt] = 0.03f * s; }, {
       var("휙휙", 0.5f, 0.8f, [](float u, P p, Pose& d) { d[LookX] -= p.side * 40 * envelope(u, 0.08f, 0.6f); }),
       var("반대편 보기", 1.8f, 2.6f, [](float u, P p, Pose& d) {
         const float e = envelope(u, 0.15f, 0.8f); d[LookX] -= p.side * 168 * e; d[MouthX] -= p.side * 32 * e; d[Tilt] -= p.side * 0.06f * e; }),
@@ -123,7 +123,7 @@ const Activity& activityFor(const std::string& name) {
       var("갸우뚱 생각", 1.8f, 2.4f, [](float u, P p, Pose& d) { d[Tilt] += p.side * 0.06f * envelope(u); }),
       var("아래 훑기", 1.2f, 1.6f, [](float u, P, Pose& d) { d[LookY] += 80 * envelope(u); }, 0.6f),
     }, "생각하고 있어요"}},
-    {"speaking", {0.8f, 2.4f, true, [](float, Pose& g) { g[MouthCat] = 0; g[MouthSmile] = 0.25f; g[MouthWidth] = 0.8f; }, {
+    {"speaking", {0.8f, 2.4f, true, [](float, Pose& g) { g[MouthSmile] = 0.25f; }, {
       var("강조", 0.45f, 0.6f, [](float u, P, Pose& d) { d[Scale] += 0.04f * bump(u); d[EyeH] += 0.06f * bump(u); }),
       var("말하며 시선 돌림", 0.9f, 1.4f, [](float u, P p, Pose& d) { d[LookX] += p.s * 30 * envelope(u); d[LookY] -= 8 * envelope(u); }),
       var("눈 크게", 0.8f, 1.1f, [](float u, P, Pose& d) { d[EyeH] += 0.1f * envelope(u); }),
@@ -131,7 +131,7 @@ const Activity& activityFor(const std::string& name) {
       var("갸웃하며 말하기", 1.2f, 1.8f, [](float u, P p, Pose& d) { d[Tilt] += p.s * 0.05f * envelope(u); }),
     }, ""}},
     {"awaiting_answer", {1.0f, 3.0f, false, [](float s, Pose& g) {
-      g[Tilt] = 0.13f * s; g[EyeH] = 1.06f; g[MouthCat] = 0; g[MouthSmile] = 0.55f; g[MouthWidth] = 0.55f; g[LookY] = -4; }, {
+      g[Tilt] = 0.13f * s; g[EyeH] = 1.06f; g[MouthSmile] = 0.55f; g[LookY] = -4; }, {
       var("반대로 갸웃", 2.2f, 3.0f, [](float u, P p, Pose& d) { d[Tilt] -= 2 * p.side * 0.13f * envelope(u, 0.25f, 0.75f); }),
       var("빤히", 1.4f, 2.0f, [](float u, P, Pose& d) { d[Scale] += 0.045f * envelope(u); d[EyeH] += 0.05f * envelope(u); }),
       var("깜박깜박", 0.6f, 0.8f, [](float, P, Pose&) {}, 1, 2),
@@ -146,34 +146,34 @@ const Activity& activityFor(const std::string& name) {
 const Mood* moodFor(const std::string& name) {
   using P = const Pick&;
   static const std::map<std::string, Mood> table{
-    {"happy", {{{LidHappy, 0.5f}, {MouthSmile, 0.6f}, {MouthCat, 0}, {MouthWidth, 0.85f}}, {}, {
+    {"happy", {{{LidHappy, 0.5f}, {MouthSmile, 0.6f}}, {}, {
       var("통통", 0.8f, 1.0f, [](float u, P, Pose& d) { d[Bob] -= 6 * std::abs(std::sin(u * kPi * 2)); }),
       var("좌우 흔들", 1.2f, 1.6f, [](float u, P, Pose& d) { d[Tilt] += 0.04f * std::sin(u * kPi * 4) * envelope(u, 0.1f, 0.9f); }),
       var("방긋", 0.9f, 1.2f, [](float u, P, Pose& d) {
         d[MouthOpen] += 0.18f * envelope(u); d[LidHappy] += 0.15f * envelope(u); d[Scale] += 0.02f * envelope(u); }),
     }}},
-    {"sad", {{{LidSad, 0.8f}, {MouthSmile, -0.75f}, {MouthCat, 0}, {MouthWidth, 0.7f}}, {{Bob, 14}, {LookY, 10}, {EyeH, -0.08f}, {Whisk, 10}}, {
+    {"sad", {{{LidSad, 0.8f}, {MouthSmile, -0.75f}}, {{Bob, 14}, {LookY, 10}, {EyeH, -0.08f}, {Whisk, 10}}, {
       var("한숨", 2.0f, 2.6f, [](float u, P, Pose& d) { d[LidTop] += 0.35f * envelope(u, 0.3f, 0.6f); d[Bob] += 6 * envelope(u, 0.3f, 0.6f); }),
       var("힐끔", 1.2f, 1.6f, [](float u, P p, Pose& d) { d[LookY] -= 16 * envelope(u); d[LookX] += p.s * 18 * envelope(u); }),
       var("울먹", 1.4f, 1.8f, [](float u, P, Pose& d) { d[MouthWave] += 0.5f * envelope(u); }),
     }}},
-    {"unknown", {{{LidTopR, 0.3f}, {MouthWave, 0.8f}, {MouthCat, 0}, {MouthWidth, 0.8f}, {MouthSmile, 0}}, {{LookX, 30}, {LookY, -12}}, {
+    {"unknown", {{{LidTopR, 0.3f}, {MouthWave, 0.8f}, {MouthSmile, 0}}, {{LookX, 30}, {LookY, -12}}, {
       var("어리둥절", 1.8f, 2.4f, [](float u, P, Pose& d) { d[LookX] -= 64 * envelope(u); }),
       var("갸웃", 1.6f, 2.2f, [](float u, P p, Pose& d) { d[Tilt] += p.s * 0.08f * envelope(u); }),
     }}},
-    {"petted", {{{LidHappy, 0.5f}, {Blush, 0.6f}, {MouthCat, 1}, {MouthSmile, 0.4f}}, {{Whisk, 4}}, {
+    {"petted", {{{LidHappy, 0.5f}, {Blush, 0.6f}, {MouthSmile, 0.4f}}, {{Whisk, 4}}, {
       var("비비기", 1.2f, 1.6f, [](float u, P, Pose& d) { d[Tilt] += 0.045f * std::sin(u * kPi * 4) * envelope(u, 0.1f, 0.9f); }),
       var("수염 씰룩", 0.6f, 0.9f, [](float u, P, Pose& d) { d[Whisk] += 4 * std::sin(u * kPi * 8); }),
       var("좋아", 1.0f, 1.4f, [](float u, P, Pose& d) {
         d[Scale] += 0.02f * envelope(u); d[Bob] -= 4 * envelope(u); d[LidHappy] += 0.2f * envelope(u); }),
     }}},
-    {"sleepy", {{{LidTop, 0.68f}, {MouthCat, 0}, {MouthSmile, 0.1f}, {MouthWidth, 0.4f}, {MouthOpen, 0.05f}}, {{Bob, 10}, {Whisk, 8}}, {
+    {"sleepy", {{{LidTop, 0.68f}, {MouthSmile, 0.1f}, {MouthOpen, 0.05f}}, {{Bob, 10}, {Whisk, 8}}, {
       var("꾸벅", 2.6f, 3.4f, [](float u, P, Pose& d) { d[LidTop] += 0.32f * envelope(u, 0.55f, 0.85f); d[Bob] += 22 * envelope(u, 0.6f, 0.85f); }),
       var("하품", 2.0f, 2.6f, [](float u, P, Pose& d) {
         d[MouthOpen] += 0.7f * envelope(u, 0.3f, 0.6f); d[LidTop] += 0.2f * envelope(u, 0.3f, 0.6f); d[Scale] += 0.03f * envelope(u); }),
       var("Z", 2.4f, 3.0f, [](float u, P, Pose& d) { d[Zz] += envelope(u, 0.15f, 0.7f); }, 1, 0, true),
     }}},
-    {"surprised", {{{EyeW, 1.18f}, {EyeH, 0.92f}, {MouthCat, 0}, {MouthOpen, 0.65f}, {MouthWidth, 0.85f}}, {{Scale, 0.05f}, {Whisk, -10}}, {
+    {"surprised", {{{EyeW, 1.18f}, {EyeH, 0.92f}, {MouthOpen, 0.65f}}, {{Scale, 0.05f}, {Whisk, -10}}, {
       var("깜짝 깜박", 0.6f, 0.8f, [](float, P, Pose&) {}, 1, 2),
       var("부르르", 0.5f, 0.6f, [](float u, P, Pose& d) { d[LookX] += 5 * std::sin(u * kPi * 12) * envelope(u, 0.1f, 0.9f); }),
     }}},
@@ -308,29 +308,25 @@ Face buildFace(const Director& director, bool whiskers, const std::string& mouth
                  [=](float, float y) { return 1 - 0.28f * smooth((y - (cy - hh * 0.3f)) / (hh * 1.3f)); }});  // soft shade reads as volume
   }
 
-  // The mouth follows only part of the gaze, which reads as a head turn.
+  // The mouth is always the cat's ω, the same size in every state; it follows only part of the gaze,
+  // which reads as a head turn. Emotion tilts each lobe about the middle peak (up = smile, down = sad),
+  // MouthWave wobbles the lobes, and speaking opens a small mouth below the peak.
   if (mouthMode == "always" || (mouthMode == "speaking" && speaking)) {
-    const float mx = 512 + P[LookX] * 0.35f + P[MouthX], my = 392 + P[LookY] * 0.3f, mw = std::max(0.3f, P[MouthWidth]);
-    const float open = std::clamp(P[MouthOpen], 0.0f, 1.0f), lip = 1 - smooth((open - 0.1f) / 0.14f), cat = std::clamp(P[MouthCat], 0.0f, 1.0f);
-    if (lip > 0.02f) {
-      if (cat > 0.02f) for (const float s : {-1.0f, 1.0f}) {
-        const float ar = 27 * mw, ax = mx + s * ar;
-        L.push_back({col, cat * lip, ax - ar - 6, my - 10, ax + ar + 6, my + ar + 6,
-                     [=](float x, float y) { return sdArc(x, y, ax, my - 6, ar, kDown0, kDown1, 5); }, nullptr});
-      }
-      if (cat < 0.98f) {
-        float px = 0, py = 0;
-        for (int i = 0; i <= 10; ++i) {
-          const float s = float(i) / 5 - 1, x = mx + s * 52 * mw;
-          const float y = my + P[MouthSmile] * 14 * (1 - s * s) - P[MouthSmile] * 7 + P[MouthWave] * 5 * std::sin(s * kPi * 2.5f + t * 5);
-          if (i > 0) L.push_back({col, (1 - cat) * lip, std::min(px, x) - 7, std::min(py, y) - 7, std::max(px, x) + 7, std::max(py, y) + 7,
-                                  [=](float qx, float qy) { return sdTaper(qx, qy, px, py, x, y, 5, 5); }, nullptr});
-          px = x; py = y;
-        }
-      }
+    const float mx = 512 + P[LookX] * 0.35f + P[MouthX], my = 392 + P[LookY] * 0.3f, py = my + 3;
+    constexpr float ar = 27;
+    for (const float s : {-1.0f, 1.0f}) {
+      const float angle = -s * P[MouthSmile] * 0.4f, cs = std::cos(angle), sn = std::sin(angle);
+      const float ax = mx + s * ar, ay = my - 6 + P[MouthWave] * 4 * std::sin(t * 6 + s * 1.5f);
+      L.push_back({col, 1, mx + std::min(0.0f, 2 * s * ar) - 14, my - 30, mx + std::max(0.0f, 2 * s * ar) + 14, my + ar + 16,
+                   [=](float x, float y) {
+        // Undo the lobe's tilt about the peak, then measure the plain lower arc.
+        const float dx = x - mx, dy = y - py;
+        return sdArc(mx + cs * dx + sn * dy, py - sn * dx + cs * dy, ax, ay, ar, kDown0, kDown1, 5);
+      }, nullptr});
     }
+    const float open = std::clamp(P[MouthOpen], 0.0f, 1.0f);
     if (open > 0.03f) {
-      const float oh = 6 + open * 24, ow = std::max(16.0f, 40 * mw - open * 8), oy = my - 6 + oh;
+      const float oh = 4 + open * 20, ow = 14 + open * 6, oy = py + 2 + oh;
       L.push_back({col, smooth(open * 6), mx - ow, oy - oh, mx + ow, oy + oh,
                    [=](float x, float y) { return sdBox(x, y, mx, oy, ow, oh, std::min(ow, oh)); }, nullptr});
     }
