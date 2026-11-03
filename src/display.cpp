@@ -58,9 +58,9 @@ float sdArc(float x, float y, float cx, float cy, float r, float a0, float a1, f
 constexpr float kDown0 = 0.35f, kDown1 = kPi - 0.35f;
 
 enum Key { LookX, LookY, Scale, Tilt, Bob, EyeSize, LidTop, LidTopR, LidSad, LidHappy,
-           MouthSmile, MouthOpen, MouthX, MouthWave, Whisk, Blush, Zz, kKeys };
+           MouthSmile, MouthOpen, MouthX, MouthWave, Whisk, Zz, kKeys };
 using Pose = std::array<float, kKeys>;
-constexpr Pose kRest{0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0.3f, 0, 0, 0, 0, 0, 0};
+constexpr Pose kRest{0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0.3f, 0, 0, 0, 0, 0};
 float stiffness(int k) {
   switch (k) {
     case MouthOpen: return 700;
@@ -69,7 +69,6 @@ float stiffness(int k) {
     case Bob: return 110;
     case LidSad: return 60;
     case LidHappy: return 90;
-    case Blush: return 40;
     case Zz: return 30;
     default: return 150;
   }
@@ -166,7 +165,7 @@ const Mood* moodFor(const std::string& name) {
       var("어리둥절", 1.8f, 2.4f, [](float u, P, Pose& d) { d[LookX] -= 64 * envelope(u); }),
       var("갸웃", 1.6f, 2.2f, [](float u, P p, Pose& d) { d[Tilt] += p.s * 0.08f * envelope(u); }),
     }}},
-    {"petted", {{{LidHappy, 0.5f}, {Blush, 0.6f}, {MouthSmile, 0.4f}}, {{Whisk, 4}}, {
+    {"petted", {{{LidHappy, 0.5f}, {MouthSmile, 0.4f}}, {{Whisk, 4}}, {
       var("비비기", 1.2f, 1.6f, [](float u, P, Pose& d) { d[Tilt] += 0.045f * std::sin(u * kPi * 4) * envelope(u, 0.1f, 0.9f); }),
       var("수염 씰룩", 0.6f, 0.9f, [](float u, P, Pose& d) { d[Whisk] += 4 * std::sin(u * kPi * 8); }),
       var("좋아", 1.0f, 1.4f, [](float u, P, Pose& d) {
@@ -203,10 +202,16 @@ public:
     saved_ = {activity, emotion, status}; petting_ = false;
     apply(activity, emotion, status);
   }
-  // Touch in design coordinates (1024x600): look at the finger, blink when an eye is tapped, purr when rubbed.
+  // Touch in design coordinates (1024x600). Holding looks at the finger and a long hold leans in with closed eyes;
+  // taps blink an eye, open the mouth or twitch a whisker; a double tap beams, rapid taps startle, a swipe makes
+  // the eyes chase it, and rubbing purrs (petted). Each touch sends a faint dot wave from the finger.
   void touch(const std::string& phase, float x, float y) {
     wake();
-    if (phase == "down") { pressed_ = true; downAt_ = t_; down_[0] = gaze_[0] = x; down_[1] = gaze_[1] = y; moved_ = travel_ = 0; travelStart_ = t_; return; }
+    if (phase == "down") {
+      pressed_ = true; downAt_ = t_; down_[0] = gaze_[0] = x; down_[1] = gaze_[1] = y; moved_ = travel_ = 0; travelStart_ = t_;
+      addWave(x, y, 0.6f, 170, 0.18f);
+      return;
+    }
     if (!pressed_) return;
     if (phase == "move") {
       const float d = std::hypot(x - gaze_[0], y - gaze_[1]);
@@ -215,19 +220,43 @@ public:
       travel_ += d;
       if (travel_ > 700) {  // rubbing back and forth reads as petting
         pettedUntil_ = t_ + 3;
-        if (!petting_) { petting_ = true; apply("idle", "petted", ""); }
+        if (!petting_) { petting_ = true; apply("idle", "petted", ""); addWave(512, 300, 1.2f, 620, 0.25f, kPetAura); }
       }
       return;
     }
     pressed_ = false;
-    if (t_ - downAt_ < 0.3f && moved_ < 14) {  // a tap
-      const bool onEye = std::abs(down_[1] - 240) < 105 && (std::abs(down_[0] - 348) < 85 || std::abs(down_[0] - 676) < 85);
-      if (onEye) { blink(0); blink(0.22f); } else gazeUntil_ = t_ + 1.2f;
+    const float held = t_ - downAt_, dx = x - down_[0], dy = y - down_[1];
+    if (held < 0.35f && std::hypot(dx, dy) > 160) {  // a swipe: the eyes chase past the end of it
+      gaze_[0] = std::clamp(x + dx * 0.5f, 0.0f, 1024.0f); gaze_[1] = std::clamp(y + dy * 0.5f, 0.0f, 600.0f);
+      gazeUntil_ = t_ + 0.9f; swipeAt_ = t_; swipeSide_ = dx < 0 ? -1.0f : 1.0f;
+      addWave(x, y, 0.8f, 300, 0.2f);
+      return;
     }
+    if (held >= 0.3f || moved_ >= 14) return;
+    // A tap.
+    taps_.erase(std::remove_if(taps_.begin(), taps_.end(), [&](float at) { return t_ - at > 1.2f; }), taps_.end());
+    taps_.push_back(t_);
+    if (taps_.size() >= 4) { startleAt_ = t_; beamAt_ = nomAt_ = -9; blink(0); taps_.clear(); lastTapAt_ = -9; return; }  // startle wins over a beam
+    if (t_ - lastTapAt_ < 0.35f && std::hypot(down_[0] - lastTap_[0], down_[1] - lastTap_[1]) < 80) {
+      beamAt_ = t_; lastTapAt_ = -9; addWave(512, 300, 1.0f, 520, 0.25f);
+      return;
+    }
+    lastTapAt_ = t_; lastTap_[0] = down_[0]; lastTap_[1] = down_[1];
+    const float tx = down_[0], ty = down_[1], fromCentre = std::abs(tx - 512);
+    if (std::abs(ty - 240) < 105 && (std::abs(tx - 348) < 85 || std::abs(tx - 676) < 85)) { blink(0); blink(0.22f); }
+    else if (fromCentre < 70 && std::abs(ty - 400) < 45) nomAt_ = t_;
+    else if (fromCentre > 210 && fromCentre < 430 && std::abs(ty - 400) < 60) { whiskAt_ = t_; whiskSide_ = tx < 512 ? -1.0f : 1.0f; }
+    else gazeUntil_ = t_ + 1.2f;
   }
+  // The face's own dot waves, newest last.
+  struct Wave { float x, y, start, duration, radius, alpha; std::optional<Rgb> color; };
+  const std::vector<Wave>& waves() const { return waves_; }
 private:
   void apply(const std::string& activity, const std::string& emotion, const std::string& status) {
-    if (status == "succeeded" && status_ != "succeeded") burstAt_ = t_ + 0.15f;  // a one-off pulse on success
+    if (status == "succeeded" && status_ != "succeeded") {  // a one-off pulse on success
+      burstAt_ = t_ + 0.15f; addWave(512, 300, 0.9f, 640, 0.35f, Rgb{255, 236, 170}, 0.15f);
+    }
+    if (activity == "listening" && activityName_ != "listening") addWave(512, 300, 1.2f, 600, 0.18f);  // "I'm listening"
     activityName_ = activity; status_ = status;
     wake();
     mood_ = emotion == "sad" || status == "failed" ? "sad" : status == "unknown" ? "unknown"
@@ -244,7 +273,7 @@ private:
   void wake() {
     const float alone = t_ - interactedAt_;
     if (activityName_ == "idle" && alone > kBoredAfter) {
-      wakeAt_ = t_; blink(0);
+      wakeAt_ = t_; blink(0); addWave(512, 300, 1.0f, 520, 0.2f);
       if (alone > kDozeAfter && hour_ >= 5 && hour_ < 10) stretchAt_ = t_;
     }
     interactedAt_ = t_;
@@ -288,7 +317,6 @@ public:
   Rgb aura() const { return {uint8_t(std::lround(aura_[0])), uint8_t(std::lround(aura_[1])), uint8_t(std::lround(aura_[2]))}; }
   float auraAmount() const { return auraAmount_; }
   float listening() const { return listening_; }  // strength of the sound ripples beside the face
-  float burstAge() const { return (t_ - burstAt_) / 0.9f; }  // 0..1 while the success pulse runs
   float blinkClosure() const { return closure_; }
   float zzPhase() const { return zzPhase_; }
   float time() const { return t_; }
@@ -302,6 +330,19 @@ private:
       g[Tilt] += std::clamp((gaze_[0] - 512) / 512, -1.0f, 1.0f) * 0.04f;
       if (pressed_) g[Scale] += 0.03f;
     }
+    if (pressed_ && moved_ < 20 && t_ - downAt_ > 0.9f) {  // a long hold: lean in and close the eyes contentedly
+      const float e = smooth((t_ - downAt_ - 0.9f) / 0.6f);
+      g[LidHappy] += 0.75f * e; g[Scale] += 0.02f * e; g[Whisk] += 4 * e;
+    }
+    if (const float u = (t_ - nomAt_) / 0.6f; u >= 0 && u < 1) { g[MouthOpen] += 0.6f * bump(u); g[MouthSmile] += 0.3f * envelope(u); }
+    if (const float u = (t_ - whiskAt_) / 0.8f; u >= 0 && u < 1) { g[Whisk] += 8 * std::sin(u * kPi * 8) * (1 - u); g[Tilt] += whiskSide_ * 0.03f * bump(u); }
+    if (const float u = (t_ - beamAt_) / 1.2f; u >= 0 && u < 1) {
+      g[LidHappy] += 0.9f * envelope(u, 0.15f, 0.7f); g[MouthSmile] += 0.4f * envelope(u); g[Bob] -= 12 * std::abs(std::sin(u * kPi * 2)) * (1 - u);
+    }
+    if (const float u = (t_ - startleAt_) / 0.8f; u >= 0 && u < 1) {
+      g[EyeSize] += 0.15f * bump(u); g[Scale] += 0.05f * bump(u); g[LookY] -= 10 * bump(u); g[Whisk] -= 8 * bump(u);
+    }
+    if (const float u = (t_ - swipeAt_) / 0.9f; u >= 0 && u < 1) g[Tilt] += swipeSide_ * 0.05f * bump(u);
     const float wake = (t_ - wakeAt_) / 0.6f;
     if (wake >= 0 && wake < 1) { g[Scale] += 0.05f * bump(wake); g[EyeSize] += 0.08f * bump(wake); }
     float bright = 1;
@@ -322,9 +363,10 @@ private:
     if (burst >= 0 && burst < 1) { g[Bob] -= 12 * bump(burst); g[Scale] += 0.04f * bump(burst); }
     const float follow = std::min(1.0f, dt * 4);
     brightness_ += (bright - brightness_) * follow;
-    // State colours: listening sky blue, thinking violet, waiting for an answer amber; other states none.
-    const Rgb* tint = activityName_ == "listening" ? &kListenAura : activityName_ == "processing" ? &kThinkAura
-                    : activityName_ == "awaiting_answer" ? &kWaitAura : nullptr;
+    // State colours wash the unlit dots while the features stay blue: petted pink, listening sky blue,
+    // thinking violet, waiting for an answer amber; other states none.
+    const Rgb* tint = mood_ == "petted" ? &kPetAura : activityName_ == "listening" ? &kListenAura
+                    : activityName_ == "processing" ? &kThinkAura : activityName_ == "awaiting_answer" ? &kWaitAura : nullptr;
     if (tint) {
       const float snap = auraAmount_ < 0.02f ? 1 : follow;
       aura_[0] += (tint->r - aura_[0]) * snap; aura_[1] += (tint->g - aura_[1]) * snap; aura_[2] += (tint->b - aura_[2]) * snap;
@@ -335,7 +377,12 @@ private:
     const float listen = activityName_ == "listening" ? std::max(0.25f + 0.08f * std::sin(t_ * 2.4f), voice_) : 0;
     listening_ += (listen - listening_) * std::min(1.0f, dt * 10);
   }
-  static constexpr Rgb kListenAura{70, 165, 255}, kThinkAura{150, 110, 255}, kWaitAura{255, 180, 80};
+  static constexpr Rgb kListenAura{70, 165, 255}, kThinkAura{150, 110, 255}, kWaitAura{255, 180, 80}, kPetAura{255, 140, 175};
+  void addWave(float x, float y, float duration, float radius, float alpha, std::optional<Rgb> color = std::nullopt, float delay = 0) {
+    waves_.erase(std::remove_if(waves_.begin(), waves_.end(), [&](const Wave& w) { return t_ > w.start + w.duration; }), waves_.end());
+    if (waves_.size() >= 6) waves_.erase(waves_.begin());
+    waves_.push_back({x, y, t_ + delay, duration, radius, alpha, color});
+  }
   struct Running { const Variation* variation; float start, duration; Pick pick; };
   float random() { return std::uniform_real_distribution<float>(0, 1)(rng_); }
   float range(float a, float b) { return a + random() * (b - a); }
@@ -359,6 +406,9 @@ private:
   bool pressed_ = false, petting_ = false;
   float gaze_[2] = {512, 250}, down_[2] = {0, 0}, downAt_ = 0, moved_ = 0, travel_ = 0, travelStart_ = 0, gazeUntil_ = -9, pettedUntil_ = -9;
   float interactedAt_ = 0, wakeAt_ = -9, stretchAt_ = -9, burstAt_ = -9;
+  float lastTapAt_ = -9, lastTap_[2] = {0, 0}, nomAt_ = -9, whiskAt_ = -9, whiskSide_ = 1, beamAt_ = -9, startleAt_ = -9, swipeAt_ = -9, swipeSide_ = 1;
+  std::vector<float> taps_;
+  std::vector<Wave> waves_;
   float brightness_ = 1, aura_[3] = {0, 0, 0}, auraAmount_ = 0, voice_ = 0, listening_ = 0;
   int hour_ = -1;
   std::array<std::string, 3> saved_;
@@ -463,14 +513,14 @@ Face buildFace(const Director& director, bool whiskers, const std::string& mouth
     L.push_back({col, alpha, x0, y0, x1, y1, [=](float x, float y) { return sdArc(x, y, 812, 250, r, -0.7f, 0.7f, 4); }, nullptr});
     L.push_back({col, alpha, 1024 - x1, y0, 1024 - x0, y1, [=](float x, float y) { return sdArc(1024 - x, y, 812, 250, r, -0.7f, 0.7f, 4); }, nullptr});
   }
-  // Success: one soft ring spreads from the face and fades.
-  if (const float age = director.burstAge(); age >= 0 && age < 1) {
-    const float r = 80 + age * 560;
-    L.push_back({Rgb{255, 236, 170}, 0.35f * (1 - age), 512 - r - 8, 300 - r - 8, 512 + r + 8, 300 + r + 8,
-                 [=](float x, float y) { return std::abs(sdCircle(x, y, 512, 300, r)) - 5; }, nullptr});
+  // Dot waves: a band of dots lights up as a ring spreads and fades, used sparingly for key moments.
+  for (const auto& w : director.waves()) {
+    const float age = (t - w.start) / w.duration;
+    if (age < 0 || age >= 1) continue;
+    const float r = w.radius * (1 - (1 - age) * (1 - age)), x = w.x, y = w.y;
+    L.push_back({w.color.value_or(col), w.alpha * (1 - age), x - r - 12, y - r - 12, x + r + 12, y + r + 12,
+                 [=](float px, float py) { return std::abs(sdCircle(px, py, x, y, r)) - 9; }, nullptr});
   }
-  if (P[Blush] > 0.02f) for (const float x : {318.0f, 706.0f})
-    L.push_back({kPink, 0.32f * P[Blush], x - 30, 308, x + 30, 368, [=](float px, float py) { return sdCircle(px, py, x, 338, 28); }, nullptr});
   if (P[Zz] > 0.02f) for (int i = 0; i < 2; ++i) {
     const float q = std::clamp(director.zzPhase() * 1.3f - float(i) * 0.3f, 0.0f, 1.0f);
     const float x = 770 + q * 50 + float(i) * 28, y = 190 - q * 80 - float(i) * 30, h = 11 + float(i) * 4;
