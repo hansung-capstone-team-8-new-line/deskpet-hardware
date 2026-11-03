@@ -36,6 +36,7 @@ for rotation in (0, 90):
         config = json.loads((ROOT / "config/mock.json").read_text())
         config["display"]["rotation"] = rotation
         config["display"]["fullscreen"] = False
+        config["display"]["face"]["timeOfDay"] = False  # snapshots must not depend on the clock
         config_path = Path(temp) / "config.json"
         config_path.write_text(json.dumps(config))
         socket_path = str(Path(temp) / "hardware.sock")

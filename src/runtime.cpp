@@ -64,6 +64,7 @@ struct Runtime::Impl {
           auto earliest = std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now().time_since_epoch()).count() - input->bufferNs();
           auto bytes = input->read(job->cancel);
           if (bytes.empty()) { reason = "eof"; break; }
+          display.micLevel(bytes);
           auto p = event(job->start, "audio.frame", {{"sequence", sequence++}, {"captureEarliestMonotonicNs", earliest}, {"format", Format{}.json()}, {"simulated", config.mock}}, std::move(bytes));
           if (!emit(std::move(p))) throw Error("AUDIO_DISCONTINUITY", "Capture queue overflow; restart the stream and invalidate its STT session");
         }
