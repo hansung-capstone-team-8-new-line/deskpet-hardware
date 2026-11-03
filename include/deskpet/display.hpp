@@ -22,6 +22,8 @@ public:
   void speechAudio(const Bytes& pcm);
   void speechStarted(Clock::time_point when);  // when the first queued sample started playing
   void speechEnd();
+  // Microphone level for the listening ripples, fed by the capture thread (thread-safe).
+  void micLevel(const Bytes& pcm);
   // Mouth opening 0..1 at `now`, or nullopt when no speech is playing.
   std::optional<float> speechLevel(Clock::time_point now) const;
 };

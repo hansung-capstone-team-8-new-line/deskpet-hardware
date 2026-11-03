@@ -42,6 +42,7 @@ struct Config {
   int dotSize = 8; // Face dot pitch in px; text screens stay vector.
   bool whiskers = true, glow = true;
   std::string mouth = "always"; // none | speaking | always
+  bool timeOfDay = true; // Night dims the face and makes it drowsier; long idle makes it bored, then doze.
   int lipSyncDelayMs = 0; // Moves the mouth later than the PCM timeline to match device latency.
   int address = 0x40, frequency = 50, stepUs = 20;
   int leaseMs = 3000;
