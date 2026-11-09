@@ -1,4 +1,4 @@
-"""DeskPet 케이스 3D 모델 rev D를 만들고 검사한 뒤 STEP·STL·3MF·미리보기 그림을 내보낸다.
+"""DeskPet 케이스 3D 모델 rev E를 만들고 검사한 뒤 STEP·STL·3MF·미리보기 그림을 내보낸다.
 
 사용: python build.py [출력 폴더]      (기본: 이 폴더. 검사 실패가 있으면 exit 1)
 검사: 부품끼리 겹침, 배선이 출력물을 뚫는지, 팬 위 공기층, 귀 회전·멈춤턱, 트레이(보드) 빼기, 귀 무게, 프린터 출력 범위.
@@ -14,7 +14,8 @@ OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.dirname(os.path.abspath(__fi
 EPS = 0.5           # mm³ 이하는 면 접촉으로 본다
 PLA = 1.24          # g/cm³ (PETG 1.27)
 
-printed, comps, cabs, inserts = m.printed_parts(), m.components(), m.cables(), m.ear_inserts()
+printed, comps, cabs = m.printed_parts(), m.components(), m.cables()
+paint = m.paint_areas()            # 그림에서만 분홍으로 보여 주는 도색 자리 (출력물 아님)
 lines, fails = [], []
 
 def log(s=""):
@@ -48,8 +49,9 @@ def oriented(name, shape):
 def rotate_ear(shape, x, y, ang):
     return Pos(x, y, 0) * (Rot(0, 0, ang) * (Pos(-x, -y, 0) * shape))
 
-log("DeskPet 케이스 3D 모델 rev D 검사 (앞면 전체 LCD, [추정] 값은 실측 후 deskpet_case.py 치수 표에서 수정)")
-log(f"외형 {m.W} × {m.D} × {m.H} mm (귀 포함 높이 {max(s.bounding_box().max.Z for s in printed.values()):.0f}, 범퍼 5 mm 별도)")
+log("DeskPet 케이스 3D 모델 rev E 검사 (앞면 전체 LCD · 둥근 외형, [추정] 값은 실측 후 deskpet_case.py 치수 표에서 수정)")
+log(f"외형 {m.W} × {m.D} × {m.H} mm (귀 포함 높이 {max(s.bounding_box().max.Z for s in printed.values()):.0f}, "
+    f"아래로 발 {m.FEET['h']} + 범퍼 {5 - m.FEET['bumper_depth']} mm 별도)")
 face_h = m.H - 2 * m.T
 log(f"앞틀 {m.W} × {face_h:.0f} mm 중 LCD 유리 {m.LCD['w']} × {m.LCD['h']} = {m.LCD['w'] * m.LCD['h'] / (m.W * face_h) * 100:.0f}%, "
     f"테두리 좌우 {m.LX0:.1f} · 위아래 {m.LZ0:.1f} mm, 창 {m.LCD['w'] - 2 * m.OVERLAP:.1f} × {m.LCD['h'] - 2 * m.OVERLAP:.1f} "
@@ -58,8 +60,6 @@ log()
 
 solids = {**printed, **comps}
 check("출력물·부품끼리 겹침 없음", [(a, solids[a], b, solids[b]) for a, b in itertools.combinations(solids, 2)])
-check("2색용 안쪽 귀 장식이 다른 것과 겹치지 않음", [(i, s, n, t) for i, s in inserts.items() for n, t in solids.items()
-                                              if not n.startswith("P6")])
 check("배선이 출력물을 뚫지 않음", [(c, s, p, ps) for c, s in cabs.items() for p, ps in printed.items()])
 ko = m.keepouts()
 check("Jetson 팬 위 공기층 30 mm 비어 있음", [(k, ks, n, s) for k, ks in ko.items() for n, s in {**solids, **cabs}.items()
@@ -68,7 +68,7 @@ check("Jetson 팬 위 공기층 30 mm 비어 있음", [(k, ks, n, s) for k, ks i
 # 귀 회전: 서보 축 기준 ±30° (소프트웨어는 ±25°까지 사용)
 ear_pairs = []
 for (x, y), side in zip(m.EARS, ("왼쪽", "오른쪽")):
-    ear = printed[f"P6 {side} 귀"].fuse(inserts[f"P6 {side} 귀 안쪽"])
+    ear = printed[f"P6 {side} 귀"]
     for ang in (-30, -15, 15, 30):
         moved = rotate_ear(ear, x, y, ang)
         for n, s in solids.items():
@@ -89,16 +89,41 @@ if not ok:
 check("뒤판을 열지 않고 Jetson 트레이를 뒤로 끝까지 뺄 수 있음", [("트레이·문 통로", m.tray_sweep(), n, s) for n, s in solids.items()
                                                  if n != "P5 트레이" and not n.startswith("Jetson")])
 
-g = (printed["P6 왼쪽 귀"].volume + inserts["P6 왼쪽 귀 안쪽"].volume) / 1000 * PLA
+g = printed["P6 왼쪽 귀"].volume / 1000 * PLA
 log(f"[{'PASS' if g <= 10 else 'FAIL'}] 귀 1개 무게 {g:.1f} g (속 채움 100% 상한, 기준 10 g 이하)")
 if g > 10:
     fails.append("귀 무게 초과")
 
+# 첫 층 들뜸: 출력 방향에서 바닥 2 mm 안에 45°보다 눕힌 아래 향한 경사면이 있으면 그 부분이 공중에서 시작한다
+# (Bambu Studio "떠 있는 구조" 경고). 수평 천장(나사 머리 자리·혼 홈 등 짧은 다리)은 따로 세어 참고로만 적는다.
+def bed_overhang(shape):
+    v, t = shape.tessellate(0.05, 0.1)
+    V, T_ = np.array([xyz(p) for p in v]), np.array(t)
+    a, b, c = V[T_[:, 0]], V[T_[:, 1]], V[T_[:, 2]]
+    nrm = np.cross(b - a, c - a)
+    ln = np.linalg.norm(nrm, axis=1)
+    area, nz, zc = ln / 2, nrm[:, 2] / np.maximum(ln, 1e-12), (a[:, 2] + b[:, 2] + c[:, 2]) / 3
+    near = (zc > 0.05) & (zc < 2.0)
+    return area[near & (nz < -0.73) & (nz > -0.995)].sum(), area[near & (nz <= -0.995)].sum()
+
+bad = []
+for n, s in printed.items():
+    o = oriented(n, s if not n.startswith("P8") else m.p8_foot())
+    slope, bridge = bed_overhang(o)
+    if slope > 5:
+        bad.append(f"{n} {slope:.0f} mm²")
+    elif bridge > 0:
+        lines.append(f"    참고: {n} 바닥 2 mm 안 수평 다리 {bridge:.0f} mm² (나사 머리 자리·혼 홈 등)")
+log(f"[{'PASS' if not bad else 'FAIL'}] 출력 방향에서 바닥 2 mm 안에 45°보다 눕힌 경사면 없음 (첫 층부터 받침이 있음)")
+for b_ in bad:
+    log(f"    - {b_}")
+    fails.append(f"첫 층 들뜸: {b_}")
+
 # 프린터 출력 범위 (출력 방향으로 돌린 크기)
 log()
 log("출력 범위 (출력 방향 기준 가로 × 세로 × 높이) · 무게는 속 채움 100% PLA 기준 상한")
-for n, s in {**printed, **inserts}.items():
-    if n == "P6 오른쪽 귀 안쪽":
+for n, s in printed.items():
+    if n == "P6 오른쪽 귀":
         continue
     sz = xyz(oriented(n, s).bounding_box().size)
     fit = {k: all(a <= b for a, b in zip(sz, bed)) for k, bed in m.BEDS.items()}
@@ -111,8 +136,6 @@ for n, s in {**printed, **inserts}.items():
 log()
 log(f"참고: LCD 오른쪽 끝 x={m.LX1:.2f}, 옆벽 안쪽 x={m.XIN1}. 남는 {m.XIN1 - m.LX1:.1f} mm에 HDMI FPC ㄱ자 플러그(8.6 mm)와 "
     f"ㄱ자 micro USB(7 mm)를 넣었다. 일자 플러그·일반 ㄱ자 HDMI 젠더(약 20 mm 이상)는 들어가지 않는다.")
-log()
-log("결과: " + ("모든 검사 통과" if not fails else f"실패 {len(fails)}건"))
 
 # ------------------------------------------------------------------ 내보내기
 os.makedirs(f"{OUT}/stl", exist_ok=True)
@@ -124,53 +147,76 @@ for d_, ext in (("stl", ".stl"), ("3mf", ".3mf")):
             os.remove(f"{OUT}/{d_}/{old}")
 stl_names = {"P1 바닥판": "P1-base", "P2 몸통": "P2-body", "P3 윗판": "P3-top", "P4 뒤판": "P4-back",
              "P5 트레이": "P5-tray-door", "P6 왼쪽 귀": "P6-ear-left", "P6 오른쪽 귀": "P6-ear-right",
-             "P6 왼쪽 귀 안쪽": "P6-ear-inner-x2", "P7 스피커 받침": "P7-speaker-cradle"}
-allp = {**printed, **inserts}
+             "P7 스피커 받침": "P7-speaker-cradle", "P8 발": "P8-foot-x4"}
+allp = {**printed, "P8 발": m.p8_foot()}
 for n, f in stl_names.items():
     export_stl(oriented(n, allp[n]), f"{OUT}/stl/{f}.stl", tolerance=0.05, angular_tolerance=0.2)
 
 # 출력판 3MF: 출력 방향으로 돌려 판 위에 배치. Bambu Studio에서 열면 판 하나가 된다 (설정은 PRINTING.md).
-def ear_pair(side):
-    ear, ins = printed[f"P6 {side} 귀"], inserts[f"P6 {side} 귀 안쪽"]
-    bb = ear.bounding_box()
-    off = Pos(-bb.min.X, -bb.min.Y, -bb.min.Z)
-    return [(f"P6 {side} 귀", off * ear), (f"P6 {side} 귀 안쪽 (2색)", off * ins)]
+FIL = 1.24           # g/cm³. Bambu PLA Basic (출력 무게 상한 계산 기준)
+JOB_LIMIT = 300      # g. H2D 한 번 출력 허용량
+JOB_MARGIN = 0.9     # 퍼지·브림·스커트 몫으로 10% 남김 → 물체 무게 상한 270 g
+GAP = 20             # mm. 출력판 위 물체 사이 간격 (브림·떼어내기 여유)
+SAFE = (275, 300)    # mm. H2D 판 325 × 320에서 양옆 "한쪽 노즐 전용" 띠(각 약 25 mm)와 앞뒤 여유 10 mm를 뺀 가운데 영역
 
 def plate(path, bed, rows):
-    """rows = [[(이름, 도형 또는 [(이름, 도형)…] 묶음), …], …] 줄마다 왼쪽부터 놓고 판 가운데로 옮긴다."""
+    """rows = [[항목, …], …]. 항목은 (이름, 도형) 하나 또는 {"col": [(이름, 도형), …]}(세로로 쌓는 묶음).
+    줄마다 왼쪽부터 놓고 판 가운데로 옮긴다. 돌려준 값: (요약 문자열, 물체 무게 상한 g)."""
     placed, y = [], 0.0
     for row in rows:
         x, depth = 0.0, 0.0
         for item in row:
-            group = item if isinstance(item, list) else [item]
-            bb = group[0][1].bounding_box()
-            placed += [(n, Pos(x - bb.min.X, y - bb.min.Y, -bb.min.Z) * s) for n, s in group]
-            x += bb.size.X + 12
-            depth = max(depth, bb.size.Y)
-        y += depth + 12
-    lo = np.min([xyz(s.bounding_box().min) for _, s in placed], axis=0)
-    hi = np.max([xyz(s.bounding_box().max) for _, s in placed], axis=0)
+            col = item["col"] if isinstance(item, dict) else [item]
+            yy, width = y, 0.0
+            for n, sh in col:
+                bb = sh.bounding_box()
+                placed.append((n, Pos(x - bb.min.X, yy - bb.min.Y, -bb.min.Z) * sh))
+                yy += bb.size.Y + GAP
+                width = max(width, bb.size.X)
+            x += width + GAP
+            depth = max(depth, yy - GAP - y)
+        y += depth + GAP
+    lo = np.min([xyz(sh.bounding_box().min) for _, sh in placed], axis=0)
+    hi = np.max([xyz(sh.bounding_box().max) for _, sh in placed], axis=0)
     size = hi - lo
-    assert size[0] <= bed[0] and size[1] <= bed[1], f"{path}: 판 밖 {size}"
+    assert size[0] <= bed[0] and size[1] <= bed[1] and size[2] <= bed[2], f"{path}: 판 밖 {size}"
     sx, sy = (bed[0] - size[0]) / 2 - lo[0], (bed[1] - size[1]) / 2 - lo[1]
     mesher = Mesher()
-    for n, s in placed:
-        mesher.add_shape(Pos(sx, sy, 0) * s, linear_deflection=0.05, angular_deflection=0.2, part_number=n)
+    for n, sh in placed:
+        mesher.add_shape(Pos(sx, sy, 0) * sh, linear_deflection=0.05, angular_deflection=0.2, part_number=n)
     mesher.write(path)
-    return f"{os.path.basename(path)}: " + ", ".join(n for n, _ in placed) + f" (판 위 {size[0]:.0f} × {size[1]:.0f} mm)"
+    grams = sum(sh.volume for _, sh in placed) / 1000 * FIL
+    return (f"{os.path.basename(path)}: " + ", ".join(n for n, _ in placed)
+            + f" (판 위 {size[0]:.0f} × {size[1]:.0f} × {size[2]:.0f} mm)", grams, size)
 
 o = {n: oriented(n, s) for n, s in printed.items()}
-plates = [
-    plate(f"{OUT}/3mf/X1C-1-P2-body.3mf", m.BEDS["X1C"], [[("P2 몸통", o["P2 몸통"])]]),
-    plate(f"{OUT}/3mf/X1C-2-P5-tray-door.3mf", m.BEDS["X1C"], [[("P5 트레이", o["P5 트레이"])]]),
-    plate(f"{OUT}/3mf/H2D-1-P1-base-P3-top.3mf", m.BEDS["H2D"], [[("P1 바닥판", o["P1 바닥판"])], [("P3 윗판", o["P3 윗판"])]]),
-    plate(f"{OUT}/3mf/H2D-2-P4-back-P7-ears.3mf", (300, 320),          # 2색(두 노즐) 출력 영역 300 × 320
-          [[("P4 뒤판", o["P4 뒤판"]), ("P7 스피커 받침", o["P7 스피커 받침"])], [ear_pair("왼쪽"), ear_pair("오른쪽")]]),
+feet = [(f"P8 발 {i + 1}", oriented("P8", m.p8_foot())) for i in range(4)]
+fit = printed["P2 몸통"] & m.box(-1, -1, -1, m.W + 1, 12, m.H + 1)                     # 앞틀 맞춤 시험편: 앞면부터 12 mm
+H2D = m.BEDS["H2D"]
+jobs = [
+    ("시험", plate(f"{OUT}/3mf/H2D-0-P2-fit-test.3mf", H2D, [[("P2 앞틀 시험편 12 mm", oriented("P2", fit))]])),
+    ("1회차", plate(f"{OUT}/3mf/H2D-1-P2-body-P7-P8-feet.3mf", H2D,
+                   [[("P2 몸통", o["P2 몸통"])], [("P7 스피커 받침", o["P7 스피커 받침"])] + feet])),
+    ("2회차", plate(f"{OUT}/3mf/H2D-2-P1-base-P4-back.3mf", H2D,
+                   [[("P1 바닥판", o["P1 바닥판"])], [("P4 뒤판", o["P4 뒤판"])]])),
+    ("3회차", plate(f"{OUT}/3mf/H2D-3-P3-top-P5-tray-P6-ears.3mf", H2D,
+                   [[("P3 윗판", o["P3 윗판"])],
+                    [("P5 트레이", o["P5 트레이"]), {"col": [("P6 왼쪽 귀", o["P6 왼쪽 귀"]), ("P6 오른쪽 귀", o["P6 오른쪽 귀"])]}]])),
 ]
 log()
-log("출력판 3MF (Bambu Studio에서 열기, 설정은 PRINTING.md)")
-for p_ in plates:
-    log("  " + p_)
+log(f"H2D 출력 계획 (한 번에 {JOB_LIMIT} g까지, 퍼지·브림 몫 10%를 빼고 물체 무게 상한 {JOB_LIMIT * JOB_MARGIN:.0f} g 이하, "
+    f"속 채움 100% PLA 기준 · 물체 간격 {GAP} mm · 가운데 {SAFE[0]} × {SAFE[1]} mm 안)")
+for job, (desc, g, size) in jobs:
+    ok_w, ok_s = g <= JOB_LIMIT * JOB_MARGIN, size[0] <= SAFE[0] and size[1] <= SAFE[1]
+    log(f"  [{'PASS' if ok_w and ok_s else 'FAIL'}] {job} {desc} · 최대 {g:.0f} g")
+    if not ok_w:
+        fails.append(f"출력 무게 초과: {job}")
+    if not ok_s:
+        fails.append(f"한쪽 노즐 전용 띠 침범: {job}")
+total = sum(g for job, (_, g, _s) in jobs if job != "시험")
+log(f"  본 출력 합계 최대 {total:.0f} g (시험편 제외)")
+log()
+log("결과: " + ("모든 검사 통과" if not fails else f"실패 {len(fails)}건"))
 
 def colored(name, shape, rgb):
     shape.label, shape.color = name, Color(*rgb)
@@ -181,20 +227,19 @@ COMP_COLORS = {"Jetson": (0.49, 0.61, 0.77), "7인치 LCD": (0.12, 0.17, 0.24), 
                "Adafruit": (0.30, 0.30, 0.32), "PCA9685": (0.73, 0.64, 0.89), "SG90": (0.20, 0.35, 0.70),
                "GPIO": (0.75, 0.25, 0.20), "DC 클립": (0.15, 0.15, 0.15), "퓨즈": (0.85, 0.20, 0.20),
                "실리콘": (0.25, 0.25, 0.25), "HDMI": (0.15, 0.15, 0.15), "micro USB": (0.15, 0.15, 0.15),
-               "멈춤 나사": (0.92, 0.92, 0.88)}
+               "멈춤 나사": (0.92, 0.92, 0.88), "발 나사": (0.92, 0.92, 0.88)}
 CABLE_COLORS = {"HDMI FPC": (0.85, 0.60, 0.20), "HDMI": (0.1, 0.1, 0.1), "LCD micro": (0.25, 0.25, 0.3),
                 "ReSpeaker USB": (0.95, 0.95, 0.95), "스피커": (0.85, 0.3, 0.3), "40핀": (0.55, 0.55, 0.85),
                 "신호": (0.3, 0.7, 0.4), "왼쪽 귀": (0.9, 0.6, 0.1), "오른쪽 귀": (0.9, 0.6, 0.1), "서보 전원": (0.85, 0.1, 0.1)}
-INSERT_RGB = (0.98, 0.62, 0.62)
+INSERT_RGB = m.PINK
 
 def rgb_for(name, table, default):
     return next((c for k, c in table.items() if k in name), default)
 
 items = [(n, s, m.COLORS[n[:2]]) for n, s in printed.items()]
-items += [(n, s, INSERT_RGB) for n, s in inserts.items()]
 items += [(n, s, rgb_for(n, COMP_COLORS, COMP_RGB)) for n, s in comps.items()]
 items += [(n, s, rgb_for(n, CABLE_COLORS, (0.3, 0.3, 0.3))) for n, s in cabs.items()]
-asm = Compound(label="DeskPet case rev D", children=[colored(n, s, c) for n, s, c in items])
+asm = Compound(label="DeskPet case rev E", children=[colored(n, s, c) for n, s, c in items])
 export_step(asm, f"{OUT}/deskpet-case-assembly.step")
 
 # ------------------------------------------------------------------ 미리보기 그림 (VTK로 깊이 버퍼 렌더링 → matplotlib으로 제목·범례)
@@ -269,16 +314,16 @@ def render(path, title, entries, elev, azim, legend=(), ortho=False, size=(13, 9
 
 E = lambda n, s, c, off=(0, 0, 0), a=1.0: (n, s, c, off, a)
 pr = {n: E(n, s, m.COLORS[n[:2]]) for n, s in printed.items()}
-pr.update({n: E(n, s, INSERT_RGB) for n, s in inserts.items()})
+pr.update({n: E(n, s, INSERT_RGB) for n, s in paint.items()})
 co = {n: E(n, s, rgb_for(n, COMP_COLORS, COMP_RGB)) for n, s in comps.items()}
 ca = {n: E(n, s, rgb_for(n, CABLE_COLORS, (0.3, 0.3, 0.3))) for n, s in cabs.items()}
-leg_parts = [(n, rgb_for(n, COMP_COLORS, COMP_RGB)) for n in comps if not any(k in n for k in ("범퍼", "ㄱ자", "멈춤", "암 단자"))]
+leg_parts = [(n, rgb_for(n, COMP_COLORS, COMP_RGB)) for n in comps if not any(k in n for k in ("범퍼", "ㄱ자", "멈춤", "암 단자", "발 나사"))]
 leg_cables = [(n, rgb_for(n, CABLE_COLORS, (0.3, 0.3, 0.3))) for n in cabs]
 outside = [co["7인치 LCD (C)"], co["실리콘 범퍼 ×4"], co["귀 멈춤 나사 M2.5 ×2"]]
 
-render(f"{OUT}/renders/01-closed.png", "DeskPet 케이스 rev D — 앞면 전체 LCD (앞·오른쪽 위)",
+render(f"{OUT}/renders/01-closed.png", "DeskPet 케이스 rev E — 둥근 외형 · 허브를 감춘 기운 귀 · 둥근 발 (분홍 = 도색 자리)",
        list(pr.values()) + outside, 20, -60)
-render(f"{OUT}/renders/01b-front.png", "정면 — LCD 유리가 앞면을 채움, 테두리 사방 13.5 mm",
+render(f"{OUT}/renders/01b-front.png", "정면 — 화면 창 R18, 바깥 모서리 R10, 귀 간격 ±52",
        list(pr.values()) + outside, 0, -90, ortho=True, size=(11, 9.6))
 render(f"{OUT}/renders/02-back.png", "뒤 — 트레이 문(Jetson 단자 창·손잡이), HDMI 단자, USB 통과 구멍, DC 단자, 배기",
        list(pr.values()) + [co[n] for n in comps] + list(ca.values()), 18, 118)
@@ -293,9 +338,9 @@ render(f"{OUT}/renders/04-top-plate-underside.png", "윗판(P3) 아래 — 귀 �
         co["귀 멈춤 나사 M2.5 ×2"], ca["왼쪽 귀 서보선"], ca["오른쪽 귀 서보선"]], -55, -70)
 explode = {"P1 바닥판": (0, 0, -60), "P2 몸통": (0, -40, 0), "P3 윗판": (0, 0, 70), "P4 뒤판": (0, 60, 0),
            "P5 트레이": (0, 130, -10), "P6 왼쪽 귀": (0, 0, 110), "P6 오른쪽 귀": (0, 0, 110), "P7 스피커 받침": (0, 0, -35),
-           "P6 왼쪽 귀 안쪽": (0, -6, 110), "P6 오른쪽 귀 안쪽": (0, -6, 110)}
-render(f"{OUT}/renders/05-exploded.png", "출력물 분해도 — P1 바닥판 · P2 몸통 · P3 윗판 · P4 뒤판 · P5 트레이+문 · P6 귀 · P7 스피커 받침",
-       [E(n, s, pr[n][2], explode[n]) for n, s in {**printed, **inserts}.items()], 18, -52, size=(13, 11))
+           "P8 발 ×4": (0, 0, -95)}
+render(f"{OUT}/renders/05-exploded.png", "출력물 분해도 — P1 바닥판 · P2 몸통 · P3 윗판 · P4 뒤판 · P5 트레이+문 · P6 귀 · P7 스피커 받침 · P8 발",
+       [E(n, s, pr[n][2], explode[n]) for n, s in printed.items()], 18, -52, size=(13, 11))
 pull = (0, 115, 0)
 render(f"{OUT}/renders/06-board-return.png", "보드 반납 — 문 나사 2개를 풀고 트레이를 Jetson째 뒤로 뺀다 (뒤판·윗판은 그대로)",
        [v for k, v in pr.items() if k != "P5 트레이"]
