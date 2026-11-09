@@ -153,9 +153,11 @@ for n, f in stl_names.items():
     export_stl(oriented(n, allp[n]), f"{OUT}/stl/{f}.stl", tolerance=0.05, angular_tolerance=0.2)
 
 # 출력판 3MF: 출력 방향으로 돌려 판 위에 배치. Bambu Studio에서 열면 판 하나가 된다 (설정은 PRINTING.md).
-PETG = 1.27          # g/cm³. 출력 무게 상한 계산은 모두 PETG 기준
+FIL = 1.24           # g/cm³. Bambu PLA Basic (출력 무게 상한 계산 기준)
 JOB_LIMIT = 300      # g. H2D 한 번 출력 허용량
 JOB_MARGIN = 0.9     # 퍼지·브림·스커트 몫으로 10% 남김 → 물체 무게 상한 270 g
+GAP = 20             # mm. 출력판 위 물체 사이 간격 (브림·떼어내기 여유)
+SAFE = (275, 300)    # mm. H2D 판 325 × 320에서 양옆 "한쪽 노즐 전용" 띠(각 약 25 mm)와 앞뒤 여유 10 mm를 뺀 가운데 영역
 
 def plate(path, bed, rows):
     """rows = [[항목, …], …]. 항목은 (이름, 도형) 하나 또는 {"col": [(이름, 도형), …]}(세로로 쌓는 묶음).
@@ -169,11 +171,11 @@ def plate(path, bed, rows):
             for n, sh in col:
                 bb = sh.bounding_box()
                 placed.append((n, Pos(x - bb.min.X, yy - bb.min.Y, -bb.min.Z) * sh))
-                yy += bb.size.Y + 10
+                yy += bb.size.Y + GAP
                 width = max(width, bb.size.X)
-            x += width + 12
-            depth = max(depth, yy - 10 - y)
-        y += depth + 12
+            x += width + GAP
+            depth = max(depth, yy - GAP - y)
+        y += depth + GAP
     lo = np.min([xyz(sh.bounding_box().min) for _, sh in placed], axis=0)
     hi = np.max([xyz(sh.bounding_box().max) for _, sh in placed], axis=0)
     size = hi - lo
@@ -183,9 +185,9 @@ def plate(path, bed, rows):
     for n, sh in placed:
         mesher.add_shape(Pos(sx, sy, 0) * sh, linear_deflection=0.05, angular_deflection=0.2, part_number=n)
     mesher.write(path)
-    grams = sum(sh.volume for _, sh in placed) / 1000 * PETG
+    grams = sum(sh.volume for _, sh in placed) / 1000 * FIL
     return (f"{os.path.basename(path)}: " + ", ".join(n for n, _ in placed)
-            + f" (판 위 {size[0]:.0f} × {size[1]:.0f} × {size[2]:.0f} mm)", grams)
+            + f" (판 위 {size[0]:.0f} × {size[1]:.0f} × {size[2]:.0f} mm)", grams, size)
 
 o = {n: oriented(n, s) for n, s in printed.items()}
 feet = [(f"P8 발 {i + 1}", oriented("P8", m.p8_foot())) for i in range(4)]
@@ -193,22 +195,25 @@ fit = printed["P2 몸통"] & m.box(-1, -1, -1, m.W + 1, 12, m.H + 1)            
 H2D = m.BEDS["H2D"]
 jobs = [
     ("시험", plate(f"{OUT}/3mf/H2D-0-P2-fit-test.3mf", H2D, [[("P2 앞틀 시험편 12 mm", oriented("P2", fit))]])),
-    ("1회차", plate(f"{OUT}/3mf/H2D-1-P2-body-P4-back-P5-tray.3mf", H2D,
-                   [[("P2 몸통", o["P2 몸통"]), ("P5 트레이", Rot(0, 0, 90) * o["P5 트레이"])], [("P4 뒤판", o["P4 뒤판"])]])),
-    ("2회차", plate(f"{OUT}/3mf/H2D-2-P1-base-P3-top-P6-ears-P7-P8.3mf", H2D,
-                   [[("P1 바닥판", o["P1 바닥판"]),
-                     {"col": [("P6 왼쪽 귀", o["P6 왼쪽 귀"]), ("P6 오른쪽 귀", o["P6 오른쪽 귀"]), feet[0], feet[1]]},
-                     {"col": [feet[2], feet[3]]}],
-                    [("P3 윗판", o["P3 윗판"]), ("P7 스피커 받침", o["P7 스피커 받침"])]])),
+    ("1회차", plate(f"{OUT}/3mf/H2D-1-P2-body-P7-P8-feet.3mf", H2D,
+                   [[("P2 몸통", o["P2 몸통"])], [("P7 스피커 받침", o["P7 스피커 받침"])] + feet])),
+    ("2회차", plate(f"{OUT}/3mf/H2D-2-P1-base-P4-back.3mf", H2D,
+                   [[("P1 바닥판", o["P1 바닥판"])], [("P4 뒤판", o["P4 뒤판"])]])),
+    ("3회차", plate(f"{OUT}/3mf/H2D-3-P3-top-P5-tray-P6-ears.3mf", H2D,
+                   [[("P3 윗판", o["P3 윗판"])],
+                    [("P5 트레이", o["P5 트레이"]), {"col": [("P6 왼쪽 귀", o["P6 왼쪽 귀"]), ("P6 오른쪽 귀", o["P6 오른쪽 귀"])]}]])),
 ]
 log()
-log(f"H2D 출력 계획 (한 번에 {JOB_LIMIT} g까지, 퍼지·브림 몫 10%를 빼고 물체 무게 상한 {JOB_LIMIT * JOB_MARGIN:.0f} g 이하, 속 채움 100% PETG 기준)")
-for job, (desc, g) in jobs:
-    ok = g <= JOB_LIMIT * JOB_MARGIN
-    log(f"  [{'PASS' if ok else 'FAIL'}] {job} {desc} · 최대 {g:.0f} g")
-    if not ok:
+log(f"H2D 출력 계획 (한 번에 {JOB_LIMIT} g까지, 퍼지·브림 몫 10%를 빼고 물체 무게 상한 {JOB_LIMIT * JOB_MARGIN:.0f} g 이하, "
+    f"속 채움 100% PLA 기준 · 물체 간격 {GAP} mm · 가운데 {SAFE[0]} × {SAFE[1]} mm 안)")
+for job, (desc, g, size) in jobs:
+    ok_w, ok_s = g <= JOB_LIMIT * JOB_MARGIN, size[0] <= SAFE[0] and size[1] <= SAFE[1]
+    log(f"  [{'PASS' if ok_w and ok_s else 'FAIL'}] {job} {desc} · 최대 {g:.0f} g")
+    if not ok_w:
         fails.append(f"출력 무게 초과: {job}")
-total = sum(g for job, (_, g) in jobs if job != "시험")
+    if not ok_s:
+        fails.append(f"한쪽 노즐 전용 띠 침범: {job}")
+total = sum(g for job, (_, g, _s) in jobs if job != "시험")
 log(f"  본 출력 합계 최대 {total:.0f} g (시험편 제외)")
 log()
 log("결과: " + ("모든 검사 통과" if not fails else f"실패 {len(fails)}건"))
