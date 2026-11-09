@@ -94,6 +94,31 @@ log(f"[{'PASS' if g <= 10 else 'FAIL'}] 귀 1개 무게 {g:.1f} g (속 채움 10
 if g > 10:
     fails.append("귀 무게 초과")
 
+# 첫 층 들뜸: 출력 방향에서 바닥 2 mm 안에 45°보다 눕힌 아래 향한 경사면이 있으면 그 부분이 공중에서 시작한다
+# (Bambu Studio "떠 있는 구조" 경고). 수평 천장(나사 머리 자리·혼 홈 등 짧은 다리)은 따로 세어 참고로만 적는다.
+def bed_overhang(shape):
+    v, t = shape.tessellate(0.05, 0.1)
+    V, T_ = np.array([xyz(p) for p in v]), np.array(t)
+    a, b, c = V[T_[:, 0]], V[T_[:, 1]], V[T_[:, 2]]
+    nrm = np.cross(b - a, c - a)
+    ln = np.linalg.norm(nrm, axis=1)
+    area, nz, zc = ln / 2, nrm[:, 2] / np.maximum(ln, 1e-12), (a[:, 2] + b[:, 2] + c[:, 2]) / 3
+    near = (zc > 0.05) & (zc < 2.0)
+    return area[near & (nz < -0.73) & (nz > -0.995)].sum(), area[near & (nz <= -0.995)].sum()
+
+bad = []
+for n, s in printed.items():
+    o = oriented(n, s if not n.startswith("P8") else m.p8_foot())
+    slope, bridge = bed_overhang(o)
+    if slope > 5:
+        bad.append(f"{n} {slope:.0f} mm²")
+    elif bridge > 0:
+        lines.append(f"    참고: {n} 바닥 2 mm 안 수평 다리 {bridge:.0f} mm² (나사 머리 자리·혼 홈 등)")
+log(f"[{'PASS' if not bad else 'FAIL'}] 출력 방향에서 바닥 2 mm 안에 45°보다 눕힌 경사면 없음 (첫 층부터 받침이 있음)")
+for b_ in bad:
+    log(f"    - {b_}")
+    fails.append(f"첫 층 들뜸: {b_}")
+
 # 프린터 출력 범위 (출력 방향으로 돌린 크기)
 log()
 log("출력 범위 (출력 방향 기준 가로 × 세로 × 높이) · 무게는 속 채움 100% PLA 기준 상한")

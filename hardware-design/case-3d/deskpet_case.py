@@ -10,7 +10,7 @@ Jetson은 뒤쪽 문과 한 몸인 트레이(P5)에 얹혀 나사 2개만 풀면
 치수 출처 표시: [사양] 판매처·제조사 자료, [계획] 케이스 설계 위키, [추정] 실물 확인 전 가정값 → 도착 후 실측.
 """
 import math
-from build123d import Align, Axis, Box, Cylinder, Ellipse, Plane, Polygon, Pos, Rot, Solid, Vector, extrude, fillet
+from build123d import Align, Axis, Box, Cylinder, Ellipse, Plane, Polygon, Pos, Rot, Solid, Vector, chamfer, extrude, fillet
 
 # ------------------------------------------------------------------ 치수 표 (한 곳에서 관리)
 LCD = dict(w=164.9, h=106.96, t=8, aa_w=154.21, aa_h=85.92,          # [사양] Waveshare 7inch HDMI LCD (C) Rev4.1 치수도
@@ -112,16 +112,34 @@ def side_slot(x0, x1, yc, zc, w, h):
     return box(x0, yc - r, zc - h / 2 + r, x1, yc + r, zc + h / 2 - r).fuse(
         cyl_x(x0, yc, zc - h / 2 + r, w, x1 - x0), cyl_x(x0, yc, zc + h / 2 - r, w, x1 - x0))
 
+def _corner(P, eA, eB, R, chamfer=False, a_first=False):
+    """출력용 둥근 모서리 한 곳의 꼭짓점들. A면 = 프린터 바닥에 닿는 면, B면 = 옆면.
+    A면에서 45° 직선으로 시작해 반지름 R 호로 B면에 접선으로 이어진다 (첫 층부터 45°보다 눕지 않음).
+    chamfer=True면 두 면 모두 바닥에 닿는 모서리라 45° 모따기(다리 0.586R, R 필렛을 감쌈)만 한다.
+    돌려준 순서는 B면 → A면, a_first=True면 A면 → B면."""
+    k = 1 - math.sqrt(0.5)                                  # 0.293
+    if chamfer:
+        loc = [(0, 2 * k * R), (2 * k * R, 0)]
+    else:
+        loc = [(R + R * math.cos(math.radians(q)), R + R * math.sin(math.radians(q))) for q in range(180, 226, 5)]
+        loc.append((2 * k * R, 0))
+    pts = [(P[0] + u * eA[0] + v * eB[0], P[1] + u * eA[1] + v * eB[1]) for u, v in loc]
+    return pts[::-1] if a_first else pts
+
 _ENV = []
 def envelope():
-    """바깥 외피 W × D × H: 앞 세로 R10, 뒤 세로 R8, 윗 모서리 R8, 아래 모서리 R3 (OCCT 필렛). 출력물 바깥면은 모두 이 안에 든다."""
+    """바깥 외피 W × D × H. 윗면·앞면·옆면 세 방향 윤곽을 각각 밀어 겹친 덩어리.
+    모서리 둥글기: 앞 세로 R10 · 뒤 세로 R8 · 위 R8 · 아래 R3. 각 출력물이 바닥에 놓이는 면(P1 아랫면, P2 앞면,
+    P3 윗면, P4 뒷면) 쪽은 45° 직선으로 시작하고, 위-앞·위-뒤 모서리(두 면 모두 바닥면)는 45° 모따기다."""
     if not _ENV:
-        b = box(0, 0, 0, W, D, H)
-        b = fillet(b.edges().filter_by(Axis.Z).filter_by_position(Axis.Y, -0.1, 0.1), CASE["r_front"])
-        b = fillet(b.edges().filter_by(Axis.Z).filter_by_position(Axis.Y, D - 0.1, D + 0.1), CASE["r_back"])
-        b = fillet(b.edges().group_by(Axis.Z)[-1], CASE["r_top"])
-        b = fillet(b.edges().group_by(Axis.Z)[0], CASE["r_bot"])
-        _ENV.append(b)
+        rf, rb, rt, rd = CASE["r_front"], CASE["r_back"], CASE["r_top"], CASE["r_bot"]
+        xy = (_corner((0, 0), (1, 0), (0, 1), rf) + _corner((W, 0), (-1, 0), (0, 1), rf, a_first=True)
+              + _corner((W, D), (-1, 0), (0, -1), rb) + _corner((0, D), (1, 0), (0, -1), rb, a_first=True))
+        xz = (_corner((0, 0), (1, 0), (0, 1), rd) + _corner((W, 0), (-1, 0), (0, 1), rd, a_first=True)
+              + _corner((W, H), (-1, 0), (0, -1), rt) + _corner((0, H), (1, 0), (0, -1), rt, a_first=True))
+        yz = (_corner((0, 0), (1, 0), (0, 1), rd) + _corner((D, 0), (-1, 0), (0, 1), rd, a_first=True)
+              + _corner((D, H), (-1, 0), (0, -1), rt, chamfer=True) + _corner((0, H), (1, 0), (0, -1), rt, chamfer=True, a_first=True))
+        _ENV.append(prism_xy(xy, 0, H) & prism_xz(xz, 0, D) & prism_yz(yz, 0, W))
     return _ENV[0]
 
 def rounded_block(z0, z1):
@@ -266,7 +284,7 @@ def p5_tray():
     t = fuse(box(x0, 53, T, x1, yd, T + 2), box(x0, 53, T + 2, x0 + 2, yd, T + 8),
              box(x1 - 2, 53, T + 2, x1, yd, T + 8), box(x0 + 2, 53, T + 2, x1 - 2, 55, T + 8))
     t = t.cut(*[box(58, 104 + i * 6, T - 0.1, 134, 107 + i * 6, T + 2.1) for i in range(6)])
-    door = box(DOOR["x0"], yd, T + 0.3, DOOR["x1"], D + 1, DOOR["z1"]).cut(
+    door = box(DOOR["x0"], yd, T, DOOR["x1"], D + 1, DOOR["z1"]).cut(                     # 문 밑면 = 트레이 밑면 (출력 때 바닥에 닿음)
         box(J0[0] - 0.5, yd - 0.1, 9, J0[0] + JET["w"] + 0.5, D + 1.1, 31))                   # Jetson 단자 창 104 × 22
     x0d, x1d = DOOR["x0"], DOOR["x1"]                                                         # 나사 탭 (뒤판 바깥면에 닿음, 아래 45°)
     tabs = [prism_xz([(x0d + 4, 30), (x0d, 30), (28, 41), (28, 50), (x0d + 4, 50)], D, D + 2.5),
@@ -378,7 +396,9 @@ def p8_foot():
     """발 1개 (위면 z=0이 바닥판 아랫면에 닿음). M2.5 × 8 나사를 아래에서 올리고 바닥판 안쪽에 너트.
     SparkFun 범퍼(Ø11 × 5)를 바닥 자리에 3 mm 묻어 2 mm만 보이게 하고, 나사 머리는 그 위 자리에 숨긴다."""
     d, h, rd = FEET["d"], FEET["h"], FEET["bumper_depth"]
-    f = fillet(cyl_z(0, 0, -h, d, h).edges(), FEET["r"])
+    f = cyl_z(0, 0, -h, d, h)
+    f = fillet(f.edges().group_by(Axis.Z)[0], FEET["r"])                                 # 바닥 쪽(보이는 면)만 둥글게
+    f = chamfer(f.edges().group_by(Axis.Z)[-1], 1.0)                                     # 윗면(출력 때 바닥) 둘레 1 mm 45° 모따기
     return f.cut(cyl_z(0, 0, -h - 0.1, M25["hole"], h + 0.2),
                  cyl_z(0, 0, -h - 0.1, 11.6, rd + 0.1),                                       # 범퍼 자리
                  cyl_z(0, 0, -h + rd - 0.1, M25["head_d"] + 0.4, M25["head_h"] + 0.2))       # 나사 머리 자리
@@ -494,7 +514,7 @@ def keepouts():
 def tray_sweep():
     """트레이(문 포함)와 Jetson을 뒤로 끝까지 뺄 때 지나가는 공간."""
     return fuse(box(41.5, 53, T + 0.05, 150.5, D + 120, JET["z0"] + JET["h"] + 0.5),
-                box(DOOR["x0"], YBACK - 0.1, T + 0.35, DOOR["x1"], D + 120, DOOR["z1"]))
+                box(DOOR["x0"], YBACK - 0.1, T + 0.05, DOOR["x1"], D + 120, DOOR["z1"]))
 
 CREAM = (0.99, 0.95, 0.88)          # 바깥 출력물은 모두 같은 크림색 (귀·발 포함). 귀 안쪽·볼은 분홍
 COLORS = {
