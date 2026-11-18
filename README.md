@@ -75,6 +75,7 @@ python3 tools/deskpetctl.py demo
 3. `deskpet-hardware doctor` 결과로 ReSpeaker 오디오·I2C·OE=GND 설정을 채웁니다.
 4. 녹음·재생·화면을 각각 시험하고 귀를 보정합니다.
 5. [실물 검증표](docs/validation.md)를 진행한 뒤 Swift 파이프라인에 연결합니다.
+6. 데스크탑 없이 화면만 띄우려면 [키오스크 모드](docs/kiosk.md)로 전환합니다.
 
 `config/jetson.json`의 장치 이름을 비워 둔 것은 실물 식별값을 추측하지 않기 위해서입니다. 귀는 `calibrated: false`로 시작하며, 보정 없이 활성화할 수 없습니다. 모의 모드 성공은 실제 전원·배선·음질·모터 동작 검증을 뜻하지 않습니다.
 

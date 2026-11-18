@@ -818,6 +818,8 @@ Display::Display(const Config& c) : impl_(std::make_unique<Impl>()) {
     d.window = SDL_CreateWindow(c.mock ? "DeskPet · 모의 실행" : "DeskPet", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
       c.fullscreen ? pw : pw / 2, c.fullscreen ? ph : ph / 2, SDL_WINDOW_ALLOW_HIGHDPI | (c.fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_RESIZABLE));
     if (!d.window) throw Error("DISPLAY_ERROR", SDL_GetError());
+    // The device screen has no pointer; without a desktop the X cursor would sit over the face.
+    if (!c.mock && c.fullscreen) SDL_ShowCursor(SDL_DISABLE);
     d.renderer = SDL_CreateRenderer(d.window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE);
     if (!d.renderer) d.renderer = SDL_CreateRenderer(d.window, -1, SDL_RENDERER_SOFTWARE | SDL_RENDERER_TARGETTEXTURE);
     if (!d.renderer) throw Error("DISPLAY_ERROR", SDL_GetError());

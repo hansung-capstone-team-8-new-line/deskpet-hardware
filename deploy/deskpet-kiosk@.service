@@ -1,0 +1,29 @@
+# Bare Xorg + deskpet-hardware without a desktop session. Instance name = device account,
+# e.g. deskpet-kiosk@jetson.service. Installed by tools/install-kiosk.sh.
+[Unit]
+Description=DeskPet kiosk display for %i (Xorg without desktop)
+After=systemd-user-sessions.service systemd-logind.service plymouth-quit-wait.service
+Conflicts=getty@tty7.service gdm.service gdm3.service display-manager.service
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=%i
+# A PAM login session gives the account a logind seat, the VT and /run/user/<uid>.
+PAMName=login
+TTYPath=/dev/tty7
+TTYReset=yes
+TTYVHangup=yes
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+UtmpIdentifier=tty7
+ExecStart=/usr/bin/xinit /usr/local/lib/deskpet-hardware/deskpet-xsession -- /usr/bin/Xorg :0 vt7 -keeptty -nolisten tcp -nocursor -s 0 -dpms
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=8
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target
