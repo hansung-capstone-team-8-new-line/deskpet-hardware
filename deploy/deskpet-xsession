@@ -1,0 +1,32 @@
+#!/bin/sh
+# xinit client for the kiosk: the only X client is deskpet-hardware (no window manager, no desktop).
+# Optional overrides live in ~/.config/deskpet-hardware/kiosk.env:
+#   DESKPET_OUTPUT=DP-0        xrandr output to use (default: first connected output)
+#   DESKPET_MODE=1024x600      mode for that output (default: the output's preferred mode)
+#   DESKPET_ROTATE=normal      xrandr rotation (keep "normal" when display.rotation is used)
+#   DESKPET_CONFIG=...         app config (default: ~/.config/deskpet-hardware/config.json)
+set -eu
+env_file="$HOME/.config/deskpet-hardware/kiosk.env"
+[ -r "$env_file" ] && . "$env_file"
+: "${XDG_RUNTIME_DIR:=/run/user/$(id -u)}"
+export XDG_RUNTIME_DIR
+config=${DESKPET_CONFIG:-$HOME/.config/deskpet-hardware/config.json}
+
+xset s off s noblank -dpms 2>/dev/null || true
+
+connected=$(xrandr --query | awk '$2 == "connected" {print $1}')
+output=${DESKPET_OUTPUT:-$(printf '%s\n' "$connected" | head -n 1)}
+if [ -n "$output" ]; then
+  if [ -n "${DESKPET_MODE:-}" ]; then
+    xrandr --output "$output" --mode "$DESKPET_MODE" --rotate "${DESKPET_ROTATE:-normal}" --primary --pos 0x0
+  else
+    xrandr --output "$output" --auto --rotate "${DESKPET_ROTATE:-normal}" --primary --pos 0x0
+  fi
+  # Turn every other output off so the fullscreen window can only land on the device screen.
+  for o in $connected; do [ "$o" = "$output" ] || xrandr --output "$o" --off; done
+  echo "deskpet-xsession: output $output" >&2
+else
+  echo 'deskpet-xsession: xrandr found no connected output; using the X default screen' >&2
+fi
+
+exec /usr/local/bin/deskpet-hardware --config "$config" --socket "$XDG_RUNTIME_DIR/deskpet-hardware.sock"

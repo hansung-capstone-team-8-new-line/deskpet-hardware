@@ -111,6 +111,8 @@ journalctl --user -u deskpet-hardware -f
 
 서비스는 그래픽 로그인 뒤 시작하고 로그아웃 때 종료합니다. 전원 투입 후 로그인 없이 화면을 띄우려면 기기 운영 계정의 자동 로그인을 별도로 설정해야 합니다. 설치기는 이를 자동으로 켜지 않습니다. 서비스 중지는 `systemctl --user stop deskpet-hardware`, 자동 시작 해제는 `systemctl --user disable deskpet-hardware`입니다.
 
+GNOME 없이 부팅하자마자 DeskPet 화면만 띄워 메모리를 아끼려면 [키오스크 모드](kiosk.md)(`bash tools/install-kiosk.sh`)를 사용합니다. 이 경우 자동 로그인은 필요 없습니다.
+
 ## 근거
 
 - [ReSpeaker Lite](https://wiki.seeedstudio.com/reSpeaker_lite/)
