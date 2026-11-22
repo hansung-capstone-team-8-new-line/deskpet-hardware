@@ -8,7 +8,6 @@
 #include <mutex>
 #include <random>
 #include <set>
-#include <ctime>
 #ifdef DESKPET_SDL
 #include <SDL.h>
 #include <SDL_ttf.h>
@@ -32,7 +31,6 @@ struct Layer {
 // Layers are in face space; tilt, scale and bob move the whole face around (512, 300).
 struct Face {
   std::vector<Layer> layers; float tilt = 0, scale = 1, bob = 0;
-  float brightness = 1;              // dims the lit dots at night
   Rgb aura{0, 0, 0}; float auraAmount = 0;  // state colour washed over the unlit dots
 };
 
@@ -58,9 +56,10 @@ float sdArc(float x, float y, float cx, float cy, float r, float a0, float a1, f
 constexpr float kDown0 = 0.35f, kDown1 = kPi - 0.35f;
 
 enum Key { LookX, LookY, Scale, Tilt, Bob, EyeSize, LidTop, LidTopR, LidSad, LidHappy,
-           MouthSmile, MouthOpen, MouthX, MouthWave, Whisk, Zz, kKeys };
+           MouthSmile, MouthOpen, MouthX, MouthWave, Whisk, Zz, EyeAsym, kKeys };
 using Pose = std::array<float, kKeys>;
-constexpr Pose kRest{0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0.3f, 0, 0, 0, 0, 0};
+// The resting upper lid (0.13) is a slightly drowsy, relaxed eye; happy, sad and surprised open it fully.
+constexpr Pose kRest{0, 0, 1, 0, 0, 1, 0.13f, 0, 0, 0, 0.3f, 0, 0, 0, 0, 0, 0};
 float stiffness(int k) {
   switch (k) {
     case MouthOpen: return 700;
@@ -77,7 +76,7 @@ float stiffness(int k) {
 // Random values fixed when a variation starts: s = sign, k = -1..1, side = the activity's chosen side.
 struct Pick { float s, k, side; };
 using Apply = std::function<void(float u, const Pick& p, Pose& d)>;
-struct Variation { const char* name; float min, max, weight; int blinks; bool track; Apply apply; };
+struct Variation { const char* name; float min, max, weight; int blinks; bool track; Apply apply; float slowBlink = 0; };
 Variation var(const char* name, float min, float max, Apply apply, float weight = 1, int blinks = 0, bool track = false) {
   return {name, min, max, weight, blinks, track, std::move(apply)};
 }
@@ -90,7 +89,19 @@ struct Activity {
   std::vector<Variation> vars;
   std::string label;
 };
-struct Mood { std::vector<std::pair<Key, float>> set, add; std::vector<Variation> vars; };
+// Emotions change the shape only a little; they mostly change how the face moves: tempo scales spring
+// stiffness, blink is the blink length, micro the micro-saccade range, gap scales the rest between variations.
+struct Mood {
+  std::vector<std::pair<Key, float>> set, add; std::vector<Variation> vars;
+  float tempo = 1, blink = 0.17f, micro = 5, gap = 1;
+};
+// The slow blink cats give when relaxed and trusting: the eyes close and reopen over 1.1 s. A squint made
+// with the upper lid looked like a flat, unimpressed -_- stare, so it uses the same rounded fold as a blink.
+Variation slowBlink(float weight) {
+  Variation v = var("느린 눈인사", 1.6f, 2.0f, [](float u, const Pick&, Pose& d) { d[LidHappy] += 0.1f * envelope(u); }, weight);
+  v.slowBlink = 1.1f;
+  return v;
+}
 
 const Activity& activityFor(const std::string& name) {
   using P = const Pick&;
@@ -105,6 +116,8 @@ const Activity& activityFor(const std::string& name) {
         d[LidHappy] += 0.8f * envelope(u, 0.3f, 0.6f); d[Scale] += 0.03f * envelope(u); }, 0.5f),
       var("수염 씰룩", 0.7f, 1.0f, [](float u, P, Pose& d) { d[Whisk] += 7 * std::sin(u * kPi * 8) * envelope(u, 0.1f, 0.9f); }),
       var("살짝 다가옴", 1.6f, 2.4f, [](float u, P, Pose& d) { d[Scale] += 0.045f * envelope(u); d[LookY] += 6 * envelope(u); }),
+      var("궁금", 1.6f, 2.2f, [](float u, P p, Pose& d) {
+        d[EyeAsym] += p.s * 0.05f * envelope(u); d[Tilt] += p.s * 0.05f * envelope(u); d[LookY] -= 6 * envelope(u); }, 0.7f),
     }, ""}},
     {"listening", {0.8f, 2.4f, false, [](float, Pose& g) {
       g[Scale] = 1.05f; g[EyeSize] = 1.08f; g[LookY] = -4; g[MouthSmile] = 0.15f; g[Whisk] = -8; }, {
@@ -113,15 +126,16 @@ const Activity& activityFor(const std::string& name) {
       var("갸웃하며 듣기", 1.8f, 2.6f, [](float u, P p, Pose& d) { d[Tilt] += p.s * 0.06f * envelope(u); }),
       var("집중", 1.4f, 2.0f, [](float u, P, Pose& d) { d[EyeSize] += 0.06f * envelope(u); d[Scale] += 0.03f * envelope(u); }),
       var("귀 기울이기", 1.4f, 2.0f, [](float u, P p, Pose& d) {
-        d[LookX] += p.s * 16 * envelope(u); d[Tilt] += p.s * 0.04f * envelope(u); d[Whisk] -= 6 * envelope(u); }),
+        d[LookX] += p.s * 16 * envelope(u); d[Tilt] += p.s * 0.04f * envelope(u); d[Whisk] -= 6 * envelope(u);
+        d[EyeAsym] += p.s * 0.03f * envelope(u); }),
     }, "듣고 있어요"}},
     // Thinking looks up and away, as people do; the side is picked at random on entry.
     {"processing", {0.5f, 2.0f, false, [](float s, Pose& g) {
-      g[LookX] = 84 * s; g[LookY] = -58; g[EyeSize] = 0.93f; g[MouthSmile] = -0.15f;
-      g[MouthX] = 16 * s; g[Tilt] = 0.03f * s; }, {
+      g[LookX] = 72 * s; g[LookY] = -44; g[EyeSize] = 0.93f; g[MouthSmile] = -0.15f;
+      g[MouthX] = 6 * s; g[Tilt] = 0.03f * s; }, {
       var("휙휙", 0.5f, 0.8f, [](float u, P p, Pose& d) { d[LookX] -= p.side * 40 * envelope(u, 0.08f, 0.6f); }),
       var("반대편 보기", 1.8f, 2.6f, [](float u, P p, Pose& d) {
-        const float e = envelope(u, 0.15f, 0.8f); d[LookX] -= p.side * 168 * e; d[MouthX] -= p.side * 32 * e; d[Tilt] -= p.side * 0.06f * e; }),
+        const float e = envelope(u, 0.15f, 0.8f); d[LookX] -= p.side * 144 * e; d[MouthX] -= p.side * 12 * e; d[Tilt] -= p.side * 0.06f * e; }),
       var("음…", 1.3f, 1.8f, [](float u, P, Pose& d) { d[MouthX] += 8 * std::sin(u * kPi * 2); d[MouthWave] += 0.7f * envelope(u); }),
       var("골똘", 1.6f, 2.4f, [](float u, P, Pose& d) { d[LidTop] += 0.24f * envelope(u); d[EyeSize] -= 0.04f * envelope(u); d[Scale] -= 0.02f * envelope(u); }),
       var("갸우뚱 생각", 1.8f, 2.4f, [](float u, P p, Pose& d) { d[Tilt] += p.side * 0.06f * envelope(u); }),
@@ -150,37 +164,57 @@ const Activity& activityFor(const std::string& name) {
 const Mood* moodFor(const std::string& name) {
   using P = const Pick&;
   static const std::map<std::string, Mood> table{
-    {"happy", {{{LidHappy, 0.5f}, {MouthSmile, 0.6f}}, {}, {
+    // Happy lifts the resting lid and opens big, full ovals: narrowing the eyes from below reads as looking
+    // down on someone. The joy is in the wide-open eyes, the smile and the brisk motion, with frequent ^ ^ beams.
+    {"happy", {{{LidTop, 0}, {LidHappy, 0.06f}, {MouthSmile, 0.75f}, {EyeSize, 1.08f}}, {{LookY, -4}}, {
       var("통통", 0.8f, 1.0f, [](float u, P, Pose& d) { d[Bob] -= 6 * std::abs(std::sin(u * kPi * 2)); }),
       var("좌우 흔들", 1.2f, 1.6f, [](float u, P, Pose& d) { d[Tilt] += 0.04f * std::sin(u * kPi * 4) * envelope(u, 0.1f, 0.9f); }),
       var("방긋", 0.9f, 1.2f, [](float u, P, Pose& d) {
-        d[MouthOpen] += 0.18f * envelope(u); d[LidHappy] += 0.15f * envelope(u); d[Scale] += 0.02f * envelope(u); }),
+        d[MouthOpen] += 0.18f * envelope(u); d[LidHappy] += 0.6f * envelope(u, 0.25f, 0.7f); d[Scale] += 0.02f * envelope(u); d[Bob] -= 4 * bump(u); }, 1.6f),
+      slowBlink(0.5f),
+    }, 1.15f}},
+    // A task that succeeded: calm pride rather than bouncing joy (a raised chin looked arrogant, so it nods).
+    {"proud", {{{LidHappy, 0.05f}, {MouthSmile, 0.6f}, {EyeSize, 1.03f}}, {{Bob, -4}, {Scale, 0.02f}}, {
+      var("끄덕", 0.6f, 0.8f, nod(1, 8)),
+      var("으쓱", 0.7f, 0.9f, [](float u, P, Pose& d) { d[Scale] += 0.03f * bump(u); d[Bob] -= 8 * bump(u); }),
+      slowBlink(0.7f),
     }}},
-    {"sad", {{{LidSad, 0.8f}, {MouthSmile, -0.75f}}, {{Bob, 14}, {LookY, 10}, {EyeSize, -0.05f}, {Whisk, 10}}, {
-      var("한숨", 2.0f, 2.6f, [](float u, P, Pose& d) { d[LidTop] += 0.35f * envelope(u, 0.3f, 0.6f); d[Bob] += 6 * envelope(u, 0.3f, 0.6f); }),
-      var("힐끔", 1.2f, 1.6f, [](float u, P p, Pose& d) { d[LookY] -= 16 * envelope(u); d[LookX] += p.s * 18 * envelope(u); }),
-      var("울먹", 1.4f, 1.8f, [](float u, P, Pose& d) { d[MouthWave] += 0.5f * envelope(u); }),
-    }}},
-    {"unknown", {{{LidTopR, 0.3f}, {MouthWave, 0.8f}, {MouthSmile, 0}}, {{LookX, 30}, {LookY, -12}}, {
+    {"sad", {{{LidTop, 0}, {LidSad, 1}, {MouthSmile, -0.9f}}, {{Bob, 16}, {LookY, 24}, {EyeSize, -0.09f}, {Whisk, 16}}, {
+      var("한숨", 2.0f, 2.6f, [](float u, P, Pose& d) {
+        const float e = envelope(u, 0.3f, 0.6f); d[LidSad] += 0.12f * e; d[EyeSize] -= 0.03f * e; d[Bob] += 8 * e; }),
+      var("힐끔", 1.4f, 1.8f, [](float u, P p, Pose& d) { d[LookY] -= 18 * envelope(u); d[LookX] += p.s * 16 * envelope(u); }),
+      var("울먹", 1.4f, 1.8f, [](float u, P, Pose& d) { d[MouthWave] += 0.4f * envelope(u); }),
+      var("시선 떨굼", 1.8f, 2.4f, [](float u, P p, Pose& d) { d[LookY] += 14 * envelope(u); d[LookX] += p.s * 20 * envelope(u); }),
+    }, 0.6f, 0.26f, 2.5f, 1.5f}},
+    // A task that failed: a lighter, sheepish sorry rather than sadness.
+    {"sorry", {{{LidTop, 0}, {LidSad, 0.4f}, {MouthSmile, -0.25f}}, {{LookY, 12}, {EyeSize, -0.03f}, {Whisk, 6}, {Tilt, 0.04f}}, {
+      var("힐끔", 1.2f, 1.6f, [](float u, P p, Pose& d) { d[LookY] -= 16 * envelope(u); d[LookX] += p.s * 14 * envelope(u); }),
+      var("머쓱 갸웃", 1.6f, 2.2f, [](float u, P p, Pose& d) { d[Tilt] += p.s * 0.06f * envelope(u); d[LookX] += p.s * 18 * envelope(u); }),
+      var("작은 한숨", 1.6f, 2.2f, [](float u, P, Pose& d) { d[LidTop] += 0.15f * envelope(u, 0.3f, 0.6f); d[Bob] += 4 * envelope(u, 0.3f, 0.6f); }),
+    }, 0.8f, 0.22f, 3}},
+    // Unsure: no clipped lid, just slightly mismatched eyes and a head tilt.
+    {"unknown", {{{MouthWave, 0.6f}, {MouthSmile, 0}, {EyeAsym, 0.06f}}, {{LookX, 30}, {LookY, -12}, {Tilt, 0.05f}}, {
       var("어리둥절", 1.8f, 2.4f, [](float u, P, Pose& d) { d[LookX] -= 64 * envelope(u); }),
-      var("갸웃", 1.6f, 2.2f, [](float u, P p, Pose& d) { d[Tilt] += p.s * 0.08f * envelope(u); }),
+      var("갸웃", 1.6f, 2.2f, [](float u, P p, Pose& d) { d[Tilt] += p.s * 0.08f * envelope(u); d[EyeAsym] -= 0.06f * envelope(u); }),
     }}},
-    {"petted", {{{LidHappy, 0.5f}, {MouthSmile, 0.4f}}, {{Whisk, 4}}, {
+    {"petted", {{{LidTop, 0}, {LidHappy, 0.28f}, {MouthSmile, 0.5f}}, {{Whisk, 4}}, {
       var("비비기", 1.2f, 1.6f, [](float u, P, Pose& d) { d[Tilt] += 0.045f * std::sin(u * kPi * 4) * envelope(u, 0.1f, 0.9f); }),
       var("수염 씰룩", 0.6f, 0.9f, [](float u, P, Pose& d) { d[Whisk] += 4 * std::sin(u * kPi * 8); }),
       var("좋아", 1.0f, 1.4f, [](float u, P, Pose& d) {
         d[Scale] += 0.02f * envelope(u); d[Bob] -= 4 * envelope(u); d[LidHappy] += 0.2f * envelope(u); }),
-    }}},
+      slowBlink(1.5f),
+    }, 0.8f, 0.24f}},
     {"sleepy", {{{LidTop, 0.68f}, {MouthSmile, 0.1f}, {MouthOpen, 0.05f}}, {{Bob, 10}, {Whisk, 8}}, {
       var("꾸벅", 2.6f, 3.4f, [](float u, P, Pose& d) { d[LidTop] += 0.32f * envelope(u, 0.55f, 0.85f); d[Bob] += 22 * envelope(u, 0.6f, 0.85f); }),
       var("하품", 2.0f, 2.6f, [](float u, P, Pose& d) {
         d[MouthOpen] += 0.7f * envelope(u, 0.3f, 0.6f); d[LidTop] += 0.2f * envelope(u, 0.3f, 0.6f); d[Scale] += 0.03f * envelope(u); }),
       var("Z", 2.4f, 3.0f, [](float u, P, Pose& d) { d[Zz] += envelope(u, 0.15f, 0.7f); }, 1, 0, true),
-    }}},
-    {"surprised", {{{EyeSize, 1.12f}, {MouthOpen, 0.65f}}, {{Scale, 0.05f}, {Whisk, -10}}, {
+    }, 0.7f, 0.32f, 1.5f}},
+    // Surprise pops once on entry (the startle reaction), then rests with slightly bigger eyes.
+    {"surprised", {{{LidTop, 0}, {EyeSize, 1.08f}, {MouthOpen, 0.4f}}, {{Scale, 0.04f}, {Whisk, -10}, {LookY, -6}}, {
       var("깜짝 깜박", 0.6f, 0.8f, [](float, P, Pose&) {}, 1, 2),
-      var("부르르", 0.5f, 0.6f, [](float u, P, Pose& d) { d[LookX] += 5 * std::sin(u * kPi * 12) * envelope(u, 0.1f, 0.9f); }),
-    }}},
+      var("부르르", 0.5f, 0.6f, [](float u, P, Pose& d) { d[LookX] += 3 * std::sin(u * kPi * 12) * envelope(u, 0.1f, 0.9f); }),
+    }, 1.3f}},
   };
   const auto it = table.find(name);
   return it == table.end() ? nullptr : &it->second;
@@ -190,7 +224,7 @@ const Mood* moodFor(const std::string& name) {
 struct Senses {
   std::optional<float> speech;  // mouth opening of the speech playing now
   std::optional<float> voice;   // microphone level now, 0..1
-  int hour = -1;                // local hour for time-of-day behaviour; -1 turns it off
+  bool boredom = false;         // long idle makes the face bored, then doze
 };
 constexpr float kBoredAfter = 300, kDozeAfter = 600;  // seconds alone in idle before getting bored, then dozing
 
@@ -259,48 +293,53 @@ private:
     if (activity == "listening" && activityName_ != "listening") addWave(512, 300, 1.2f, 600, 0.18f);  // "I'm listening"
     activityName_ = activity; status_ = status;
     wake();
-    mood_ = emotion == "sad" || status == "failed" ? "sad" : status == "unknown" ? "unknown"
-          : emotion == "happy" || status == "succeeded" ? "happy" : emotion;
+    // proud and sorry are internal moods picked from actionStatus, not interface values.
+    mood_ = status == "failed" ? "sorry" : emotion == "sad" ? "sad" : status == "unknown" ? "unknown"
+          : status == "succeeded" ? "proud" : emotion;
     activity_ = &activityFor(activity); moodTable_ = moodFor(mood_);
+    if (mood_ == "surprised") startleAt_ = t_ + 0.05f;  // surprise pops once on entry
     side_ = sign(); current_.reset(); last_ = nullptr;
     nextVariation_ = t_ + range(0.6f, 1.4f);
     blink(0);  // a state change starts with a blink, the way animators hide a cut
     nextBlink_ = t_ + range(2, 5);
     label_ = status == "unknown" ? "결과를 확인해야 해요" : activity_->label;
-    target_ = mood_ == "sad" ? kPink : mood_ == "unknown" ? kYellow : kBlue;
+    target_ = low() ? kPink : mood_ == "unknown" ? kYellow : kBlue;
   }
-  // Any interaction resets the idle clock; coming back from boredom startles the pet awake (with a stretch in the morning).
+  // Subdued moods answer touch by softening instead of beaming ^ ^.
+  bool low() const { return mood_ == "sad" || mood_ == "sorry"; }
+  // Any interaction resets the idle clock; coming back from boredom startles the pet awake.
   void wake() {
     const float alone = t_ - interactedAt_;
     if (activityName_ == "idle" && alone > kBoredAfter) {
       wakeAt_ = t_; blink(0); addWave(512, 300, 1.0f, 520, 0.2f);
-      if (alone > kDozeAfter && hour_ >= 5 && hour_ < 10) stretchAt_ = t_;
     }
     interactedAt_ = t_;
   }
 public:
   void update(float dt, const Senses& senses) {
-    t_ += dt; hour_ = senses.hour;
+    t_ += dt;
     if (petting_ && !pressed_ && t_ > pettedUntil_) { petting_ = false; apply(saved_[0], saved_[1], saved_[2]); }
-    if (current_ && t_ > current_->start + current_->duration) { current_.reset(); nextVariation_ = t_ + range(activity_->gap0, activity_->gap1); }
+    if (current_ && t_ > current_->start + current_->duration) {
+      current_.reset(); nextVariation_ = t_ + range(activity_->gap0, activity_->gap1) * (moodTable_ ? moodTable_->gap : 1);
+    }
     if (!current_ && t_ >= nextVariation_) start();
     Pose g = kRest;
     activity_->base(side_, g);
     if (moodTable_) { for (const auto& [k, v] : moodTable_->set) g[k] = v; for (const auto& [k, v] : moodTable_->add) g[k] += v; }
     // Without audio playing the mouth stays closed rather than guessing a rhythm.
-    if (activity_->talk) g[MouthOpen] = senses.speech ? *senses.speech * (mood_ == "sad" ? 0.7f : 1) : 0;
+    if (activity_->talk) g[MouthOpen] = senses.speech ? *senses.speech * (low() ? 0.7f : 1) : 0;
     // Living eyes never hold perfectly still.
     if (t_ >= nextMicro_) {
-      const float amp = mood_ == "sleepy" ? 1.5f : 5;
+      const float amp = moodTable_ ? moodTable_->micro : 5;
       micro_[0] = range(-amp, amp); micro_[1] = range(-amp * 0.6f, amp * 0.6f); nextMicro_ = t_ + range(0.35f, 1.6f);
     }
     g[LookX] += micro_[0]; g[LookY] += micro_[1];
     if (current_) current_->variation->apply((t_ - current_->start) / current_->duration, current_->pick, g);
     react(g, senses, dt);
-    const float h = std::min(dt, 1.0f / 20) / 2;
+    const float h = std::min(dt, 1.0f / 20) / 2, tempo = moodTable_ ? moodTable_->tempo : 1;  // sad moves slowly, happy briskly
     for (int k = 0; k < kKeys; ++k) {
       if (snap_) { pose_[k] = g[k]; velocity_[k] = 0; continue; }
-      const float K = stiffness(k), C = 2 * std::sqrt(K) * 0.78f;
+      const float K = stiffness(k) * (k == MouthOpen ? 1 : tempo), C = 2 * std::sqrt(K) * 0.78f;
       for (int i = 0; i < 2; ++i) { velocity_[k] += (K * (g[k] - pose_[k]) - C * velocity_[k]) * h; pose_[k] += velocity_[k] * h; }
     }
     const float follow = snap_ ? 1 : std::min(1.0f, dt * 6);
@@ -313,7 +352,6 @@ public:
     zzPhase_ = current_ && current_->variation->track ? (t_ - current_->start) / current_->duration : 0;
   }
   const Pose& pose() const { return pose_; }
-  float brightness() const { return brightness_; }
   Rgb aura() const { return {uint8_t(std::lround(aura_[0])), uint8_t(std::lround(aura_[1])), uint8_t(std::lround(aura_[2]))}; }
   float auraAmount() const { return auraAmount_; }
   float listening() const { return listening_; }  // strength of the sound ripples beside the face
@@ -323,7 +361,7 @@ public:
   Rgb color() const { return {uint8_t(std::lround(color_[0])), uint8_t(std::lround(color_[1])), uint8_t(std::lround(color_[2]))}; }
   const std::string& label() const { return label_; }
 private:
-  // Touch, wake-up, time of day, boredom and the success pulse on top of the expression's own target.
+  // Touch, wake-up, boredom and the success pulse on top of the expression's own target.
   void react(Pose& g, const Senses& senses, float dt) {
     if (pressed_ || t_ < gazeUntil_) {
       g[LookX] = std::clamp((gaze_[0] - 512) * 0.3f, -120.0f, 120.0f); g[LookY] = std::clamp((gaze_[1] - 250) * 0.3f, -80.0f, 80.0f);
@@ -332,12 +370,18 @@ private:
     }
     if (pressed_ && moved_ < 20 && t_ - downAt_ > 0.9f) {  // a long hold: lean in and close the eyes contentedly
       const float e = smooth((t_ - downAt_ - 0.9f) / 0.6f);
-      g[LidHappy] += 0.75f * e; g[Scale] += 0.02f * e; g[Whisk] += 4 * e;
+      g[Scale] += 0.02f * e; g[Whisk] += 4 * e;
+      if (low()) { g[LidTop] += 0.45f * e; g[LidSad] -= 0.3f * e; } else g[LidHappy] += 0.75f * e;  // when sad, quietly close the eyes
     }
     if (const float u = (t_ - nomAt_) / 0.6f; u >= 0 && u < 1) { g[MouthOpen] += 0.6f * bump(u); g[MouthSmile] += 0.3f * envelope(u); }
     if (const float u = (t_ - whiskAt_) / 0.8f; u >= 0 && u < 1) { g[Whisk] += 8 * std::sin(u * kPi * 8) * (1 - u); g[Tilt] += whiskSide_ * 0.03f * bump(u); }
     if (const float u = (t_ - beamAt_) / 1.2f; u >= 0 && u < 1) {
-      g[LidHappy] += 0.9f * envelope(u, 0.15f, 0.7f); g[MouthSmile] += 0.4f * envelope(u); g[Bob] -= 12 * std::abs(std::sin(u * kPi * 2)) * (1 - u);
+      if (low()) {  // comforted: the lids soften and a small smile appears
+        const float e = envelope(u, 0.2f, 0.7f);
+        g[LidSad] -= 0.4f * e; g[LidHappy] += 0.3f * e; g[MouthSmile] += 0.5f * e; g[Bob] -= 4 * bump(u);
+      } else {
+        g[LidHappy] += 0.9f * envelope(u, 0.15f, 0.7f); g[MouthSmile] += 0.4f * envelope(u); g[Bob] -= 12 * std::abs(std::sin(u * kPi * 2)) * (1 - u);
+      }
     }
     if (const float u = (t_ - startleAt_) / 0.8f; u >= 0 && u < 1) {
       g[EyeSize] += 0.15f * bump(u); g[Scale] += 0.05f * bump(u); g[LookY] -= 10 * bump(u); g[Whisk] -= 8 * bump(u);
@@ -345,24 +389,13 @@ private:
     if (const float u = (t_ - swipeAt_) / 0.9f; u >= 0 && u < 1) g[Tilt] += swipeSide_ * 0.05f * bump(u);
     const float wake = (t_ - wakeAt_) / 0.6f;
     if (wake >= 0 && wake < 1) { g[Scale] += 0.05f * bump(wake); g[EyeSize] += 0.08f * bump(wake); }
-    float bright = 1;
-    if (senses.hour >= 0) {
-      const bool night = senses.hour >= 21 || senses.hour < 5, evening = senses.hour >= 17 && senses.hour < 21;
-      if (night) { g[LidTop] += 0.2f; g[Bob] += 5; bright = 0.55f; } else if (evening) { g[LidTop] += 0.07f; bright = 0.85f; }
-      const float m = (t_ - stretchAt_) / 1.8f;  // morning stretch
-      if (m >= 0 && m < 1) {
-        const float e = envelope(m, 0.2f, 0.7f);
-        g[LidHappy] += 0.9f * e; g[Scale] += 0.06f * e; g[Bob] -= 10 * e; g[MouthOpen] += 0.55f * envelope(m, 0.3f, 0.6f);
-      }
-      if (activityName_ == "idle" && !moodTable_) {
-        const float alone = t_ - interactedAt_, bored = smooth((alone - kBoredAfter) / 60), doze = smooth((alone - kDozeAfter) / 60);
-        g[LidTop] += 0.15f * bored + 0.45f * doze; g[LookY] += 12 * bored; g[Bob] += doze * (4 + 6 * std::sin(t_ * 0.8f));
-      }
+    if (senses.boredom && activityName_ == "idle" && !moodTable_) {
+      const float alone = t_ - interactedAt_, bored = smooth((alone - kBoredAfter) / 60), doze = smooth((alone - kDozeAfter) / 60);
+      g[LidTop] += 0.15f * bored + 0.45f * doze; g[LookY] += 12 * bored; g[Bob] += doze * (4 + 6 * std::sin(t_ * 0.8f));
     }
     const float burst = (t_ - burstAt_) / 0.7f;
     if (burst >= 0 && burst < 1) { g[Bob] -= 12 * bump(burst); g[Scale] += 0.04f * bump(burst); }
     const float follow = std::min(1.0f, dt * 4);
-    brightness_ += (bright - brightness_) * follow;
     // State colours wash the unlit dots while the features stay blue: petted pink, listening sky blue,
     // thinking violet, waiting for an answer amber; other states none.
     const Rgb* tint = mood_ == "petted" ? &kPetAura : activityName_ == "listening" ? &kListenAura
@@ -387,7 +420,7 @@ private:
   float random() { return std::uniform_real_distribution<float>(0, 1)(rng_); }
   float range(float a, float b) { return a + random() * (b - a); }
   float sign() { return random() < 0.5f ? -1.0f : 1.0f; }
-  void blink(float delay) { blinks_.push_back({t_ + delay, mood_ == "sleepy" ? 0.32f : 0.17f}); }
+  void blink(float delay, float length = 0) { blinks_.push_back({t_ + delay, length > 0 ? length : moodTable_ ? moodTable_->blink : 0.17f}); }
   void start() {
     std::vector<const Variation*> pool;
     for (const auto& v : activity_->vars) pool.push_back(&v);
@@ -399,18 +432,18 @@ private:
     current_ = Running{chosen, t_, range(chosen->min, chosen->max), {sign(), range(-1, 1), side_}};
     last_ = chosen;
     for (int i = 0; i < chosen->blinks; ++i) blink(float(i) * 0.26f);
+    if (chosen->slowBlink > 0) blink(0.2f, chosen->slowBlink);
   }
   std::mt19937 rng_{std::random_device{}()};
   float t_ = 0, side_ = 1, nextVariation_ = 0, nextBlink_ = 0, nextMicro_ = 0, closure_ = 0, zzPhase_ = 0;
   // Touch, wake-up and environment state.
   bool pressed_ = false, petting_ = false;
   float gaze_[2] = {512, 250}, down_[2] = {0, 0}, downAt_ = 0, moved_ = 0, travel_ = 0, travelStart_ = 0, gazeUntil_ = -9, pettedUntil_ = -9;
-  float interactedAt_ = 0, wakeAt_ = -9, stretchAt_ = -9, burstAt_ = -9;
+  float interactedAt_ = 0, wakeAt_ = -9, burstAt_ = -9;
   float lastTapAt_ = -9, lastTap_[2] = {0, 0}, nomAt_ = -9, whiskAt_ = -9, whiskSide_ = 1, beamAt_ = -9, startleAt_ = -9, swipeAt_ = -9, swipeSide_ = 1;
   std::vector<float> taps_;
   std::vector<Wave> waves_;
-  float brightness_ = 1, aura_[3] = {0, 0, 0}, auraAmount_ = 0, voice_ = 0, listening_ = 0;
-  int hour_ = -1;
+  float aura_[3] = {0, 0, 0}, auraAmount_ = 0, voice_ = 0, listening_ = 0;
   std::array<std::string, 3> saved_;
   std::string activityName_, status_;
   float micro_[2] = {0, 0}, color_[3] = {kBlue.r, kBlue.g, kBlue.b};
@@ -432,21 +465,33 @@ Face buildFace(const Director& director, bool whiskers, const std::string& mouth
   const Rgb col = director.color();
   const float t = director.time(), blink = director.blinkClosure();
   face.tilt = P[Tilt]; face.scale = P[Scale]; face.bob = P[Bob];
-  face.brightness = director.brightness(); face.aura = director.aura(); face.auraAmount = director.auraAmount();
+  face.aura = director.aura(); face.auraAmount = director.auraAmount();
   for (const float side : {-1.0f, 1.0f}) {
-    // The eye keeps one oval shape; only its size changes, so it never turns round. Smiling lifts it,
-    // and only a strong smile (LidHappy above ~0.56, e.g. a beaming moment) turns it into a closed ^ arc.
+    // The eye keeps one oval shape; only its size changes, so it never turns round. Its shape changes only
+    // by being covered: the upper lid (LidTop), an upper lid drooping a little at the outer corner (LidSad),
+    // and a cheek pushing up from below when smiling (LidHappy). Only a strong smile (LidHappy above ~0.56,
+    // e.g. a beaming moment) turns it into a closed ^ arc.
     const float happy = std::clamp(P[LidHappy], 0.0f, 1.1f), arcK = smooth((happy - 0.56f) / 0.08f);
-    const float cx = (side < 0 ? 348.0f : 676.0f) + P[LookX], cy = 240 + P[LookY] - 12 * happy;
+    const float cx = (side < 0 ? 348.0f : 676.0f) + P[LookX], cy0 = 240 + P[LookY] - 6 * happy;
     const float breath = 1 + 0.012f * std::sin(t * 1.7f);  // the eyes breathe very slightly
-    const float size = std::max(0.5f, P[EyeSize]) * breath, hw = 64 * size, hh = std::max(4.0f, 90 * size * (1 - 0.94f * blink));
-    const float r = std::min(hw, hh);
-    const float lid = std::clamp(P[LidTop] + (side > 0 ? P[LidTopR] : 0), 0.0f, 0.92f), sad = std::clamp(P[LidSad], 0.0f, 1.0f);
-    // Upper lid: a half-plane, slanted down toward the outer corner when sad.
-    const float yl = cy - hh + 2 * hh * lid + sad * 0.45f * hh, m = sad * 0.8f * hh * side / hw, mn = std::hypot(1.0f, m);
+    // A blink folds the rounded eye toward a point a third of the way up from its bottom rather than its
+    // middle; the lids and cheek fold with it, so a drooping or smiling eye still closes cleanly.
+    const float size = std::max(0.5f, P[EyeSize] * (1 + side * P[EyeAsym])) * breath, hw = 64 * size, full = 90 * size;
+    const float hh = std::max(4.0f, full * (1 - 0.94f * blink)), cy = cy0 + 0.3f * full * blink, r = std::min(hw, hh);
+    const float lid = std::clamp(P[LidTop] + (side > 0 ? P[LidTopR] : 0), 0.0f, 0.92f), yl = cy - hh + 2 * hh * lid;
+    // Sad lid: the inner corner stays put and the lid droops toward the outer corner (at 1: 28% of the eye height
+    // at the outer edge, 11% in the middle, ~26 degrees). Cutting over half the eye made a teardrop that looked wrong.
+    const float sad = std::clamp(P[LidSad], 0.0f, 1.0f), sy = cy - hh + 0.22f * hh * sad;
+    const float sm = 0.34f * hh * sad * side / hw, smn = std::hypot(1.0f, sm);
+    // Cheek: a circle much wider than the eye rises from below and bends its bottom gently up into a smile.
+    // A circle narrower than the eye would leave two pointed "feet" at the bottom, which looks wrong.
+    const float cheek = 0.9f * hh * std::min(happy, 0.35f), cheekR = 3 * hw, cheekY = cy + hh - cheek + cheekR;
     const auto eyeDistance = [=](float x, float y) {
-      const float d = sdBox(x, y, cx, cy, hw, hh, r);
-      return lid > 0.001f || sad > 0.001f ? std::max(d, (yl + m * (x - cx) - y) / mn) : d;
+      float d = sdBox(x, y, cx, cy, hw, hh, r);
+      if (lid > 0.001f) d = std::max(d, yl - y);
+      if (sad > 0.001f) d = std::max(d, (sy + sm * (x - cx) - y) / smn);
+      if (cheek > 0.5f) d = std::max(d, cheekR - std::hypot(x - cx, y - cheekY));
+      return d;
     };
     if (arcK > 0.02f) {
       const float ay = 270 + P[LookY], ar = hw * 0.95f;
@@ -466,11 +511,12 @@ Face buildFace(const Director& director, bool whiskers, const std::string& mouth
                  [=](float, float y) { return 1 - 0.28f * smooth((y - (cy - hh * 0.3f)) / (hh * 1.3f)); }});  // soft shade reads as volume
   }
 
-  // The mouth is always the cat's ω, the same size in every state; it follows only part of the gaze,
-  // which reads as a head turn. Emotion tilts each lobe about the middle peak (up = smile, down = sad),
+  // The mouth is always the cat's ω, the same size in every state. It follows 75-80% of the gaze (whiskers
+  // 65-75%), so the eyes lead and the whole face turns with them; following only 30% stretched the gap
+  // between eyes and mouth when looking up, which looked like the face itself was deforming. Emotion tilts each lobe about the middle peak (up = smile, down = sad),
   // MouthWave wobbles the lobes, and speaking opens a small mouth below the peak.
   if (mouthMode == "always" || (mouthMode == "speaking" && speaking)) {
-    const float mx = 512 + P[LookX] * 0.35f + P[MouthX], my = 392 + P[LookY] * 0.3f, py = my + 3;
+    const float mx = 512 + P[LookX] * 0.75f + P[MouthX], my = 392 + P[LookY] * 0.8f, py = my + 3;
     constexpr float ar = 27;
     for (const float s : {-1.0f, 1.0f}) {
       const float angle = -s * P[MouthSmile] * 0.4f, cs = std::cos(angle), sn = std::sin(angle);
@@ -492,8 +538,8 @@ Face buildFace(const Director& director, bool whiskers, const std::string& mouth
 
   // Whiskers: gently bowed strands that thin toward the tip and sway slowly.
   if (whiskers) for (const float side : {-1.0f, 1.0f}) for (const float k : {-1.0f, 0.0f, 1.0f}) {
-    const float ix = 512 + side * 222 + P[LookX] * 0.25f, iy = 392 + k * 18 + P[Whisk] * 0.25f + P[LookY] * 0.2f;
-    const float bx = 512 + side * 404 + P[LookX] * 0.25f, by = iy + k * 26 + P[Whisk] + std::sin(t * 1.1f + k * 0.9f + side) * 3;
+    const float ix = 512 + side * 222 + P[LookX] * 0.65f, iy = 392 + k * 18 + P[Whisk] * 0.25f + P[LookY] * 0.75f;
+    const float bx = 512 + side * 404 + P[LookX] * 0.65f, by = iy + k * 26 + P[Whisk] + std::sin(t * 1.1f + k * 0.9f + side) * 3;
     const float qx = (ix + bx) / 2, qy = (iy + by) / 2 + 9 + k * 4;
     float px = ix, py = iy;
     for (int i = 1; i <= 6; ++i) {
@@ -725,14 +771,14 @@ struct Display::Impl {
           static_cast<uint32_t*>(pixels)[y * pitch / 4 + x] = (uint32_t(best * 255) << 24) | (c.r << 16) | (c.g << 8) | c.b;
         }
         SDL_UnlockTexture(glow);
-        SDL_SetTextureAlphaMod(glow, uint8_t(140 * face.brightness));
+        SDL_SetTextureAlphaMod(glow, 140);
         SDL_Rect dst{g.left, g.top, gw * 2 * g.cell, gh * 2 * g.cell};
         SDL_RenderCopy(renderer, glow, nullptr, &dst);
       }
     }
     for (size_t k = 0; k < n; ++k) {
       if (level[k] < 0.04f) continue;
-      stamp(g, int(k % size_t(g.cols)), int(k / size_t(g.cols)), tint[k], uint8_t(level[k] * face.brightness * 255));
+      stamp(g, int(k % size_t(g.cols)), int(k / size_t(g.cols)), tint[k], uint8_t(level[k] * 255));
     }
   }
   void text(const std::string& s, int x, int y) {
@@ -773,8 +819,8 @@ struct Display::Impl {
       for (const auto& line : lines) { text(line, 80, y); y += TTF_FontLineSkip(font); }
     } else {
       const auto now = Clock::now();
-      Senses senses{speechLevel(now), voiceLevel(now), -1};
-      if (config.timeOfDay) { const std::time_t clock = std::time(nullptr); std::tm local{}; localtime_r(&clock, &local); senses.hour = local.tm_hour; }
+      // config.timeOfDay now only turns idle boredom and dozing on; the evening/night lids and dimming are gone.
+      const Senses senses{speechLevel(now), voiceLevel(now), config.timeOfDay};
       director.update(std::chrono::duration<float>(now - frameAt).count(), senses);
       frameAt = now;
       drawFace(buildFace(director, config.whiskers, config.mouth, view.value("activity", "idle") == "speaking"));
