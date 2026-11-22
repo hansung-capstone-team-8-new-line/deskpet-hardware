@@ -113,6 +113,59 @@ journalctl --user -u deskpet-hardware -f
 
 GNOME 없이 부팅하자마자 DeskPet 화면만 띄워 메모리를 아끼려면 [키오스크 모드](kiosk.md)(`bash tools/install-kiosk.sh`)를 사용합니다. 이 경우 자동 로그인은 필요 없습니다.
 
+## 코드를 받은 뒤 다시 빌드
+
+설치 때 만든 `build-jetson` 폴더를 그대로 쓰면 **바뀐 파일만** 다시 컴파일하고 링크합니다. 처음부터 전체를 빌드할 필요는 없습니다. 프로젝트 폴더에서:
+
+```sh
+git fetch
+git switch <브랜치>        # 또는 main에서 git pull
+cmake --build build-jetson -j 2
+sudo cmake --install build-jetson
+```
+
+그다음 쓰는 방식에 맞게 재시작합니다.
+
+```sh
+systemctl --user restart deskpet-hardware        # 로그인 후 자동 시작을 쓸 때
+sudo systemctl restart deskpet-kiosk@<계정>       # 키오스크 모드일 때
+```
+
+- `build-jetson` 폴더를 지우지 않습니다. 지우면 처음부터 전체 빌드가 됩니다.
+- `CMakeLists.txt`가 바뀌었으면 `cmake --build`가 스스로 다시 구성합니다. 별도 명령은 필요 없습니다.
+- `include/deskpet/` 아래 헤더가 바뀌면 그 헤더를 쓰는 소스가 모두 다시 컴파일되어 오래 걸립니다. `src/` 파일 하나만 바뀌면 그 파일과 링크만 합니다.
+- `bash tools/install-jetson.sh real`을 다시 실행해도 같은 `build-jetson` 폴더를 쓰므로 빌드는 바뀐 파일만 합니다. 다만 apt 패키지 확인과 설치 단계를 다시 거쳐서 느립니다. 의존성이 바뀌었을 때만 씁니다. 기존 `config.json`은 덮어쓰지 않습니다.
+- 빌드 중 메모리가 부족해 컴파일러가 죽으면 `-j 1`로 다시 실행합니다.
+- 서비스를 재시작한 뒤 `journalctl --user -u deskpet-hardware -n 50`(키오스크는 `journalctl -u deskpet-kiosk@<계정> -n 50`)으로 시작 오류가 없는지 봅니다.
+
+### 2026-11-22 표정 조정 (`feat/face-subtle-emotions`)
+
+이 업데이트를 받을 때 해야 할 일입니다.
+
+1. **바뀐 것:** [src/display.cpp](../src/display.cpp)와 문서만 바뀌었습니다. 다시 컴파일되는 소스는 `display.cpp` 하나입니다. 설정 파일은 고치지 않아도 됩니다.
+2. **빌드:** 위 명령 그대로 하되 `<브랜치>`에 `feat/face-subtle-emotions`를 넣습니다(main에 머지된 뒤라면 main에서 `git pull`).
+3. **처음 하는 전체 컴파일:** 개발 PC에는 SDL이 없어서 표정 로직만 따로 컴파일하고 돌려 봤습니다. SDL 화면 코드까지 함께 컴파일되는 건 이번 젯슨 빌드가 처음입니다. 오류가 나면 메시지 전체를 남겨 주세요.
+4. **설정 의미 변경:** `display.face.timeOfDay`는 이제 대기 중 혼자 둔 시간의 심심함·졸기만 켜고 끕니다. 저녁·밤에 눈꺼풀이 내려오고 화면이 어두워지던 동작과 아침 기지개는 없어졌습니다.
+5. **실물 확인:** 서비스를 멈추고 수동 실행한 상태에서([첫 장치 시험](#첫-장치-시험)) 다른 터미널로 하나씩 띄워 봅니다. 표정별 의도는 [도트 표정](face-catalog.md)에 있습니다.
+
+   ```sh
+   deskpetctl face --activity idle                                       # 평소 눈: 윗눈꺼풀이 살짝 내려온 느긋한 눈
+   deskpetctl face --emotion happy                                       # 눈꺼풀을 다 올린 큰 타원 눈, 자주 ^ ^
+   deskpetctl face --emotion sad                                         # 바깥 눈꼬리로 처진 분홍 눈, 느릿한 움직임
+   deskpetctl face --activity processing                                 # 위쪽 옆을 볼 때 입·수염이 같이 따라오는지
+   deskpetctl face --activity idle --emotion happy --status succeeded    # 뿌듯함: 끄덕임, 따뜻한 도트 물결 한 번
+   deskpetctl face --activity idle --emotion sad --status failed         # 머쓱함: 슬픔보다 덜 처진 눈, 갸웃
+   deskpetctl face --activity idle --status unknown                      # 노랑, 두 눈 크기가 살짝 다름
+   deskpetctl face --emotion surprised                                   # 들어올 때 한 번 튀고 가라앉음
+   ```
+
+   - [ ] 실물 LCD에서 평소 눈꺼풀(0.13)이 졸려 보이기보다 느긋해 보이는지
+   - [ ] 기쁨과 평소 눈의 차이가 멀리서도 보이는지
+   - [ ] 슬픔이 과하거나 어색하지 않은지, 깜박일 때 눈이 찌그러지지 않는지
+   - [ ] 생각 중에 눈과 입 사이 간격이 자연스러운지
+   - [ ] 슬픔 상태에서 화면을 두 번 톡 하면 ^ ^ 대신 눈꼬리가 풀리며 작게 웃는지
+6. **되돌리기:** 문제가 있으면 `git switch main` 뒤 같은 빌드·설치·재시작 명령을 실행합니다. 이때도 `display.cpp`만 다시 컴파일합니다.
+
 ## 근거
 
 - [ReSpeaker Lite](https://wiki.seeedstudio.com/reSpeaker_lite/)
