@@ -75,7 +75,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 <div class="wrap">
   <header>
     <h1>DeskPet 표정 일람</h1>
-    <p class="lede">상태는 <strong>시선과 움직임</strong>으로, 감정은 <strong>눈꺼풀 모양</strong>으로 약하게 나타냅니다. 상태마다 기본 자세가 몇 가지 있고, 그 위에 작은 변형 동작 여러 개가 무작위로 나옵니다. 같은 상태라도 매번 조금씩 다르게 움직이고, 터치·소리·시간대에도 반응합니다. 같은 자세·변형·도형·반응이 하드웨어 렌더러(display.cpp)에 들어가 있습니다.</p>
+    <p class="lede">상태는 <strong>시선과 움직임</strong>으로, 감정은 <strong>눈꺼풀 모양</strong>으로 약하게 나타냅니다. 상태마다 기본 자세가 몇 가지 있고, 그 위에 작은 변형 동작 여러 개가 무작위로 나옵니다. 같은 상태라도 매번 조금씩 다르게 움직이고, 터치·소리·혼자 둔 시간에도 반응합니다. 같은 자세·변형·도형·반응이 하드웨어 렌더러(display.cpp)에 들어가 있습니다.</p>
   </header>
 
   <section class="stage" aria-label="선택한 표정 미리보기">
@@ -98,9 +98,6 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
           <button type="button" data-v="1">켜기</button><button type="button" data-v="0">끄기</button></div></div>
         <div class="ctl"><span>움직임</span><div class="seg" data-key="motion">
           <button type="button" data-v="1">재생</button><button type="button" data-v="0">정지</button></div></div>
-        <div class="ctl"><span>시간대</span><div class="seg" id="tods">
-          <button type="button" data-tod="auto">지금 시각</button><button type="button" data-tod="morning">아침</button><button type="button" data-tod="day">낮</button>
-          <button type="button" data-tod="evening">저녁</button><button type="button" data-tod="night">밤</button><button type="button" data-tod="off">끄기</button></div></div>
         <div class="ctl"><span>혼자 두기</span><div class="seg" id="alone">
           <button type="button" data-after="300">5분 뒤 (심심함)</button><button type="button" data-after="600">10분 뒤 (졸기)</button></div></div>
       </div>
@@ -115,14 +112,16 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     <ul>
       <li><strong>생기 있는 눈, 과하지 않게.</strong> 둥근 눈에 작고 옅은 반사광 하나만 넣었습니다(눈동자처럼 보이지 않게). 빛은 고정이라 시선을 옮기면 반사광이 살짝 반대로 밀리고, 눈이 아주 살짝 숨 쉬듯 커졌다 작아집니다.</li>
       <li><strong>상태는 시선과 움직임.</strong> 듣는 중: 사용자를 보고 다가옴·끄덕임. 생각 중: 위쪽 옆을 봄(사람이 생각할 때 시선을 피하는 것과 같음)·시선이 휙휙. 말하는 중: 다시 사용자를 보고 입을 움직임. 대답 기다림: 고개를 갸웃.</li>
-      <li><strong>감정은 약하게.</strong> 눈은 늘 같은 타원이고 크기만 바뀝니다. 기쁨은 눈이 살짝 올라가고 크게 웃는 순간에만 ^ ^, 슬픔은 바깥쪽 눈꺼풀이 처진 눈. 색은 슬픔·실패(분홍)와 결과 미확인(노랑)에만 씁니다.</li>
+      <li><strong>감정은 모양보다 움직임으로.</strong> 평소 눈은 윗눈꺼풀이 살짝 내려온 느긋한 타원입니다. 기쁨은 눈꺼풀을 다 올린 큰 타원 눈과 미소, 짧은 ^ ^로(눈을 가늘게 하면 내려다보는 눈처럼 보여서), 슬픔은 바깥 눈꼬리로 처진 눈. 대신 슬프면 느릿하고 깜박임이 무겁고, 기쁘면 경쾌합니다. 눈이 크게 깎이거나 찌그러지는 변형은 쓰지 않습니다. 색은 슬픔·실패(분홍)와 결과 미확인(노랑)에만 씁니다.</li>
+      <li><strong>아래쪽으로 접히는 깜박임.</strong> 둥근 모양을 유지한 채 눈 아래쪽 1/3 지점으로 접히고, 눈꺼풀·볼도 함께 접혀서 처진 눈도 깨끗하게 감깁니다.</li>
+      <li><strong>느린 눈인사.</strong> 고양이가 편안함을 보일 때처럼 천천히 실눈이 됐다가 뜹니다. 기쁨·뿌듯함·쓰다듬기에 나옵니다.</li>
       <li><strong>상태가 바뀔 때 먼저 깜박임.</strong> 애니메이터가 장면 전환을 숨기는 방식이라 자연스럽습니다.</li>
       <li><strong>부드러운 움직임.</strong> 모든 값은 스프링으로 따라가서 살짝 넘쳤다 돌아옵니다. 눈 깜박임 간격도 무작위(가끔 두 번 연속)입니다.</li>
       <li><strong>터치 반응.</strong> 누르면 그쪽을 바라보고 살짝 다가오며, 끌면 눈이 따라옵니다. 오래 누르면 눈을 감고 기대요. 톡 치면 눈은 깜박, 입은 “냠”, 수염은 씰룩입니다. 두 번 톡 치면 방긋 웃고, 여러 번 연타하면 깜짝 놀라고, 휙 밀면 눈이 그쪽으로 따라가고, 문지르면 3초 동안 쓰다듬기(배경이 분홍으로 물듦)가 됩니다. 파이프라인이 터치를 구독하지 않아도 화면이 스스로 반응합니다.</li>
       <li><strong>도트 물결.</strong> 고리 모양으로 도트가 켜지며 퍼지는 연출을 중요한 순간에만 옅게 씁니다: 누른 자리, 두 번 톡, 스와이프, 쓰다듬기 시작(분홍), 듣기 시작, 졸다 깰 때, 업무 성공.</li>
       <li><strong>상태별 배경 빛.</strong> 이목구비는 파랑 그대로 두고, 쓰다듬기 분홍, 듣는 중 하늘색, 생각 중 보라, 대답 기다림 주황을 꺼진 도트에 옅게 입힙니다. 문구 없이도 멀리서 상태가 구분됩니다.</li>
       <li><strong>듣는 중 소리 물결.</strong> 얼굴 양옆 물결이 은은하게 숨 쉬다가 사용자 목소리(마이크 소리 크기)에 맞춰 커집니다. 이 페이지는 목소리를 흉내 냅니다.</li>
-      <li><strong>시간대·혼자 두기.</strong> 저녁에는 눈이 조금, 밤에는 많이 무거워지고 화면이 어두워집니다. 대기 상태로 5분 혼자 두면 심심해하고 10분이면 졸며, 누르거나 상태가 바뀌면 깜짝 깹니다. 아침에 졸다 깨면 기지개를 켭니다. 설정으로 끌 수 있습니다.</li>
+      <li><strong>혼자 두기.</strong> 대기 상태로 5분 혼자 두면 심심해하고 10분이면 졸며, 누르거나 상태가 바뀌면 깜짝 깹니다. 설정으로 끌 수 있습니다. 시간대에 따라 눈꺼풀·밝기가 바뀌던 동작은 뺐습니다.</li>
       <li><strong>업무 성공 효과.</strong> 성공 순간 한 번만 따뜻한 색 도트 물결이 퍼지고 통 튑니다.</li>
       <li><strong>무작위 변형.</strong> 상태마다 기본 자세(예: 생각할 때 왼쪽 위/오른쪽 위)를 무작위로 고르고, 쉬는 간격도 무작위로 두며 같은 변형이 연달아 나오지 않게 합니다.</li>
     </ul>
@@ -165,8 +164,8 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   // 모든 표정은 이 숫자들의 조합. 목표값이 바뀌면 스프링으로 따라감.
   const BASE = {
     lookX: 0, lookY: 0, scale: 1, tilt: 0, bob: 0,
-    eyeSize: 1, lidTop: 0, lidTopR: 0, lidSad: 0, lidHappy: 0, raiseR: 0,
-    mSmile: 0.3, mOpen: 0, mX: 0, mWave: 0, whisk: 0, zz: 0,
+    eyeSize: 1, lidTop: 0.13, lidTopR: 0, lidSad: 0, lidHappy: 0, raiseR: 0,
+    mSmile: 0.3, mOpen: 0, mX: 0, mWave: 0, whisk: 0, zz: 0, eyeAsym: 0,
   };
   const STIFF = { mOpen: 700, lookX: 220, lookY: 220, tilt: 70, bob: 110, lidSad: 60, lidHappy: 90, zz: 30 };
 
@@ -174,6 +173,9 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   // f(u, p): u = 0..1 진행도, p = 시작할 때 정한 무작위 값. 반환값은 기본 자세에 더해짐.
   const V = (name, dur, f, w = 1, extra = {}) => ({ name, dur, f, w, ...extra });
   const nod = (n, depth) => u => ({ bob: depth * Math.max(0, Math.sin(u * Math.PI * 2 * n)) * env(u, 0.05, 0.9) });
+  // 고양이가 편안함·신뢰를 보일 때 하는 느린 눈 깜박임: 1.1초에 걸쳐 천천히 감았다 뜸.
+  // 윗눈꺼풀로 실눈을 만들면 일자 눈(-_-)이 되어 시큰둥해 보여서 깜박임과 같은 둥근 접힘을 씀
+  const slowBlink = w => V("느린 눈인사", [1.6, 2.0], u => ({ lidHappy: 0.1 * env(u) }), w, { slowBlink: 1.1 });
   const ACT = {
     idle: {
       gap: [1.2, 3.6], base: () => ({}),
@@ -185,6 +187,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
         V("하품", [2.0, 2.6], u => ({ mOpen: 0.75 * env(u, 0.3, 0.6), lidHappy: 0.8 * env(u, 0.3, 0.6), scale: 0.03 * env(u) }), 0.5),
         V("수염 씰룩", [0.7, 1.0], u => ({ whisk: 7 * Math.sin(u * Math.PI * 8) * env(u, 0.1, 0.9) })),
         V("살짝 다가옴", [1.6, 2.4], u => ({ scale: 0.045 * env(u), lookY: 6 * env(u) })),
+        V("궁금", [1.6, 2.2], (u, p) => ({ eyeAsym: p.s * 0.05 * env(u), tilt: p.s * 0.05 * env(u), lookY: -6 * env(u) }), 0.7),
       ],
     },
     listening: {
@@ -194,15 +197,15 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
         V("응응", [1.0, 1.3], nod(2, 9)),
         V("갸웃하며 듣기", [1.8, 2.6], (u, p) => ({ tilt: p.s * 0.06 * env(u) })),
         V("집중", [1.4, 2.0], u => ({ eyeSize: 0.06 * env(u), scale: 0.03 * env(u) })),
-        V("귀 기울이기", [1.4, 2.0], (u, p) => ({ lookX: p.s * 16 * env(u), tilt: p.s * 0.04 * env(u), whisk: -6 * env(u) })),
+        V("귀 기울이기", [1.4, 2.0], (u, p) => ({ lookX: p.s * 16 * env(u), tilt: p.s * 0.04 * env(u), whisk: -6 * env(u), eyeAsym: p.s * 0.03 * env(u) })),
       ],
     },
     processing: {
-      gap: [0.5, 2.0], base: s => ({ lookX: 84 * s, lookY: -58, eyeSize: 0.93, mSmile: -0.15, mX: 16 * s, tilt: 0.03 * s }),
+      gap: [0.5, 2.0], base: s => ({ lookX: 72 * s, lookY: -44, eyeSize: 0.93, mSmile: -0.15, mX: 6 * s, tilt: 0.03 * s }),
       sides: true,
       vars: [
         V("휙휙", [0.5, 0.8], (u, p) => ({ lookX: -p.side * 40 * env(u, 0.08, 0.6) })),
-        V("반대편 보기", [1.8, 2.6], (u, p) => ({ lookX: -p.side * 168 * env(u, 0.15, 0.8), mX: -p.side * 32 * env(u, 0.15, 0.8), tilt: -p.side * 0.06 * env(u, 0.15, 0.8) })),
+        V("반대편 보기", [1.8, 2.6], (u, p) => ({ lookX: -p.side * 144 * env(u, 0.15, 0.8), mX: -p.side * 12 * env(u, 0.15, 0.8), tilt: -p.side * 0.06 * env(u, 0.15, 0.8) })),
         V("음…", [1.3, 1.8], u => ({ mX: 8 * Math.sin(u * Math.PI * 2), mWave: 0.7 * env(u) })),
         V("골똘", [1.6, 2.4], u => ({ lidTop: 0.24 * env(u), eyeSize: -0.04 * env(u), scale: -0.02 * env(u) })),
         V("갸우뚱 생각", [1.8, 2.4], (u, p) => ({ tilt: p.side * 0.06 * env(u) })),
@@ -231,78 +234,109 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       ],
     },
   };
+  // 감정마다 모양은 조금만 바꾸고, 움직임의 빠르기(tempo: 스프링 강도 배율)·깜박임 길이(blink)·
+  // 미세 시선 폭(micro)·변형 사이 쉬는 간격 배율(gap)로 기분을 나타냄.
   const EMO = {
+    // 기쁨: 눈을 가늘게 하면(아래에서 밀어 올리면) 내려다보는·비웃는 눈이 되므로 눈은 크고 밝게 뜬 채
+    // 미소와 경쾌한 움직임으로 나타내고, 웃음은 짧은 ^ ^(방긋)로 자주 터뜨림
     happy: {
-      set: { lidHappy: 0.5, mSmile: 0.6 }, add: {},
+      set: { lidTop: 0, lidHappy: 0.06, mSmile: 0.75, eyeSize: 1.08 }, add: { lookY: -4 }, tempo: 1.15,
       vars: [
         V("통통", [0.8, 1.0], u => ({ bob: -6 * Math.abs(Math.sin(u * Math.PI * 2)) })),
         V("좌우 흔들", [1.2, 1.6], u => ({ tilt: 0.04 * Math.sin(u * Math.PI * 4) * env(u, 0.1, 0.9) })),
-        V("방긋", [0.9, 1.2], u => ({ mOpen: 0.18 * env(u), lidHappy: 0.15 * env(u), scale: 0.02 * env(u) })),
+        V("방긋", [0.9, 1.2], u => ({ mOpen: 0.18 * env(u), lidHappy: 0.6 * env(u, 0.25, 0.7), scale: 0.02 * env(u), bob: -4 * bump(u) }), 1.6),
+        slowBlink(0.5),
+      ],
+    },
+    // 업무 성공: 들뜬 기쁨보다 차분한 뿌듯함(턱을 들면 거만해 보여서 끄덕임으로)
+    proud: {
+      set: { lidHappy: 0.05, mSmile: 0.6, eyeSize: 1.03 }, add: { bob: -4, scale: 0.02 },
+      vars: [
+        V("끄덕", [0.6, 0.8], nod(1, 8)),
+        V("으쓱", [0.7, 0.9], u => ({ scale: 0.03 * bump(u), bob: -8 * bump(u) })),
+        slowBlink(0.7),
       ],
     },
     sad: {
-      set: { lidSad: 0.8, mSmile: -0.75 }, add: { bob: 14, lookY: 10, eyeSize: -0.05, whisk: 10 },
+      set: { lidTop: 0, lidSad: 1, mSmile: -0.9 }, add: { bob: 16, lookY: 24, eyeSize: -0.09, whisk: 16 },
+      tempo: 0.6, blink: 0.26, micro: 2.5, gap: 1.5,
       vars: [
-        V("한숨", [2.0, 2.6], u => ({ lidTop: 0.35 * env(u, 0.3, 0.6), bob: 6 * env(u, 0.3, 0.6) })),
-        V("힐끔", [1.2, 1.6], (u, p) => ({ lookY: -16 * env(u), lookX: p.s * 18 * env(u) })),
-        V("울먹", [1.4, 1.8], u => ({ mWave: 0.5 * env(u) })),
+        V("한숨", [2.0, 2.6], u => ({ lidSad: 0.12 * env(u, 0.3, 0.6), eyeSize: -0.03 * env(u, 0.3, 0.6), bob: 8 * env(u, 0.3, 0.6) })),
+        V("힐끔", [1.4, 1.8], (u, p) => ({ lookY: -18 * env(u), lookX: p.s * 16 * env(u) })),
+        V("울먹", [1.4, 1.8], u => ({ mWave: 0.4 * env(u) })),
+        V("시선 떨굼", [1.8, 2.4], (u, p) => ({ lookY: 14 * env(u), lookX: p.s * 20 * env(u) })),
       ],
     },
+    // 업무 실패: 슬픔보다 가벼운 머쓱함·미안함
+    sorry: {
+      set: { lidTop: 0, lidSad: 0.4, mSmile: -0.25 }, add: { lookY: 12, eyeSize: -0.03, whisk: 6, tilt: 0.04 },
+      tempo: 0.8, blink: 0.22, micro: 3,
+      vars: [
+        V("힐끔", [1.2, 1.6], (u, p) => ({ lookY: -16 * env(u), lookX: p.s * 14 * env(u) })),
+        V("머쓱 갸웃", [1.6, 2.2], (u, p) => ({ tilt: p.s * 0.06 * env(u), lookX: p.s * 18 * env(u) })),
+        V("작은 한숨", [1.6, 2.2], u => ({ lidTop: 0.15 * env(u, 0.3, 0.6), bob: 4 * env(u, 0.3, 0.6) })),
+      ],
+    },
+    // 결과 미확인: 눈꺼풀을 깎지 않고 두 눈 크기를 살짝 다르게 + 갸웃
     unknown: {
-      set: { lidTopR: 0.3, mWave: 0.8, mSmile: 0 }, add: { lookX: 30, lookY: -12 },
+      set: { mWave: 0.6, mSmile: 0, eyeAsym: 0.06 }, add: { lookX: 30, lookY: -12, tilt: 0.05 },
       vars: [
         V("어리둥절", [1.8, 2.4], u => ({ lookX: -64 * env(u) })),
-        V("갸웃", [1.6, 2.2], (u, p) => ({ tilt: p.s * 0.08 * env(u) })),
+        V("갸웃", [1.6, 2.2], (u, p) => ({ tilt: p.s * 0.08 * env(u), eyeAsym: -0.06 * env(u) })),
       ],
     },
     petted: {
-      set: { lidHappy: 0.5, mSmile: 0.4 }, add: { whisk: 4 },
+      set: { lidTop: 0, lidHappy: 0.28, mSmile: 0.5 }, add: { whisk: 4 }, tempo: 0.8, blink: 0.24,
       vars: [
         V("비비기", [1.2, 1.6], u => ({ tilt: 0.045 * Math.sin(u * Math.PI * 4) * env(u, 0.1, 0.9) })),
         V("수염 씰룩", [0.6, 0.9], u => ({ whisk: 4 * Math.sin(u * Math.PI * 8) })),
         V("좋아", [1.0, 1.4], u => ({ scale: 0.02 * env(u), bob: -4 * env(u), lidHappy: 0.2 * env(u) })),
+        slowBlink(1.5),
       ],
     },
     sleepy: {
-      set: { lidTop: 0.68, mSmile: 0.1, mOpen: 0.05 }, add: { bob: 10, whisk: 8 },
+      set: { lidTop: 0.68, mSmile: 0.1, mOpen: 0.05 }, add: { bob: 10, whisk: 8 }, tempo: 0.7, blink: 0.32, micro: 1.5,
       vars: [
         V("꾸벅", [2.6, 3.4], u => ({ lidTop: 0.32 * env(u, 0.55, 0.85), bob: 22 * env(u, 0.6, 0.85) })),
         V("하품", [2.0, 2.6], u => ({ mOpen: 0.7 * env(u, 0.3, 0.6), lidTop: 0.2 * env(u, 0.3, 0.6), scale: 0.03 * env(u) })),
         V("Z", [2.4, 3.0], u => ({ zz: env(u, 0.15, 0.7) }), 1, { track: true }),
       ],
     },
+    // 놀람: 들어오는 순간 한 번 크게 튀고(깜짝 반응), 그 뒤엔 조금 커진 눈으로 머묾
     surprised: {
-      set: { eyeSize: 1.12, mOpen: 0.65 }, add: { scale: 0.05, whisk: -10 },
+      set: { lidTop: 0, eyeSize: 1.08, mOpen: 0.4 }, add: { scale: 0.04, whisk: -10, lookY: -6 }, tempo: 1.3,
       vars: [
         V("깜짝 깜박", [0.6, 0.8], () => ({}), 1, { blinks: 2 }),
-        V("부르르", [0.5, 0.6], u => ({ lookX: 5 * Math.sin(u * Math.PI * 12) * env(u, 0.1, 0.9) })),
+        V("부르르", [0.5, 0.6], u => ({ lookX: 3 * Math.sin(u * Math.PI * 12) * env(u, 0.1, 0.9) })),
       ],
     },
   };
+  // proud·sorry는 인터페이스 값이 아니라 actionStatus에서 고르는 내부 감정
   function moodOf(p) {
-    if (p.emotion === "sad" || p.actionStatus === "failed") return "sad";
+    if (p.actionStatus === "failed") return "sorry";
+    if (p.emotion === "sad") return "sad";
     if (p.actionStatus === "unknown") return "unknown";
-    if (p.emotion === "happy" || p.actionStatus === "succeeded") return "happy";
+    if (p.actionStatus === "succeeded") return "proud";
+    if (p.emotion === "happy") return "happy";
     return EMO[p.emotion] ? p.emotion : null;
   }
+  const LOW = { sad: 1, sorry: 1 };  // 가라앉은 감정: 터치에 ^ ^ 대신 누그러지는 반응
   const BORED_AFTER = 300, DOZE_AFTER = 600;  // 대기 상태에서 혼자 둔 시간(초): 심심함, 졸기
   const PET_AURA = [255, 140, 175];
   const AURA = { listening: [70, 165, 255], processing: [150, 110, 255], awaiting_answer: [255, 180, 80] };
-  let TOD = "auto";  // 페이지 시간대 설정: auto(지금 시각)·morning·day·evening·night·off
-  const hourNow = () => TOD === "off" ? -1 : TOD === "auto" ? new Date().getHours() : { morning: 7, day: 13, evening: 19, night: 23 }[TOD];
   const LABEL = { listening: "듣고 있어요", processing: "생각하고 있어요", awaiting_answer: "대답을 기다려요" };
 
   // ---------- 연출(Director): 상태 하나를 맡아 자세를 계산 ----------
   class Director {
     constructor(face) {
       this.t = 0; this.pose = { ...BASE }; this.vel = {}; this.col = MINT.slice(); this.snap = true;
-      // 터치·깨어남·시간대 상태 (display.cpp Director와 같음)
+      // 터치·깨어남 상태 (display.cpp Director와 같음)
       this.pressed = false; this.petting = false; this.gaze = [512, 250]; this.down = [0, 0]; this.downAt = 0; this.moved = 0;
       this.travel = 0; this.travelStart = 0; this.gazeUntil = -9; this.pettedUntil = -9;
-      this.interactedAt = 0; this.wakeAt = -9; this.stretchAt = -9; this.burstAt = -9; this.hour = -1;
+      this.interactedAt = 0; this.wakeAt = -9; this.burstAt = -9;
       this.lastTapAt = -9; this.lastTap = [0, 0]; this.nomAt = -9; this.whiskAt = -9; this.whiskSide = 1; this.beamAt = -9; this.startleAt = -9; this.swipeAt = -9; this.swipeSide = 1;
       this.taps = []; this.waves = [];
-      this.brightness = 1; this.aura = [0, 0, 0]; this.auraAmount = 0; this.voice = 0; this.listening = 0;
+      this.aura = [0, 0, 0]; this.auraAmount = 0; this.voice = 0; this.listening = 0;
       this.voiceTarget = 0; this.nextVoice = 0; this.status = ""; this.activityName = "idle";
       this.set(face);
     }
@@ -323,14 +357,14 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       this.nextBlink = this.t + rr(2, 5);
       this.talk = 0; this.nextTalk = 0; this.micro = [0, 0]; this.nextMicro = this.t + rr(0.3, 1.2);
       this.label = p.actionStatus === "unknown" ? "결과를 확인해야 해요" : LABEL[p.activity] || "";
-      this.colTarget = this.mood === "sad" ? PINK : this.mood === "unknown" ? YELLOW : MINT;
+      this.colTarget = LOW[this.mood] ? PINK : this.mood === "unknown" ? YELLOW : MINT;
+      if (this.mood === "surprised") this.startleAt = this.t + 0.05;  // 놀람은 들어오는 순간 한 번 튐
     }
     // 아무 상호작용이든 혼자 있던 시간을 0으로. 심심하던 중이면 깜짝 깨고, 아침에 졸다 깨면 기지개.
     wake() {
       const alone = this.t - this.interactedAt;
       if (this.activityName === "idle" && alone > BORED_AFTER) {
         this.wakeAt = this.t; this.blink(0); this.addWave(512, 300, 1.0, 520, 0.2);
-        if (alone > DOZE_AFTER && this.hour >= 5 && this.hour < 10) this.stretchAt = this.t;
       }
       this.interactedAt = this.t;
     }
@@ -382,7 +416,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       if (this.waves.length >= 6) this.waves.shift();
       this.waves.push({ x, y, start: this.t + delay, duration, radius, alpha, color });
     }
-    // 터치·깨어남·시간대·심심함·성공 효과를 목표 자세에 더함
+    // 터치·깨어남·심심함·성공 효과를 목표 자세에 더함
     react(g, dt) {
       const t = this.t;
       if (this.pressed || t < this.gazeUntil) {
@@ -390,30 +424,27 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
         g.tilt += clamp((this.gaze[0] - 512) / 512, -1, 1) * 0.04; if (this.pressed) g.scale += 0.03;
       }
       if (this.pressed && this.moved < 20 && t - this.downAt > 0.9) {  // 오래 누르기: 눈 감고 기댐
-        const e = ss((t - this.downAt - 0.9) / 0.6); g.lidHappy += 0.75 * e; g.scale += 0.02 * e; g.whisk += 4 * e;
+        const e = ss((t - this.downAt - 0.9) / 0.6); g.scale += 0.02 * e; g.whisk += 4 * e;
+        if (LOW[this.mood]) { g.lidTop += 0.45 * e; g.lidSad -= 0.3 * e; } else g.lidHappy += 0.75 * e;  // 슬플 땐 ^ ^ 대신 조용히 눈 감음
       }
       let u = (t - this.nomAt) / 0.6; if (u >= 0 && u < 1) { g.mOpen += 0.6 * bump(u); g.mSmile += 0.3 * env(u); }
       u = (t - this.whiskAt) / 0.8; if (u >= 0 && u < 1) { g.whisk += 8 * Math.sin(u * Math.PI * 8) * (1 - u); g.tilt += this.whiskSide * 0.03 * bump(u); }
-      u = (t - this.beamAt) / 1.2; if (u >= 0 && u < 1) { g.lidHappy += 0.9 * env(u, 0.15, 0.7); g.mSmile += 0.4 * env(u); g.bob -= 12 * Math.abs(Math.sin(u * Math.PI * 2)) * (1 - u); }
+      u = (t - this.beamAt) / 1.2;
+      if (u >= 0 && u < 1) {
+        if (LOW[this.mood]) { const e = env(u, 0.2, 0.7); g.lidSad -= 0.4 * e; g.lidHappy += 0.3 * e; g.mSmile += 0.5 * e; g.bob -= 4 * bump(u); }  // 위로받아 누그러짐
+        else { g.lidHappy += 0.9 * env(u, 0.15, 0.7); g.mSmile += 0.4 * env(u); g.bob -= 12 * Math.abs(Math.sin(u * Math.PI * 2)) * (1 - u); }
+      }
       u = (t - this.startleAt) / 0.8; if (u >= 0 && u < 1) { g.eyeSize += 0.15 * bump(u); g.scale += 0.05 * bump(u); g.lookY -= 10 * bump(u); g.whisk -= 8 * bump(u); }
       u = (t - this.swipeAt) / 0.9; if (u >= 0 && u < 1) g.tilt += this.swipeSide * 0.05 * bump(u);
       const w = (t - this.wakeAt) / 0.6;
       if (w >= 0 && w < 1) { g.scale += 0.05 * bump(w); g.eyeSize += 0.08 * bump(w); }
-      let bright = 1;
-      if (this.hour >= 0) {
-        const night = this.hour >= 21 || this.hour < 5, evening = this.hour >= 17 && this.hour < 21;
-        if (night) { g.lidTop += 0.2; g.bob += 5; bright = 0.55; } else if (evening) { g.lidTop += 0.07; bright = 0.85; }
-        const m = (t - this.stretchAt) / 1.8;
-        if (m >= 0 && m < 1) { const e = env(m, 0.2, 0.7); g.lidHappy += 0.9 * e; g.scale += 0.06 * e; g.bob -= 10 * e; g.mOpen += 0.55 * env(m, 0.3, 0.6); }
-        if (this.activityName === "idle" && !this.emo) {
-          const alone = t - this.interactedAt, bored = ss((alone - BORED_AFTER) / 60), doze = ss((alone - DOZE_AFTER) / 60);
-          g.lidTop += 0.15 * bored + 0.45 * doze; g.lookY += 12 * bored; g.bob += doze * (4 + 6 * Math.sin(t * 0.8));
-        }
+      if (this.activityName === "idle" && !this.emo) {  // 혼자 둔 시간: 심심함, 졸기
+        const alone = t - this.interactedAt, bored = ss((alone - BORED_AFTER) / 60), doze = ss((alone - DOZE_AFTER) / 60);
+        g.lidTop += 0.15 * bored + 0.45 * doze; g.lookY += 12 * bored; g.bob += doze * (4 + 6 * Math.sin(t * 0.8));
       }
       const b = (t - this.burstAt) / 0.7;
       if (b >= 0 && b < 1) { g.bob -= 12 * bump(b); g.scale += 0.04 * bump(b); }
       const k = Math.min(1, dt * 4);
-      this.brightness += (bright - this.brightness) * k;
       const tint = this.mood === "petted" ? PET_AURA : AURA[this.activityName];  // 쓰다듬기 분홍, 듣는 중 하늘색, 생각 중 보라, 대답 기다림 주황
       if (tint) for (let i = 0; i < 3; i++) this.aura[i] += (tint[i] - this.aura[i]) * (this.auraAmount < 0.02 ? 1 : k);
       this.auraAmount += ((tint ? 1 : 0) - this.auraAmount) * k;
@@ -426,7 +457,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       this.listening += (listen - this.listening) * Math.min(1, dt * 10);
     }
     pool() { return this.act.vars.concat(this.emo ? this.emo.vars : []); }
-    blink(delay = 0, dur = this.mood === "sleepy" ? 0.32 : 0.17) { this.blinks.push([this.t + delay, dur]); }
+    blink(delay = 0, dur = this.emo?.blink ?? 0.17) { this.blinks.push([this.t + delay, dur]); }
     start(force) {
       const pool = this.pool().filter(v => v !== this.last || this.pool().length === 1);
       let r = Math.random() * pool.reduce((s, v) => s + v.w, 0), v = pool[0];
@@ -435,33 +466,34 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       this.beh = { v, t0: this.t, dur, p: { s: sgn(), k: rr(-1, 1), side: this.side } };
       this.last = v;
       if (v.blinks) for (let i = 0; i < v.blinks; i++) this.blink(i * 0.26);
+      if (v.slowBlink) this.blink(0.2, v.slowBlink);
     }
     update(dt, opt) {
-      this.t += dt; const t = this.t; this.hour = hourNow();
+      this.t += dt; const t = this.t;
       if (this.petting && !this.pressed && t > this.pettedUntil) { this.petting = false; this.apply(this.saved); }
       // 변형 고르기
-      if (this.beh && t > this.beh.t0 + this.beh.dur) { this.beh = null; this.nextBeh = t + rr(...this.act.gap); }
+      if (this.beh && t > this.beh.t0 + this.beh.dur) { this.beh = null; this.nextBeh = t + rr(...this.act.gap) * (this.emo?.gap ?? 1); }
       if (!this.beh && opt.vary && t >= this.nextBeh) this.start();
       // 목표 자세
       const g = { ...BASE, ...this.act.base(this.side) };
       if (this.emo) { Object.assign(g, this.emo.set); for (const k in this.emo.add) g[k] += this.emo.add[k]; }
       if (this.act.talk) {
         if (t >= this.nextTalk) { this.talk = Math.random() < 0.16 ? 0 : rr(0.25, 1); this.nextTalk = t + (this.talk ? rr(0.08, 0.16) : rr(0.18, 0.35)); }
-        g.mOpen = this.talk * (this.mood === "sad" ? 0.7 : 1);
+        g.mOpen = this.talk * (LOW[this.mood] ? 0.7 : 1);
       }
       // 미세 시선: 살아 있는 눈은 가만히 멈춰 있지 않음
       if (t >= this.nextMicro) {
-        const amp = this.mood === "sleepy" ? 1.5 : 5;
+        const amp = this.emo?.micro ?? 5;
         this.micro = [rr(-amp, amp), rr(-amp * 0.6, amp * 0.6)]; this.nextMicro = t + rr(0.35, 1.6);
       }
       g.lookX += this.micro[0]; g.lookY += this.micro[1];
       if (this.beh) { const d = this.beh.v.f((t - this.beh.t0) / this.beh.dur, this.beh.p); for (const k in d) g[k] += d[k]; }
       this.react(g, dt);
       // 스프링
-      const steps = 2, h = Math.min(dt, 1 / 20) / steps;
+      const steps = 2, h = Math.min(dt, 1 / 20) / steps, tempo = this.emo?.tempo ?? 1;  // 슬프면 느릿하게, 기쁘면 경쾌하게
       for (const k in g) {
         if (this.snap) { this.pose[k] = g[k]; this.vel[k] = 0; continue; }
-        const K = STIFF[k] || 150, C = 2 * Math.sqrt(K) * 0.78;
+        const K = (STIFF[k] || 150) * (k === "mOpen" ? 1 : tempo), C = 2 * Math.sqrt(K) * 0.78;
         let x = this.pose[k], v = this.vel[k] || 0;
         for (let i = 0; i < steps; i++) { v += (K * (g[k] - x) - C * v) * h; x += v * h; }
         this.pose[k] = x; this.vel[k] = v;
@@ -485,18 +517,29 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   function buildLayers(P, col, t, opt, dir) {
     const L = [];
     for (const side of [-1, 1]) {
-      // 눈은 늘 같은 타원이고 크기만 바뀜(동그래지지 않게). 웃으면 살짝 올라감.
+      // 눈은 늘 같은 타원이고 크기만 바뀜(동그래지지 않게). 모양은 눈꺼풀이 가려서만 바뀜:
+      // 윗눈꺼풀(lidTop), 바깥쪽이 조금 처진 윗눈꺼풀(lidSad), 웃을 때 아래에서 밀어 올리는 볼(lidHappy).
       // 아주 크게 웃을 때(lidHappy 0.56 이상, 예: 방긋)만 감은 ^ 아치 눈이 됨.
       const hap = clamp(P.lidHappy, 0, 1.1), arcK = ss((hap - 0.56) / 0.08);
-      const cx = (side < 0 ? 348 : 676) + P.lookX, cy = 240 + P.lookY - 12 * hap;
+      const cx = (side < 0 ? 348 : 676) + P.lookX, cy0 = 240 + P.lookY - 6 * hap;
       const breath = 1 + 0.012 * Math.sin(t * 1.7);  // 눈이 아주 살짝 숨 쉼
-      const size = Math.max(0.5, P.eyeSize) * breath, hw = 64 * size, hh = Math.max(4, 90 * size * (1 - 0.94 * P.blink));
-      const r = Math.min(hw, hh);
-      const lid = clamp(P.lidTop + (side > 0 ? P.lidTopR : 0), 0, 0.92), sad = clamp(P.lidSad, 0, 1);
-      const yl = cy - hh + 2 * hh * lid + sad * 0.45 * hh, m = sad * 0.8 * hh * side / hw, mn = Math.hypot(1, m);
+      // 깜박임: 둥근 모양 그대로 눈 아래쪽 1/3 지점을 향해 접힘(가운데로 찌그러지지 않음). 눈꺼풀·볼도 함께 접힘
+      const bl = clamp(P.blink, 0, 1), size = Math.max(0.5, P.eyeSize * (1 + side * P.eyeAsym)) * breath;
+      const hw = 64 * size, full = 90 * size, hh = Math.max(4, full * (1 - 0.94 * bl));
+      const cy = cy0 + 0.3 * full * bl, r = Math.min(hw, hh);
+      const lid = clamp(P.lidTop + (side > 0 ? P.lidTopR : 0), 0, 0.92), yl = cy - hh + 2 * hh * lid;
+      // 슬픈 눈꺼풀: 안쪽 눈머리는 그대로, 바깥 눈꼬리로 갈수록 처짐(1일 때 바깥 28%·가운데 11%, 약 26°).
+      // 예전처럼 절반 넘게 깎으면 물방울 모양이 되어 어색했음
+      const sad = clamp(P.lidSad, 0, 1), sy = cy - hh + 0.22 * hh * sad, sm = 0.34 * hh * sad * side / hw, smn = Math.hypot(1, sm);
+      // 볼: 눈보다 훨씬 큰 원이 아래에서 밀고 올라와 눈 아랫선이 완만하게 위로 휘는 눈웃음.
+      // 원이 눈보다 좁으면 아래에 '발'이 두 개 생겨 어색하므로 넓은 원(반폭의 3배)을 씀
+      const cheek = 0.9 * hh * Math.min(hap, 0.35), cR = 3 * hw, ccy = cy + hh - cheek + cR;
       const eyeD = (x, y) => {
-        const d = sdBox(x, y, cx, cy, hw, hh, r);
-        return lid > 0.001 || sad > 0.001 ? Math.max(d, (yl + m * (x - cx) - y) / mn) : d;
+        let d = sdBox(x, y, cx, cy, hw, hh, r);
+        if (lid > 0.001) d = Math.max(d, yl - y);
+        if (sad > 0.001) d = Math.max(d, (sy + sm * (x - cx) - y) / smn);
+        if (cheek > 0.5) d = Math.max(d, cR - hyp(x - cx, y - ccy));
+        return d;
       };
       if (arcK > 0.02) {
         const ay = 270 + P.lookY, ar = hw * 0.95;
@@ -511,9 +554,10 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       }
       L.push(layer(col, 1 - arcK, [cx - hw, cy - hh, cx + hw, cy + hh], eyeD, (x, y) => 1 - 0.28 * ss((y - (cy - hh * 0.3)) / (hh * 1.3))));
     }
-    // 입: 모든 상태에서 같은 크기의 고양이 ω. 시선의 일부만 따라가 고개를 돌리는 것처럼 보임.
+    // 입: 모든 상태에서 같은 크기의 고양이 ω. 시선을 75~80% 따라가(수염은 65~75%) 눈이 앞서고 얼굴이 함께 돌아감.
+    // 예전처럼 30%만 따라가면 위를 볼 때 눈과 입 사이가 벌어져 얼굴이 늘어나 보였음.
     // 감정은 가운데 꼭짓점을 축으로 양쪽 반원을 기울임(위 = 웃음, 아래 = 슬픔), 말할 때는 꼭짓점 아래로 작은 입이 벌어짐.
-    const mx = 512 + P.lookX * 0.35 + P.mX, my = 392 + P.lookY * 0.3, py = my + 3, ar = 27;
+    const mx = 512 + P.lookX * 0.75 + P.mX, my = 392 + P.lookY * 0.8, py = my + 3, ar = 27;
     for (const s of [-1, 1]) {
       const angle = -s * P.mSmile * 0.4, cs = Math.cos(angle), sn = Math.sin(angle);
       const ax = mx + s * ar, ay = my - 6 + P.mWave * 4 * Math.sin(t * 6 + s * 1.5);
@@ -529,9 +573,9 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     }
     // 수염: 휘어지고 끝이 가늘어지는 곡선, 천천히 흔들림
     if (opt.whiskers) for (const side of [-1, 1]) for (const k of [-1, 0, 1]) {
-      const ix = 512 + side * 222 + P.lookX * 0.25, iy = 392 + k * 18 + P.whisk * 0.25 + P.lookY * 0.2;
+      const ix = 512 + side * 222 + P.lookX * 0.65, iy = 392 + k * 18 + P.whisk * 0.25 + P.lookY * 0.75;
       const sway = Math.sin(t * 1.1 + k * 0.9 + side) * 3;
-      const bx = 512 + side * 404 + P.lookX * 0.25, by = iy + k * 26 + P.whisk + sway, bow = 9 + k * 4;
+      const bx = 512 + side * 404 + P.lookX * 0.65, by = iy + k * 26 + P.whisk + sway, bow = 9 + k * 4;
       const qx = (ix + bx) / 2, qy = (iy + by) / 2 + bow;
       let px = ix, py = iy;
       for (let i = 1; i <= 6; i++) {
@@ -629,9 +673,8 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       grad.addColorStop(0, `rgba(${r},${g},${b},${0.55 * a})`); grad.addColorStop(0.6, `rgba(${r},${g},${b},${0.22 * a})`); grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
       ctx.save(); ctx.fillStyle = grad; ctx.fill(v.auraPath); ctx.restore();
     }
-    const bright = v.dir.brightness;  // 밤에는 어두워짐
-    if (opt.glow) { ctx.save(); ctx.filter = `blur(${cp * 1.4}px)`; ctx.globalAlpha = 0.5 * bright; ctx.drawImage(v.lit, 0, 0); ctx.restore(); }
-    ctx.save(); ctx.globalAlpha = bright; ctx.drawImage(v.lit, 0, 0); ctx.restore();
+    if (opt.glow) { ctx.save(); ctx.filter = `blur(${cp * 1.4}px)`; ctx.globalAlpha = 0.5; ctx.drawImage(v.lit, 0, 0); ctx.restore(); }
+    ctx.drawImage(v.lit, 0, 0);
     if (v.dir.label) {
       ctx.fillStyle = TEXT; ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.font = `${36 * sc}px Jua, "IBM Plex Sans KR", sans-serif`; ctx.fillText(v.dir.label, W / 2 * sc, 530 * sc);
@@ -641,7 +684,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   // ---------- 표정 목록 ----------
   const FACES = [
     { group: "activity", id: "idle", name: "대기", payload: { activity: "idle", emotion: "neutral" },
-      note: "편안한 눈과 ω 입. 가끔 두리번거리고, 갸웃하고, 하품하고, 살짝 다가옵니다." },
+      note: "윗눈꺼풀이 살짝 내려온 느긋한 눈과 ω 입. 가끔 두리번거리고, 갸웃하고, 하품하고, 살짝 다가옵니다." },
     { group: "activity", id: "listening", name: "듣는 중", payload: { activity: "listening", emotion: "neutral" },
       note: "사용자를 똑바로 보고 얼굴이 조금 다가옵니다. 끄덕이거나 귀를 기울입니다." },
     { group: "activity", id: "processing", name: "생각 중", payload: { activity: "processing", emotion: "neutral" },
@@ -651,30 +694,30 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     { group: "activity", id: "awaiting", name: "대답 기다림", payload: { activity: "awaiting_answer", emotion: "neutral" },
       note: "얼굴 전체를 8°쯤 기울여 갸웃합니다(왼쪽/오른쪽 무작위). 빤히 보거나 깜박깜박합니다." },
     { group: "emotion", id: "happy", name: "기쁨", payload: { activity: "idle", emotion: "happy" },
-      note: "눈이 살짝 올라간 웃는 얼굴과 작은 미소. 방긋할 때만 잠깐 ^ ^ 눈이 되고, 가볍게 통통 튀거나 살짝 흔듭니다." },
+      note: "눈꺼풀을 다 올린 큰 타원 눈(1.08배)으로 크게 미소 짓습니다. 움직임이 경쾌해지고, 자주 방긋(^ ^) 웃으며 통통 튑니다." },
     { group: "emotion", id: "sad", name: "슬픔·위로", payload: { activity: "idle", emotion: "sad" },
-      note: "바깥쪽 눈꺼풀이 처지고 얼굴이 조금 내려갑니다. 한숨을 쉬거나 힐끔 올려다봅니다." },
+      note: "바깥 눈꼬리로 갈수록 눈꺼풀이 처지고, 시선과 얼굴이 아래로 가라앉습니다. 움직임이 느려지고 깜박임이 무거워집니다." },
     { group: "emotion", id: "happy-talk", name: "기쁘게 말하기", payload: { activity: "speaking", emotion: "happy" },
       note: "웃는 눈으로 말합니다." },
     { group: "emotion", id: "sad-talk", name: "위로하며 말하기", payload: { activity: "speaking", emotion: "sad" },
       note: "처진 눈으로 입을 작게 움직이며 말합니다." },
     { group: "result", id: "succeeded", name: "업무 성공", payload: { activity: "idle", emotion: "happy", actionStatus: "succeeded" },
-      note: "기쁨과 같은 얼굴입니다. 반짝이 장식은 뺐습니다." },
+      note: "뿌듯함: 또렷한 눈과 미소로 끄덕이거나 으쓱합니다. 성공 순간 한 번 따뜻한 도트 물결이 퍼집니다." },
     { group: "result", id: "failed", name: "업무 실패", payload: { activity: "idle", emotion: "sad", actionStatus: "failed" },
-      note: "슬픔과 같은 얼굴(분홍)입니다." },
+      note: "머쓱함: 슬픔보다 눈꼬리가 덜 처지고, 고개를 살짝 기울인 채 힐끔 올려다봅니다(분홍)." },
     { group: "result", id: "unknown", name: "결과 미확인", payload: { activity: "idle", emotion: "neutral", actionStatus: "unknown" },
-      note: "노란 얼굴에 한쪽 눈꺼풀이 내려오고 ω 입이 흔들립니다. 어리둥절하게 두리번거립니다." },
+      note: "노란 얼굴. 두 눈 크기가 살짝 다르고 고개를 갸웃하며, ω 입이 흔들립니다." },
     { group: "proposal", id: "petted", name: "쓰다듬기", payload: { activity: "idle", emotion: "petted" },
-      note: "살짝 올라간 눈과 분홍으로 물드는 배경. '좋아' 할 때만 잠깐 ^ ^ 눈이 되고, 살짝 비비고 수염이 씰룩입니다." },
+      note: "약한 눈웃음과 분홍 배경. 움직임이 느긋해지고, 고양이처럼 느린 눈인사를 자주 하며 살짝 비빕니다." },
     { group: "proposal", id: "sleepy", name: "졸림", payload: { activity: "idle", emotion: "sleepy" },
       note: "눈이 반쯤 감겼고, 가끔 꾸벅 졸거나 하품하거나 z가 떠오릅니다." },
     { group: "proposal", id: "surprised", name: "놀람", payload: { activity: "idle", emotion: "surprised" },
-      note: "눈이 둥글고 커지고 ω 아래로 입이 벌어집니다. 깜짝 깜박이거나 부르르 떱니다." },
+      note: "들어오는 순간 한 번 크게 튀고, 그 뒤엔 조금 커진 눈과 작게 벌어진 입으로 머뭅니다." },
   ];
   const GROUPS = [
     ["activity", "활동 상태", "파이프라인이 대화 단계마다 보내는 기본 얼굴입니다. 시선과 움직임으로 구분합니다."],
-    ["emotion", "감정", "출력 모델이 정하는 emotion 값입니다. 눈꺼풀과 입 모양만 약하게 바뀝니다."],
-    ["result", "업무 결과", "actionStatus를 보낼 때의 얼굴입니다."],
+    ["emotion", "감정", "출력 모델이 정하는 emotion 값입니다. 모양은 눈꺼풀과 입만 약하게 바뀌고, 움직임의 빠르기와 깜박임이 달라집니다."],
+    ["result", "업무 결과", "actionStatus를 보낼 때의 얼굴입니다. 일반 감정과 구분되게 뿌듯함·머쓱함으로 나타냅니다."],
     ["proposal", "확장 감정", "하드웨어 확장 값입니다. 파이프라인이 터치·장시간 대기·호출어에 맞춰 보냅니다."],
   ];
   const FLOW = [["idle", 3.5], ["listening", 4], ["processing", 3.5], ["happy-talk", 4], ["awaiting", 4], ["listening", 3], ["processing", 3], ["sad-talk", 3.5], ["idle", 3]];
@@ -727,15 +770,12 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     opt[seg.dataset.key] = b.dataset.v === "1"; save(); syncControls();
   }));
 
-  // 시간대·혼자 두기 미리보기
-  const syncTod = () => document.querySelectorAll("#tods button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tod === TOD)));
-  $("tods").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; TOD = b.dataset.tod; syncTod(); });
+  // 혼자 두기 미리보기
   $("alone").addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
     if (stage.face.payload.activity !== "idle" || stage.dir.emo) select(FACES[0]);
     stage.dir.interactedAt = stage.dir.t - +b.dataset.after;  // 그만큼 혼자 둔 것처럼
   });
-  syncTod();
   // 큰 화면: 마우스를 터치처럼
   const toFace = e => { const r = stage.cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H]; };
   stage.cv.style.cursor = "pointer"; stage.cv.style.touchAction = "none";
