@@ -45,6 +45,7 @@ struct Config {
   bool timeOfDay = true; // Night dims the face and makes it drowsier; long idle makes it bored, then doze.
   int lipSyncDelayMs = 0; // Moves the mouth later than the PCM timeline to match device latency.
   int address = 0x40, frequency = 50, stepUs = 20;
+  bool autoEars = true; // Once calibrated, move the ears with the face while a client is connected.
   int leaseMs = 3000;
   Ear left, right{1};
   void validate() const;

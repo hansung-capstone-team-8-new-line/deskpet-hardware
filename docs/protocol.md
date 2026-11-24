@@ -170,6 +170,8 @@ Swift 클라이언트를 쓰면 아래 봉투와 패킷을 직접 구현할 필�
 
 `motion.set`에는 선택적 `intensity`(기본 1, 유한한 0..1)가 추가되었습니다. preset의 정규화 진폭에 곱한 뒤 각 귀의 보정 범위로 변환하며 범위 밖 값은 `MOTION_RANGE`입니다.
 
+자동 귀(2026-11-24): `servo.autoEars`가 켜져 있고(기본) 보정이 끝났으면, 클라이언트가 연결돼 있는 동안 데몬이 표정에 맞춰 귀를 스스로 움직입니다. 메시지는 보내지 않습니다(`motion.commanded` 없음). `motion.set`의 자세는 2.5초 동안 유지되고, `motion.disable`은 그 연결 동안 자동 귀를 멈추며 `motion.enable`로 다시 켭니다. `motion.set`에는 여전히 `motion.enable`이 먼저 필요합니다. `health.motion.autoEars`에 `configured`·`active`·`paused`가 있고, `enabled`는 클라이언트가 켠 상태만 뜻합니다. 연결이 끊기면 기존처럼 PWM을 끕니다. 동작은 [도트 표정](face-catalog.md#귀-반응)을 참고하세요.
+
 ## 팀 통합 입력 수명
 
 `DeskPetHardwareIntegration.HardwareBridge`는 한 클라이언트와 한 이벤트 소비자를 공유합니다. 실제 캡처는 계속 드레인하고 입력 전달만 보류합니다. `holdInputDelivery` 후 `resumeInputDelivery(epoch:)`는 현재 epoch와 실제 재생 종료+300ms를 검사하고 복귀 시각보다 오래된 프레임을 버립니다. 전달 보류 동안에도 캡처 watchdog은 1초 이상 장치 프레임이 없으면 오류로 연결을 종료합니다.

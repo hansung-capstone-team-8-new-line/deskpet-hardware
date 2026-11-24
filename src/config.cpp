@@ -65,6 +65,7 @@ Config Config::load(const std::string& file) {
     if (s.contains("gpioLine") || s.contains("gpioChipLabel"))
       throw Error("CONFIG_ERROR", "Legacy GPIO OE config: migrate explicitly to grounded wiring");
     c.calibrated = s.value("calibrated", false); c.frequency = s.value("frequency", 50); c.stepUs = s.value("stepUs", 20);
+    c.autoEars = s.value("autoEars", true);
     auto ear = [](const Json& x, Ear& e) {
       e.channel = x.value("channel", e.channel); e.minUs = x.value("minUs", 1000);
       e.neutralUs = x.value("neutralUs", 1500); e.maxUs = x.value("maxUs", 2000); e.inverted = x.value("inverted", false);
