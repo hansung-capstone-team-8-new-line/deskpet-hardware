@@ -91,6 +91,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       <div class="now" aria-live="polite">지금 변형: <b id="pNow">—</b></div>
       <div class="heard" id="pHeard" aria-live="polite">큰 화면을 누르면 효과음이 나요. 아래 버튼으로 바로 들어볼 수도 있어요.</div>
       <div class="sounds" id="pSounds" aria-label="효과음 들어보기"></div>
+      <div class="heard" id="pMood">기분 기억: 애정 0.00 · 귀찮음 0.00</div>
       <div class="vars" id="pVars"></div>
       <div class="actions">
         <button type="button" id="btnNext">다른 변형 보기</button>
@@ -128,6 +129,8 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       <li><strong>부드러운 움직임.</strong> 모든 값은 스프링으로 따라가서 살짝 넘쳤다 돌아옵니다. 눈 깜박임 간격도 무작위(가끔 두 번 연속)입니다.</li>
       <li><strong>터치 반응.</strong> 누르면 그쪽을 바라보고 살짝 다가오며, 끌면 눈이 따라옵니다. 오래 누르면 눈을 감고 기대요. 톡 치면 눈은 깜박, 입은 “냠”, 수염은 씰룩입니다. 두 번 톡 치면 방긋 웃고, 여러 번 연타하면 깜짝 놀라고, 휙 밀면 눈이 그쪽으로 따라가고, 문지르면 3초 동안 쓰다듬기(배경이 분홍으로 물듦)가 됩니다. 파이프라인이 터치를 구독하지 않아도 화면이 스스로 반응합니다.</li>
       <li><strong>귀.</strong> 화면 위 두 귀(서보)가 표정과 함께 움직입니다. 상태마다 기본 자세(듣는 중 세움, 슬픔 눕힘, 결과 미확인 한쪽만 세움 등)가 있고, 고개 기울기·시선·끄덕임을 한 박자 늦게 따라가며, 상태마다 다른 빈도로 한쪽 까딱·두 번 까딱·천천히 돌리기를 합니다. 듣는 중에는 세운 채 거의 멈추고 목소리가 시작될 때만 한 번 까딱입니다. 터치(톡·두 번 톡·연타·밀기·쓰다듬기·화면 위 모서리 톡)에도 반응합니다.</li>
+      <li><strong>터치 기분 기억.</strong> 쓰다듬기·턱 긁기·정수리 톡·오래 기대기는 애정을, 짧은 간격으로 찌르기·연타·볼 콕은 귀찮음을 쌓습니다(애정 반감 90초, 귀찮음 12초). 정들면 늘 살짝 웃고 더 다가오며 방긋 하트와 골골이 늘고, 귀찮으면 귀가 젖혀지고, 0.6을 넘으면 '흥' 하고 몇 초 고개를 돌립니다. 그때 찌르면 힐끔 보고 다시 외면하고, 쓰다듬으면 금방 풀립니다.</li>
+      <li><strong>터치 부위.</strong> 정수리(지그시 눈 감고 귀 눕힘), 코(눈이 모이고 가끔 에취), 턱(톡 하면 턱 들기, 문지르면 녹아내림), 볼(고개를 피함), 가장자리(빼꼼)에 눈·입·수염·귀·빈 곳까지 부위마다 반응이 2~4가지이고 같은 반응은 연달아 나오지 않습니다. 대화 중에는 깜박·바라보기만 합니다.</li>
       <li><strong>화면 효과.</strong> 쓰다듬기·두 번 톡·기대기에 하트, 업무 성공·방긋에 반짝이, 머쓱에 땀방울, 결과 미확인에 물음표, 기쁨에 음표, 깜짝에 놀람선, 생각 중에 보는 쪽 위로 점 세 개가 나옵니다. 모두 같은 도트로 그리고 잠깐 나타났다 사라집니다.</li>
       <li><strong>효과음.</strong> 음원 없이 합성한 짧은 소리입니다: 톡(삑), 입 톡(냠), 귀 톡(파르르), 두 번 톡(짹), 연타(뽁), 쓰다듬기(골골), 깸(므르릅), 성공(반짝). 매번 음높이가 조금씩 달라집니다. 대기(쓰다듬기 포함)에서만 나고, 실물에서는 효과음과 그 뒤 0.3초 동안 마이크 입력을 무음으로 채워 음성 인식에 섞이지 않게 합니다. 이 페이지는 큰 화면을 누를 때만 소리를 냅니다.</li>
       <li><strong>도트 물결.</strong> 고리 모양으로 도트가 켜지며 퍼지는 연출을 중요한 순간에만 옅게 씁니다: 누른 자리, 두 번 톡, 스와이프, 쓰다듬기 시작(분홍), 듣기 시작, 졸다 깰 때, 업무 성공.</li>
@@ -192,7 +195,10 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     return Math.min(hyp((x - hx) / 1.25, y - hy) - 0.17 * s, sdTaper(x, y, cx, cy + 0.36 * s, cx, cy - 0.5 * s, 0.05 * s, 0.05 * s),
       sdTaper(x, y, cx, cy - 0.5 * s, cx + 0.3 * s, cy - 0.22 * s, 0.07 * s, 0.04 * s));
   }
-  const FX_COLOR = { heart: [255, 140, 175], spark: [255, 236, 170], sweat: [150, 210, 255] };
+  function sdPuff(x, y, cx, cy, s, dir) {  // '흥' 콧김: 작은 구름 세 덩이
+    return Math.min(sdCircle(x, y, cx, cy, 0.45 * s), sdCircle(x, y, cx + dir * 0.42 * s, cy - 0.2 * s, 0.35 * s), sdCircle(x, y, cx + dir * 0.78 * s, cy + 0.05 * s, 0.27 * s));
+  }
+  const FX_COLOR = { heart: [255, 140, 175], spark: [255, 236, 170], sweat: [150, 210, 255], puff: [215, 228, 238], spray: [190, 225, 245] };
 
   // ---------- 자세(pose) ----------
   // 모든 표정은 이 숫자들의 조합. 목표값이 바뀌면 스프링으로 따라감.
@@ -200,6 +206,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     lookX: 0, lookY: 0, scale: 1, tilt: 0, bob: 0,
     eyeSize: 1, lidTop: 0.13, lidTopR: 0, lidSad: 0, lidHappy: 0, raiseR: 0,
     mSmile: 0.3, mOpen: 0, mX: 0, mWave: 0, whisk: 0, zz: 0, eyeAsym: 0,
+    cross: 0, wink: 0,  // 두 눈이 코 쪽으로 모이는 정도(px), 한쪽 눈 감기(+ 오른쪽, - 왼쪽)
     earL: 0, earR: 0,  // 귀(서보) -1 내림 ~ 0 중립 ~ +1 세움
   };
   const STIFF = { mOpen: 700, lookX: 220, lookY: 220, tilt: 70, bob: 110, lidSad: 60, lidHappy: 90, zz: 30, earL: 55, earR: 55 };
@@ -393,6 +400,14 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
           out[i] = e * am * (Math.sin(2 * Math.PI * 110 * t * pitch) + 0.6 * Math.sin(2 * Math.PI * 220 * t * pitch) + 0.3 * Math.sin(2 * Math.PI * 330 * t * pitch));
         }
         break;
+      case "pat": out = buf(0.16); tone(out, 0, 0.15, P * 0.75, P * 0.6); break;                // 쓰담(정수리)
+      case "hmph": out = buf(0.26); tone(out, 0, 0.08, P * 0.62, P * 0.58, 1, 0.2); tone(out, 0.11, 0.13, P * 0.52, P * 0.42, 1, 0.2); break;  // 흥(삐짐)
+      case "achoo": {                                                                              // 에취(재채기)
+        out = buf(0.3); tone(out, 0, 0.09, P * 0.9, P * 1.1, 1, 0.2);
+        let y = 0; const k = 1 - Math.exp(-2 * Math.PI * 1800 / rate), n0 = Math.round(0.08 * rate), n = Math.round(0.18 * rate);
+        for (let i = 0; i < n && n0 + i < out.length; i++) { y += k * ((Math.random() * 2 - 1) - y); out[n0 + i] += 0.8 * y * bump(i / n); }
+        break;
+      }
       default: return new Float32Array(0);
     }
     const k = 1 - Math.exp(-2 * Math.PI * 2500 / rate); let y = 0, m = 0;  // 2.5 kHz 저역 통과
@@ -436,6 +451,10 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       // 화면 효과 입자와 효과음 신호, 주기적으로 나오는 효과의 다음 시각
       this.parts = []; this.sounds = []; this.thinking = 0;
       this.heartAt = 0; this.holdHeartAt = 0; this.sweatAt = 0; this.questionAt = 0; this.noteAt = 0; this.purrAt = 0;
+      // 기분 기억(짧은 기억): 애정은 부드러운 터치로 쌓이고 90초 반감, 귀찮음은 연달아 찌르면 쌓이고 12초 반감
+      this.affection = 0; this.annoy = 0; this.lastPokeAt = -9; this.lastNoseAt = -9; this.lastTouchX = 512;
+      this.sulkUntil = -9; this.sulkStart = 0; this.sulkSide = 1; this.sulkCooldown = 0; this.sulking = false;
+      this.acts = []; this.lastPick = {}; this.chinPress = false; this.chinStart = 0;
       this.set(face);
     }
     set(face) { this.saved = face; this.petting = false; this.apply(face); }
@@ -484,16 +503,18 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       this.wake();
       if (phase === "down") {
         this.pressed = true; this.downAt = this.t; this.down = [x, y]; this.gaze = [x, y]; this.moved = this.travel = 0; this.travelStart = this.t;
+        this.chinPress = Math.abs(x - 512) < 90 && y > 445 && y < 530; this.chinStart = -9; this.lastTouchX = x;
         this.addWave(x, y, 0.6, 170, 0.18);
         return;
       }
       if (!this.pressed) return;
       if (phase === "move") {
         const d = hyp(x - this.gaze[0], y - this.gaze[1]);
-        this.gaze = [x, y]; this.moved += d;
+        this.gaze = [x, y]; this.moved += d; this.lastTouchX = x;
+        if (this.chinPress && this.moved > 20 && this.chinStart < 0) this.chinStart = this.t;  // 턱 긁기 시작
         if (this.t - this.travelStart > 1.5) { this.travel = 0; this.travelStart = this.t; }
         this.travel += d;
-        if (this.travel > 700) {
+        if (this.travel > 700 && !this.chinPress) {  // 턱에서 시작한 문지르기는 턱 긁기로만
           this.pettedUntil = this.t + 3;
           if (!this.petting) { this.petting = true; this.apply({ payload: { activity: "idle", emotion: "petted" } }); this.addWave(512, 300, 1.2, 620, 0.25, PET_AURA); this.purrAt = 0; }
         }
@@ -509,30 +530,90 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
         return;
       }
       if (held >= 0.3 || this.moved >= 14) return;
+      // 귀찮음: 1.5초 안에 다시 찌르면 크게, 아니면 조금. 대화 중에는 쌓지 않고, 슬플 때는 덜 쌓음
+      const calm = this.activityName !== "idle";
+      if (!calm) this.annoy = clamp(this.annoy + (this.t - this.lastPokeAt < 1.5 ? 0.09 : 0.02) * (LOW[this.mood] ? 0.3 : 1), 0, 1);
+      this.lastPokeAt = this.t;
+      if (this.t < this.sulkUntil) {  // 삐진 중: 힐끔 보고 다시 외면
+        this.act("glance", 0.7, this.down[0] < 512 ? -1 : 1); this.annoy = clamp(this.annoy + 0.03, 0, 1); return;
+      }
       this.taps = this.taps.filter(at => this.t - at <= 1.2); this.taps.push(this.t);
-      if (this.taps.length >= 4) { this.startleAt = this.t; this.beamAt = this.nomAt = -9; this.blink(0); this.taps = []; this.lastTapAt = -9; this.kick(0.8, 0.8, 0.6, "snap"); this.spawn("shock", 512, 80, 0, 0, 0.55, 1); this.cue("pop"); return; }  // 연타가 방긋보다 우선
+      if (this.taps.length >= 4) { this.startleAt = this.t; this.beamAt = this.nomAt = -9; this.blink(0); this.taps = []; this.lastTapAt = -9; this.kick(0.8, 0.8, 0.6, "snap"); this.spawn("shock", 512, 80, 0, 0, 0.55, 1); this.cue("pop"); if (!calm) this.annoy = clamp(this.annoy + 0.15, 0, 1); return; }  // 연타가 방긋보다 우선
       if (this.t - this.lastTapAt < 0.35 && hyp(this.down[0] - this.lastTap[0], this.down[1] - this.lastTap[1]) < 80) {
         this.beamAt = this.t; this.lastTapAt = -9; this.addWave(512, 300, 1.0, 520, 0.25);
         if (!LOW[this.mood]) {
           this.kick(0.35, -0.35, 0.9, "wiggle", 0, 2);  // 방긋: 귀를 엇갈려 살랑
           for (const sx of [-1, 0, 1]) this.spawn("heart", 512 + sx * rr(140, 220), 330, sx * 30, -70, rr(1.2, 1.6), rr(44, 56), sx === 0 ? 0 : 0.12);
+          if (this.affection > 0.5) for (const sx of [-1, 1]) this.spawn("heart", 512 + sx * rr(250, 330), 280, sx * 20, -60, 1.4, 40, 0.25);  // 정든 만큼 하트가 더
+          this.affection = clamp(this.affection + 0.05, 0, 1); this.annoy = Math.max(0, this.annoy - 0.1);
           this.spawn("spark", 348 + rr(-60, 60), 140, 0, -6, 0.8, 30); this.spawn("spark", 676 + rr(-60, 60), 140, 0, -6, 0.8, 30, 0.1);
           this.cue("chirp");
         } else { this.spawn("heart", 512 + rr(-80, 80), 340, 0, -45, 1.6, 38); this.cue("boop", 0.8); }  // 위로받음: 작은 하트 하나
         return;
       }
       this.lastTapAt = this.t; this.lastTap = this.down.slice();
-      const [tx, ty] = this.down, fromCentre = Math.abs(tx - 512);
-      if (ty < 120 && fromCentre > 282) { this.earTap(tx < 512 ? -1 : 1); this.cue("flutter"); }  // 화면 위 모서리(귀 바로 아래)
-      else if (Math.abs(ty - 240) < 105 && (Math.abs(tx - 348) < 85 || Math.abs(tx - 676) < 85)) { this.blink(0); this.blink(0.22); this.cue("boop", 1.15); }
-      else if (fromCentre < 70 && Math.abs(ty - 400) < 45) { this.nomAt = this.t; const f = 0.2 * this.lift(); this.kick(f, f, 0.3); this.cue("nom", 0.85); }
-      else if (fromCentre > 210 && fromCentre < 430 && Math.abs(ty - 400) < 60) {
-        this.whiskAt = this.t; this.whiskSide = tx < 512 ? -1 : 1;
-        const f = 0.4 * this.lift(tx < 512 ? -1 : 1);
-        this.kick(tx < 512 ? f : 0, tx < 512 ? 0 : f, 0.28);  // 수염 쪽 귀가 까딱
-        this.cue("boop");
+      const [tx, ty] = this.down, fromCentre = Math.abs(tx - 512), sx = tx < 512 ? -1 : 1, aff = this.affection;
+      const eye = Math.abs(ty - 240) < 105 && (Math.abs(tx - 348) < 85 || Math.abs(tx - 676) < 85);
+      if (calm) {  // 대화 중에는 작게: 눈은 깜박, 나머지는 바라보기만
+        if (eye) { this.blink(0); this.blink(0.22); } else this.gazeUntil = this.t + 1.2;
+        return;
       }
-      else { this.gazeUntil = this.t + 1.2; this.cue("boop", 0.95); }
+      if (ty < 120 && fromCentre > 282) {  // 화면 위 모서리(귀 바로 아래): 귀 털기 또는 고개까지 흔들기
+        this.earTap(sx); this.cue("flutter");
+        if (this.pick("ear", [["tap", 1], ["shake", 0.5]]) === "shake") this.act("shake", 0.6, sx);
+      } else if (ty < 120) {  // 정수리: 눈을 지그시 감고 귀를 눕히며 손 쪽으로 기댐
+        this.act("pat", 0.8, sx); this.kick(-0.45, -0.45, 0.6, "snap"); this.cue("pat");
+        this.affection = clamp(aff + 0.1, 0, 1); this.annoy = Math.max(0, this.annoy - 0.06);
+      } else if (tx < 60 || tx > 964 || ty > 560) {  // 화면 가장자리: 빼꼼 들여다봄
+        this.act("peek", 1.1, tx < 60 ? -1 : tx > 964 ? 1 : 0); this.cue("boop", 1.05);
+      } else if (eye) {  // 눈: 두 번 깜박·윙크·꼭 감기·동그래짐
+        const v = this.pick("eye", [["blink", 1], ["wink", 0.7 + 0.8 * aff], ["squeeze", 0.5 + 0.5 * aff], ["widen", 0.5]]);
+        if (v === "blink") { this.blink(0); this.blink(0.22); }
+        else if (v === "wink") this.act("wink", 0.34, Math.abs(tx - 348) < 85 ? -1 : 1);
+        else this.act(v, v === "squeeze" ? 0.45 : 0.5, sx);
+        this.cue("boop", 1.15);
+      } else if (fromCentre < 40 && ty > 350 && ty < 386) {  // 코: 두 눈이 코로 모이고, 가끔 에취
+        this.act("nose", 1.0, sx);
+        const again = this.t - this.lastNoseAt < 3; this.lastNoseAt = this.t;
+        if (again) this.annoy = clamp(this.annoy + 0.06, 0, 1);
+        if (Math.random() < (again ? 0.5 : 0.2)) this.sneeze(0.45); else this.cue("boop", 1.3);
+      } else if (fromCentre < 70 && ty >= 386 && ty < 445) {  // 입: 냠·냠냠·오물
+        const v = this.pick("mouth", [["nom", 1], ["nom2", 0.6], ["mumble", 0.6]]);
+        if (v === "mumble") { this.act("mumble", 0.6, sx); this.cue("boop", 0.7); }
+        else { this.nomAt = this.t; if (v === "nom2") this.act("nom", 0.6, sx, 0.3); this.cue("nom", 0.85); }
+        const f = 0.2 * this.lift(); this.kick(f, f, 0.3);
+      } else if (fromCentre < 90 && ty >= 445 && ty < 530) {  // 턱: 턱을 들고 살짝 웃음
+        this.act("chin", 0.7, sx); this.cue("boop", 0.8); this.affection = clamp(aff + 0.04, 0, 1);
+      } else if (fromCentre > 110 && fromCentre < 220 && ty > 300 && ty < 362) {  // 볼: 눌린 쪽에서 고개를 피함
+        this.act("cheek", 0.9, sx); this.blink(0); this.cue("boop", 0.9); this.annoy = clamp(this.annoy + 0.04, 0, 1);
+      } else if (fromCentre > 210 && fromCentre < 430 && Math.abs(ty - 400) < 60) {  // 수염: 씰룩·쓸기, 가끔 간지러워 재채기
+        const f = 0.4 * this.lift(sx);
+        this.kick(sx < 0 ? f : 0, sx < 0 ? 0 : f, 0.28);  // 수염 쪽 귀가 까딱
+        if (this.pick("whisker", [["twitch", 1], ["sweep", 0.6]]) === "sweep") this.act("sweep", 0.7, sx);
+        else { this.whiskAt = this.t; this.whiskSide = sx; }
+        if (Math.random() < 0.12) this.sneeze(0.4); else this.cue("boop");
+      } else {  // 빈 곳: 바라보기·갸웃하며 보기·다가가 보기
+        this.gazeUntil = this.t + 1.2;
+        const v = this.pick("gaze", [["look", 1], ["tiltLook", 0.6], ["approach", 0.4 + 0.6 * aff]]);
+        if (v !== "look") this.act(v, v === "tiltLook" ? 1.2 : 1.0, sx);
+        this.cue("boop", 0.95);
+      }
+    }
+    // 순간 동작(터치 반응). react()가 이름별로 자세에 더함. side: 반응하는 쪽(-1 왼쪽, +1 오른쪽)
+    act(name, dur, side = 1, delay = 0) {
+      if (this.acts.length >= 10) this.acts.shift();
+      this.acts.push({ name, at: this.t + delay, dur, side });
+    }
+    // 부위별 반응 고르기: 가중치로 뽑되 같은 반응은 연달아 나오지 않게
+    pick(zone, options) {
+      const pool = options.filter(o => o[0] !== this.lastPick[zone]);
+      let r = Math.random() * pool.reduce((a, o) => a + o[1], 0), v = pool[0][0];
+      for (const [name, w] of pool) { r -= w; if (r <= 0) { v = name; break; } }
+      return this.lastPick[zone] = v;
+    }
+    sneeze(delay) {  // 에취: 잠깐 뒤 눈을 질끈, 머리가 홱, 작은 방울이 튐
+      this.act("sneeze", 0.6, 1, delay); this.cue("achoo", 1, this.activityName, delay);
+      for (let i = 0; i < 5; i++) { const a = rr(-0.9, 0.9) - Math.PI / 2; this.spawn("spray", 512 + rr(-20, 20), 380, Math.cos(a) * rr(60, 140), Math.sin(a) * rr(40, 110) + 60, 0.6, 9, delay + 0.08); }
     }
     // 귀 순간 동작. l·r은 각 귀의 크기(음수는 내림), shape: flick(까딱) snap(번쩍 후 천천히) swivel(천천히 내렸다 올림) wiggle(엇갈려 흔듦)
     kick(l, r, dur, shape = "flick", delay = 0, cycles = 1) {
@@ -596,18 +677,40 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       this.parts.push({ kind, x, y, vx, vy, start: this.t + delay, life, size, phase: rr(0, 6.28) });
     }
     // 효과음은 대기(쓰다듬기 포함)에서만: 듣는 중·생각 중·말하는 중에는 사용자 목소리·TTS와 섞이지 않게 냄
-    cue(name, pitch = 1, activity = this.activityName) {
+    cue(name, pitch = 1, activity = this.activityName, delay = 0) {
       if (activity !== "idle") { this.mutedAt = this.t; return; }  // 페이지가 '이 상태에선 소리 없음'을 알려 줌
-      if (this.sounds.length >= 2) this.sounds.shift();
-      this.sounds.push({ name, pitch: pitch * rr(0.92, 1.08) });
+      if (this.sounds.length >= 3) this.sounds.shift();
+      this.sounds.push({ name, pitch: pitch * rr(0.92, 1.08), at: this.t + delay });
     }
-    takeSounds() { const s = this.sounds; this.sounds = []; return s; }
+    takeSounds() { const due = this.sounds.filter(c => c.at <= this.t); this.sounds = this.sounds.filter(c => c.at > this.t); return due; }
     // 기분에 따라 주기적으로 나오는 효과
     effects(t, dt) {
       if (this.mood === "petted" && t >= this.heartAt) {  // 쓰다듬는 동안 양옆에서 하트가 피어오름
         const sx = sgn(); this.spawn("heart", 512 + sx * rr(170, 330), rr(250, 360), sx * 12, -60, rr(1.4, 1.8), rr(40, 56)); this.heartAt = t + rr(0.45, 0.8);
       }
-      if (this.petting && t >= this.purrAt) { this.cue("purr"); this.purrAt = t + 1.3; }
+      const chin = this.pressed && this.chinPress && this.chinStart >= 0;
+      if ((this.petting || chin) && t >= this.purrAt) { this.cue("purr", chin ? 0.9 : 1); this.purrAt = t + 1.3 - 0.4 * this.affection; }  // 정들수록 골골이 잦아짐
+      // 기분 기억: 반감기 애정 90초, 귀찮음 12초. 쓰다듬기·턱 긁기·기대기는 애정을 쌓고 귀찮음을 풂
+      this.affection *= Math.pow(0.5, dt / 90); this.annoy *= Math.pow(0.5, dt / 12);
+      if (this.petting && this.pressed) { this.affection += 0.25 * dt; this.annoy -= 0.4 * dt; }
+      if (chin) {
+        this.affection += 0.2 * dt; this.annoy -= 0.3 * dt;
+        if (t >= this.heartAt) { this.spawn("heart", 512 + sgn() * rr(90, 200), 430, 0, -55, 1.5, 40); this.heartAt = t + rr(0.7, 1.1); }
+      }
+      if (this.pressed && this.moved < 20 && t - this.downAt > 0.9) this.affection += 0.12 * dt;
+      this.affection = clamp(this.affection, 0, 1); this.annoy = clamp(this.annoy, 0, 1);
+      // 삐짐: 귀찮음이 0.6을 넘으면 '흥' 하고 2.5~4초 고개를 돌림. 쓰다듬으면 금방 풀림
+      if (this.activityName === "idle" && !this.sulking && this.annoy > 0.6 && t >= this.sulkCooldown) {
+        this.sulking = true; this.sulkStart = t; this.sulkUntil = t + rr(2.5, 4); this.sulkSide = this.lastTouchX < 512 ? 1 : -1;
+        this.spawn("puff", 512 + this.sulkSide * 120, 410, this.sulkSide * 50, -12, 1.0, 46); this.cue("hmph"); this.kick(-0.5, -0.5, 0.5, "snap");
+      }
+      if (this.sulking && (t >= this.sulkUntil || this.annoy < 0.25 || this.activityName !== "idle")) {  // 풀림: 다시 돌아보며 깜박
+        const forgiven = this.annoy < 0.25 && t < this.sulkUntil;
+        this.sulking = false; this.sulkUntil = -9; this.sulkCooldown = t + 4; this.annoy *= 0.5;
+        this.blink(0); this.act("glance", 0.6, -this.sulkSide);
+        if (forgiven) { this.spawn("heart", 512, 330, 0, -50, 1.4, 40); this.kick(0.4, 0.4, 0.4); }
+      }
+      this.acts = this.acts.filter(a => t < a.at + a.dur);
       if (this.pressed && this.moved < 20 && t - this.downAt > 0.9 && t >= this.holdHeartAt) {  // 오래 기대면 하트가 천천히
         if (this.holdHeartAt < this.downAt) this.cue("purr", 0.9);
         this.spawn("heart", 512 + rr(-120, 120), 330, 0, -40, 1.8, 44); this.holdHeartAt = t + 1.2;
@@ -656,6 +759,43 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
         const alone = t - this.interactedAt, bored = ss((alone - BORED_AFTER) / 60), doze = ss((alone - DOZE_AFTER) / 60);
         g.lidTop += 0.15 * bored + 0.45 * doze; g.lookY += 12 * bored; g.bob += doze * (4 + 6 * Math.sin(t * 0.8));
         g.earL -= 0.15 * bored + 0.45 * doze; g.earR -= 0.15 * bored + 0.45 * doze;
+      }
+      // 턱 긁기: 턱을 들고 눈을 감으며 점점 녹아내림
+      if (this.pressed && this.chinPress && this.chinStart >= 0) {
+        const e = ss((t - this.chinStart) / 0.5), melt = ss((t - this.chinStart - 1.5) / 1.0);
+        g.lookY -= 22 * e; g.bob -= 6 * e; g.lidHappy += 0.45 * e + 0.25 * melt; g.mSmile += 0.3 * e; g.earL -= 0.3 * e; g.earR -= 0.3 * e;
+      }
+      for (const a of this.acts) {
+        const u = (t - a.at) / a.dur; if (u < 0 || u >= 1) continue;
+        const e = env(u, 0.15, 0.7), k = bump(u), s = a.side;
+        switch (a.name) {
+          case "pat": g.lidHappy += 0.65 * e; g.bob += 8 * k; g.mSmile += 0.3 * e; g.tilt += s * 0.03 * k; break;
+          case "nose": g.cross += 34 * e; g.lookY -= 6 * e; g.eyeSize += 0.04 * e; break;
+          case "sneeze": { const jerk = u < 0.25 ? -12 * ss(u / 0.25) : 12 * bump((u - 0.25) / 0.75); g.lidHappy += 0.75 * env(u, 0.1, 0.5); g.bob += jerk; g.mOpen += 0.5 * env(u, 0.15, 0.4); g.whisk -= 8 * k; break; }
+          case "cheek": g.lookX -= s * 60 * e; g.tilt -= s * 0.06 * e; g.mWave += 0.4 * e; break;
+          case "peek": g.lookX = s ? s * 130 * e + g.lookX * (1 - e) : g.lookX; g.lookY += (s ? 0 : 60) * e; g.scale -= 0.04 * e; g.earL += 0.3 * e; g.earR += 0.3 * e; break;
+          case "wink": g.wink += s * 0.95 * k; g.mSmile += 0.25 * k; break;
+          case "squeeze": g.lidHappy += 0.8 * k; break;
+          case "widen": g.eyeSize += 0.12 * k; g.earL += 0.3 * k; g.earR += 0.3 * k; break;
+          case "mumble": g.mWave += 0.7 * e; g.mOpen += 0.12 * Math.abs(Math.sin(u * Math.PI * 6)) * e; break;
+          case "nom": g.mOpen += 0.6 * k; g.mSmile += 0.3 * e; break;
+          case "chin": g.lookY -= 14 * e; g.mSmile += 0.35 * e; g.lidHappy += 0.3 * e; break;
+          case "sweep": g.whisk += 14 * Math.sin(u * Math.PI * 2) * (1 - u); g.tilt += s * 0.04 * k; break;
+          case "shake": g.tilt += 0.07 * Math.sin(u * Math.PI * 6) * (1 - u); break;
+          case "tiltLook": g.tilt += s * 0.07 * e; break;
+          case "approach": g.scale += 0.06 * e; g.eyeSize += 0.04 * e; break;
+          case "glance": g.lookX = g.lookX * (1 - k) + s * 70 * k; break;
+        }
+      }
+      // 기분: 정들면 늘 살짝 웃고 더 다가옴, 귀찮으면 귀가 젖혀지고 입꼬리가 내려감
+      g.mSmile += 0.15 * this.affection; if (this.pressed) g.scale += 0.03 * this.affection;
+      const sour = clamp((this.annoy - 0.35) / 0.25, 0, 1);
+      g.earL -= 0.35 * sour; g.earR -= 0.35 * sour; g.mSmile -= 0.3 * sour;
+      if (this.sulking) {  // 삐짐: 고개를 돌리고 귀를 젖힘(힐끔은 위 glance가 잠깐 되돌림)
+        const e = ss((t - this.sulkStart) / 0.3);
+        g.lookX = g.lookX * (1 - e) + this.sulkSide * 110 * e; g.tilt += this.sulkSide * 0.05 * e;
+        g.earL -= 0.45 * e; g.earR -= 0.45 * e; g.mSmile -= 0.35 * e; g.eyeSize -= 0.03 * e;
+        for (const a of this.acts) if (a.name === "glance") { const u = (t - a.at) / a.dur; if (u >= 0 && u < 1) g.lookX = g.lookX * (1 - bump(u)) + a.side * 70 * bump(u); }
       }
       const b = (t - this.burstAt) / 0.7;
       if (b >= 0 && b < 1) { g.bob -= 12 * bump(b); g.scale += 0.04 * bump(b); }
@@ -751,10 +891,10 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       // 윗눈꺼풀(lidTop), 바깥쪽이 조금 처진 윗눈꺼풀(lidSad), 웃을 때 아래에서 밀어 올리는 볼(lidHappy).
       // 아주 크게 웃을 때(lidHappy 0.56 이상, 예: 방긋)만 감은 ^ 아치 눈이 됨.
       const hap = clamp(P.lidHappy, 0, 1.1), arcK = ss((hap - 0.56) / 0.08);
-      const cx = (side < 0 ? 348 : 676) + P.lookX, cy0 = 240 + P.lookY - 6 * hap;
+      const cx = (side < 0 ? 348 : 676) + P.lookX - side * P.cross, cy0 = 240 + P.lookY - 6 * hap;
       const breath = 1 + 0.012 * Math.sin(t * 1.7);  // 눈이 아주 살짝 숨 쉼
       // 깜박임: 둥근 모양 그대로 눈 아래쪽 1/3 지점을 향해 접힘(가운데로 찌그러지지 않음). 눈꺼풀·볼도 함께 접힘
-      const bl = clamp(P.blink, 0, 1), size = Math.max(0.5, P.eyeSize * (1 + side * P.eyeAsym)) * breath;
+      const bl = clamp(P.blink + Math.max(0, side * P.wink), 0, 1), size = Math.max(0.5, P.eyeSize * (1 + side * P.eyeAsym)) * breath;
       const hw = 64 * size, full = 90 * size, hh = Math.max(4, full * (1 - 0.94 * bl));
       const cy = cy0 + 0.3 * full * bl, r = Math.min(hw, hh);
       const lid = clamp(P.lidTop + (side > 0 ? P.lidTopR : 0), 0, 0.92), yl = cy - hh + 2 * hh * lid;
@@ -845,6 +985,8 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
         : q.kind === "sweat" ? (px, py) => sdDrop(px, py, x, y, s)
         : q.kind === "question" ? (px, py) => sdQuestion(px, py, x, y, s)
         : q.kind === "note" ? (px, py) => sdNote(px, py, x, y, s)
+        : q.kind === "puff" ? (px, py) => sdPuff(px, py, x, y, s * (0.8 + 0.4 * f), Math.sign(q.vx) || 1)
+        : q.kind === "spray" ? (px, py) => sdCircle(px, py, x, y, s)
         : (px, py) => Math.min(...[[-1, 420, 78, 380, 20], [0, 512, 62, 512, 4], [1, 604, 78, 644, 20]].map(([, ax, ay, bx, by]) => sdTaper(px, py, ax, ay, bx, by, 8, 4)));  // 놀람선
       if (q.kind === "shock") L.push(layer(c, a * bump(f) / 0.9, [360, 0, 664, 100], d));
       else L.push(layer(c, a, [x - r, y - r - s, x + r, y + r], d));
@@ -1057,7 +1199,8 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   // ---------- 효과음 들어보기 ----------
   const SOUNDS = [["boop", "삑", "눈·수염·빈 곳 톡"], ["nom", "냠", "입 톡"], ["flutter", "파르르", "화면 위 모서리(귀) 톡"],
     ["chirp", "짹", "두 번 톡(방긋)"], ["pop", "뽁", "연타(깜짝)"], ["purr", "골골", "문지르기(쓰다듬기)·오래 누르기"],
-    ["mrrp", "므르릅", "심심함·졸기에서 깸"], ["sparkle", "반짝", "업무 성공"]];
+    ["mrrp", "므르릅", "심심함·졸기에서 깸"], ["sparkle", "반짝", "업무 성공"],
+    ["pat", "쓰담", "정수리 톡"], ["achoo", "에취", "코 콕(가끔 재채기)"], ["hmph", "흥", "너무 찌르면 삐짐"]];
   let shownMutedAt;
   function showHeard(name) {
     const s = SOUNDS.find(x => x[0] === name); if (!s) return;
@@ -1095,6 +1238,8 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       if (v.cur) v.cur.textContent = "▸ " + v.dir.nowName();
     }
     $("pNow").textContent = stage.dir.nowName();
+    const bar = v => "▮".repeat(Math.round(v * 5)) + "▯".repeat(5 - Math.round(v * 5));
+    $("pMood").textContent = `기분 기억: 애정 ${bar(stage.dir.affection)} ${stage.dir.affection.toFixed(2)} · 귀찮음 ${bar(stage.dir.annoy)} ${stage.dir.annoy.toFixed(2)}${stage.dir.sulking ? " · 삐짐" : ""}`;
     document.querySelectorAll("#pVars span").forEach(s => s.classList.toggle("on", s.textContent === stage.dir.nowName()));
     requestAnimationFrame(frame);
   }
