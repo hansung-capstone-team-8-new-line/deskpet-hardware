@@ -38,6 +38,8 @@ struct Config {
   std::string socketPath, font, captureDevice, playbackDevice, wavInput;
   std::string i2cDevice, oeMode = "grounded";
   double playbackGain = 0.25;
+  bool effects = true;        // short sound effects for touch and moments in idle (see docs/face-catalog.md)
+  double effectsVolume = 0.5; // 0..1, before playbackGain
   int width = 1024, height = 600, rotation = 0, fontSize = 36;
   int dotSize = 8; // Face dot pitch in px; text screens stay vector.
   bool whiskers = true, glow = true;

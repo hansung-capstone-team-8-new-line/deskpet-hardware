@@ -47,7 +47,7 @@ PCM `format`은 `{"encoding":"s16le","sampleRate":16000,"channels":1}`입니다.
 
 이벤트에는 `version:1`, `type:event`, `event`, `timestampUnixNs`가 있습니다.
 
-- `audio.frame`: `captureId`, 연속 `sequence`, PCM `format`, 640바이트 payload, `captureEarliestMonotonicNs`(실제 캡처 버퍼 길이를 뺀 monotonic 하한). 16kHz·모노·PCM16의 20ms입니다. 타임스탬프는 호스트에서 프레임을 읽은 시점으로 ADC의 정밀 표본 시각이 아닙니다.
+- `audio.frame`: `captureId`, 연속 `sequence`, PCM `format`, 640바이트 payload, `captureEarliestMonotonicNs`(실제 캡처 버퍼 길이를 뺀 monotonic 하한). 16kHz·모노·PCM16의 20ms입니다. 타임스탬프는 호스트에서 프레임을 읽은 시점으로 ADC의 정밀 표본 시각이 아닙니다. 데몬의 효과음이 나는 동안과 그 뒤 300ms에는 payload를 무음(0)으로 채우고 `effectMuted: true`를 붙입니다(2026-11-24). 프레임과 `sequence`는 그대로 이어집니다.
 - `capture.stopped`: EOF·취소·오류 등 `reason`을 포함합니다.
 - `audio.started`: 첫 PCM 재생 시작을 확인했을 때. `begin` 수락을 뜻하지 않습니다.
 - `audio.completed`: 마지막 PCM의 drain 이후에만 발생합니다. 빈 job은 `NO_AUDIO`로 실패합니다.
@@ -99,7 +99,7 @@ while let frame = try await microphone.nextFrame() {
 
 ### Current Audio Contract — 2026-10-13
 
-ReSpeaker Lite 실제 출력은 **16kHz·모노 s16le**다. 소켓의 8–48kHz·1/2채널 입력 계약은 유지하며 C++ SoXR가 청크 간 상태를 유지해 모노 혼합·변환하고 마지막 필터 표본까지 drain한다. `audio.playbackGain`은 0–0.25(기본 0.25)이고 필터 overshoot도 제한한다. 디지털 진폭 제한은 3W 전력 보장이 아니므로 낮은 음량부터 실제 스피커 왜곡·발열·출력을 측정한다.
+ReSpeaker Lite 실제 출력은 **16kHz·모노 s16le**다. 소켓의 8–48kHz·1/2채널 입력 계약은 유지하며 C++ SoXR가 청크 간 상태를 유지해 모노 혼합·변환하고 마지막 필터 표본까지 drain한다. `audio.playbackGain`은 0–0.25(기본 0.25)이고 필터 overshoot도 제한한다. 데몬은 대기 상태의 터치 등에 짧은 효과음(`audio.effects`, 음량 `audio.effectsVolume` 0–1)을 같은 출력으로 내며, 스피커 job이 있으면 내지 않고 `speaker.begin`이 오면 즉시 끊는다. 효과음은 응답·이벤트를 보내지 않는다([도트 표정의 효과음](face-catalog.md#효과음)). 디지털 진폭 제한은 3W 전력 보장이 아니므로 낮은 음량부터 실제 스피커 왜곡·발열·출력을 측정한다.
 
 동일한 `HardwareClient`를 마이크·스피커가 공유해야 한다. `speaker.begin` 전 클라이언트가 입력 epoch를 바꾸고 큐를 비운 뒤 `input.invalidated`를 발생시킨다. 파이프라인은 이 이벤트에서 VAD/STT 누적 상태를 초기화하고, 프레임의 `inputEpoch`를 발화에 보존하며 늦은 STT final을 업무로 보내기 직전에 `client.isCurrentInputEpoch(epoch)`로 거절한다. 프레임 수신만 다시 시작하고 이전 STT 결과를 수용하면 안 된다.
 
