@@ -1,5 +1,6 @@
 #pragma once
 #include "deskpet/types.hpp"
+#include <array>
 #include <optional>
 
 namespace deskpet {
@@ -26,5 +27,8 @@ public:
   void micLevel(const Bytes& pcm);
   // Mouth opening 0..1 at `now`, or nullopt when no speech is playing.
   std::optional<float> speechLevel(Clock::time_point now) const;
+  // Ear targets (left, right; -1 down .. +1 up) that follow the face, or nullopt until the face has been drawn
+  // (headless runs and builds without SDL). Thread-safe; the servo thread reads them.
+  std::optional<std::array<float, 2>> ears() const;
 };
 }

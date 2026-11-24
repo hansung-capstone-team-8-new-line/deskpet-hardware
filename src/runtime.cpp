@@ -14,6 +14,9 @@ struct Runtime::Impl {
   std::atomic_bool quitting{false}, captureFault{false}, playbackFault{false}, motionFault{false};
   std::atomic_uint64_t motionGeneration{0};
   std::atomic_bool stopFault{false};
+  // Automatic ears: active while a client is connected, the ears are calibrated and servo.autoEars is on.
+  // A client's motion.disable pauses them for the session; a client's motion.set holds them for a moment.
+  std::atomic_bool clientActive{false};
   struct Capture {
     Packet start; std::optional<Packet> stop; std::atomic_bool cancel{false};
   };
@@ -25,6 +28,8 @@ struct Runtime::Impl {
   std::shared_ptr<Playback> playback;
   std::deque<std::pair<Packet, uint64_t>> motionCommands;
   bool motionAvailable = false, motionEnabled = false, calibration = false;
+  bool autoActive = false, autoPaused = false;
+  Clock::time_point manualUntil{};
   std::string motionError = "initializing";
   int leftUs = 1500, rightUs = 1500;
   std::thread inputThread, outputThread, motionThread;
@@ -42,6 +47,7 @@ struct Runtime::Impl {
       if (capture) capture->cancel = true;
       if (playback) playback->cancel = true;
       ++motionGeneration; motionCommands.clear();
+      clientActive = false; autoPaused = false;
     }
     cv.notify_all(); display.reset();
   }
@@ -162,8 +168,39 @@ struct Runtime::Impl {
     uint64_t observedGeneration = motionGeneration;
     auto disable = [&] {
       if (!bus) return;
-      try { bus->disable(); std::lock_guard lock(mutex); motionEnabled = false; calibration = false; }
-      catch (const std::exception& e) { std::lock_guard lock(mutex); motionAvailable = false; motionError = e.what(); }
+      try { bus->disable(); std::lock_guard lock(mutex); motionEnabled = false; calibration = false; autoActive = false; }
+      catch (const std::exception& e) { std::lock_guard lock(mutex); motionAvailable = false; motionError = e.what(); autoActive = false; }
+    };
+    // One 20 ms step of the automatic ears toward the face's targets, limited to stepUs per step.
+    // Pulses are only written when they change, so a still ear sends nothing.
+    auto autoStep = [&] {
+      bool want; bool active;
+      { std::lock_guard lock(mutex);
+        want = config.autoEars && config.calibrated && clientActive && !autoPaused && motionAvailable && bus && !calibration &&
+               Clock::now() >= manualUntil;
+        active = autoActive; }
+      const auto target = want ? display.ears() : std::nullopt;
+      if (!target) return;
+      try {
+        if (!active) {
+          bool enabled; { std::lock_guard lock(mutex); enabled = motionEnabled; }
+          if (!enabled) { bus->disable(); bus->pulses(config.left.neutralUs, config.right.neutralUs); bus->enable(); }
+          std::lock_guard lock(mutex); autoActive = true;
+          if (!enabled) { leftUs = config.left.neutralUs; rightUs = config.right.neutralUs; }
+        }
+        const int l = config.left.pulse(std::clamp(double((*target)[0]), -1.0, 1.0));
+        const int r = config.right.pulse(std::clamp(double((*target)[1]), -1.0, 1.0));
+        int nextL, nextR;
+        { std::lock_guard lock(mutex);
+          nextL = leftUs + std::clamp(l - leftUs, -config.stepUs, config.stepUs);
+          nextR = rightUs + std::clamp(r - rightUs, -config.stepUs, config.stepUs);
+          if (nextL == leftUs && nextR == rightUs) return; }
+        bus->pulses(nextL, nextR);
+        std::lock_guard lock(mutex); leftUs = nextL; rightUs = nextR;
+      } catch (const std::exception& e) {
+        disable();
+        std::lock_guard lock(mutex); autoPaused = true; motionError = std::string("Automatic ears stopped: ") + e.what();
+      }
     };
     for (;;) {
       std::optional<std::pair<Packet, uint64_t>> entry;
@@ -173,7 +210,7 @@ struct Runtime::Impl {
       }
       if (quitting) { disable(); return; }
       if (motionGeneration != observedGeneration) { disable(); observedGeneration = motionGeneration; }
-      if (!entry) continue;
+      if (!entry) { autoStep(); continue; }
       auto [cmd, generation] = std::move(*entry);
       auto check = [&] {
         if (quitting || motionGeneration != generation) throw Error("CANCELLED", "Motion was cancelled");
@@ -184,12 +221,12 @@ struct Runtime::Impl {
         { std::lock_guard lock(mutex); if (!motionAvailable || !bus) throw Error("SERVO_ERROR", motionError); }
         const auto op = cmd.meta.at("command").get<std::string>();
         if (op == "motion.disable" || op == "motion.calibration.end") {
-          bus->disable(); std::lock_guard lock(mutex); motionEnabled = false; calibration = false;
+          bus->disable(); std::lock_guard lock(mutex); motionEnabled = false; calibration = false; autoActive = false;
         } else if (op == "motion.enable" || op == "motion.calibration.begin") {
           if (op == "motion.enable" && !config.calibrated) throw Error("CALIBRATION_REQUIRED", "Calibrate both ears before enabling motion");
           bus->disable(); bus->pulses(config.left.neutralUs, config.right.neutralUs); check(); bus->enable();
           std::lock_guard lock(mutex); motionEnabled = true; calibration = op == "motion.calibration.begin";
-          leftUs = config.left.neutralUs; rightUs = config.right.neutralUs;
+          autoActive = false; leftUs = config.left.neutralUs; rightUs = config.right.neutralUs;
         } else {
           bool calibrating;
           { std::lock_guard lock(mutex); if (!motionEnabled) throw Error("MOTION_DISABLED", "Enable motion first"); calibrating = calibration; }
@@ -226,6 +263,8 @@ struct Runtime::Impl {
               std::this_thread::sleep_for(std::chrono::milliseconds(20));
             }
           }
+          // The client's pose holds for a moment before the automatic ears take over again.
+          { std::lock_guard lock(mutex); manualUntil = Clock::now() + std::chrono::milliseconds(2500); }
         }
         Json state;
         { std::lock_guard lock(mutex); state = {{"enabled", motionEnabled}, {"leftUs", leftUs}, {"rightUs", rightUs}, {"positionVerified", false}, {"simulated", config.mock}}; }
@@ -242,6 +281,7 @@ struct Runtime::Impl {
     try {
       (void)identifiers(cmd.meta);
       const auto op = requiredString(cmd.meta, "command");
+      clientActive = true;
       if (!cmd.data.empty() && op != "speaker.write") throw Error("INVALID_COMMAND", "Only speaker.write accepts a binary payload");
       if (op == "hello") {
         emit(reply(cmd, {{"protocolVersion", 1}, {"mode", config.mock ? "mock" : "real"}, {"leaseMs", config.leaseMs},
@@ -250,7 +290,8 @@ struct Runtime::Impl {
       else if (op == "health") {
         Json j;
         { std::lock_guard lock(mutex); j = {{"captureActive", bool(capture)}, {"playbackActive", bool(playback)},
-          {"motion", {{"available", motionAvailable}, {"enabled", motionEnabled}, {"error", motionError}, {"leftUs", leftUs}, {"rightUs", rightUs}, {"calibrated", config.calibrated}}}}; }
+          {"motion", {{"available", motionAvailable}, {"enabled", motionEnabled}, {"error", motionError}, {"leftUs", leftUs}, {"rightUs", rightUs}, {"calibrated", config.calibrated},
+                      {"autoEars", {{"configured", config.autoEars}, {"active", autoActive}, {"paused", autoPaused}}}}}}; }
         j["display"] = display.health(); j["mode"] = config.mock ? "mock" : "real"; emit(reply(cmd, j));
       } else if (op == "display.show" || op == "display.idle") {
         if (op == "display.show") { (void)requiredString(cmd.meta, "requestId"); (void)requiredString(cmd.meta, "outputId"); }
@@ -296,6 +337,8 @@ struct Runtime::Impl {
       } else if (op == "motion.enable" || op == "motion.disable" || op == "motion.set" ||
                  op == "motion.calibration.begin" || op == "motion.calibration.set" || op == "motion.calibration.end") {
         std::lock_guard lock(mutex);
+        if (op == "motion.disable") autoPaused = true;  // the client asked for still ears
+        if (op == "motion.enable") autoPaused = false;
         if (op == "motion.disable" || op == "motion.calibration.end") {
           ++motionGeneration;
           for (auto& p : motionCommands) emit(failure(p.first, "CANCELLED", "Motion disabled"));

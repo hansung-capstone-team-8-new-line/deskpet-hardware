@@ -22,6 +22,7 @@
     "frequency": 50,
     "calibrated": false,
     "stepUs": 20,
+    "autoEars": true,
     "left": {
       "channel": 0,
       "minUs": 1400,

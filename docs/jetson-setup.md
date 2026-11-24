@@ -166,6 +166,27 @@ sudo systemctl restart deskpet-kiosk@<계정>       # 키오스크 모드일 때
    - [ ] 슬픔 상태에서 화면을 두 번 톡 하면 ^ ^ 대신 눈꼬리가 풀리며 작게 웃는지
 6. **되돌리기:** 문제가 있으면 `git switch main` 뒤 같은 빌드·설치·재시작 명령을 실행합니다. 이때도 `display.cpp`만 다시 컴파일합니다.
 
+### 2026-11-24 귀 자동 반응 (`feat/ear-reactions`)
+
+1. **바뀐 것:** 표정에 맞춰 귀가 스스로 움직입니다([도트 표정의 귀 반응](face-catalog.md#귀-반응)). `include/deskpet/display.hpp`·`types.hpp`도 바뀌어서 이번에는 대부분의 소스가 다시 컴파일됩니다(위 빌드 명령 그대로, 시간이 더 걸림).
+2. **설정:** 새 키 `servo.autoEars`(기본 `true`)입니다. 기존 `config.json`에 없어도 켜집니다. 끄려면 `"autoEars": false`를 넣습니다.
+3. **켜지는 조건:** 귀 보정(`calibrated: true`)이 끝났고, 파이프라인이나 `deskpetctl`이 데몬에 연결돼 있고, 화면이 표정을 그리고 있을 때만 움직입니다. 보정 전에는 PWM을 켜지 않습니다.
+4. **실물 확인:** 서비스를 멈추고 수동 실행한 상태에서 다른 터미널로 상태를 바꿔 가며 봅니다. `deskpetctl face`가 연결돼 있는 동안 귀가 움직입니다.
+
+   ```sh
+   deskpetctl health                                                     # motion.autoEars.active가 true인지
+   deskpetctl face --activity listening --seconds 10                     # 두 귀 세우고 거의 멈춤
+   deskpetctl face --emotion sad --seconds 10                            # 바깥으로 눕히고 드물게 작게 까딱
+   deskpetctl face --activity processing --seconds 10                    # 보는 쪽 귀만 서고 자주 까딱
+   deskpetctl face --activity idle --status unknown --seconds 10         # 좌우가 엇갈림
+   ```
+
+   - [ ] 귀가 보정 범위 끝에서 떨리거나 걸리지 않는지
+   - [ ] 까딱 빈도가 과하지 않은지, 소음이 마이크 인식(VAD)을 건드리지 않는지
+   - [ ] 화면 위 양쪽 모서리를 톡 하면 그쪽 귀가 털듯이 까딱하는지
+   - [ ] 연결을 끊으면(`deskpetctl` 종료) 귀 출력이 꺼지는지
+5. **되돌리기:** `"autoEars": false`로 끄거나, `git switch main` 뒤 다시 빌드합니다.
+
 ## 근거
 
 - [ReSpeaker Lite](https://wiki.seeedstudio.com/reSpeaker_lite/)
