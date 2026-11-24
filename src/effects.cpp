@@ -11,7 +11,7 @@ double smooth01(double x) { x = std::clamp(x, 0.0, 1.0); return x * x * (3 - 2 *
 // One gliding tone added into `out`: from f0 to f1 (shaped by `curve`), a little second harmonic and optional vibrato.
 // It rises over at least 12 ms so it never clicks, then decays quadratically.
 void tone(std::vector<double>& out, int rate, double t0, double duration, double f0, double f1,
-          double curve = 1, double harmonic = 0.08, double vibrato = 0) {
+          double curve = 1, double harmonic = 0.12, double vibrato = 0) {
   const size_t n0 = size_t(std::lround(t0 * rate)), n = size_t(std::lround(duration * rate));
   const double rise = std::max(0.08 * double(n), 0.012 * rate);
   double phase = 0;
@@ -25,19 +25,19 @@ void tone(std::vector<double>& out, int rate, double t0, double duration, double
 }
 }
 
-// Short sound effects made from sine tones and noise, no audio files. The base is 520 Hz (the highest effect
-// stays near 1 kHz; an 880 Hz base reaching 2.6 kHz sounded harsh on the small speaker), a 2.5 kHz low-pass
+// Short sound effects made from sine tones and noise, no audio files. The base is 600 Hz (the highest effect
+// stays near 1.1 kHz; an 880 Hz base reaching 2.6 kHz sounded harsh, 520 Hz was hard to hear), a 2.5 kHz low-pass
 // takes the edge off, and the peak is set to 0.5 x volume. Matches synth() in docs/face-catalog/index.html.
 Bytes synthesizeEffect(const std::string& name, float pitch, double volume, int rate) {
-  const double P = 520.0 * pitch;
+  const double P = 600.0 * pitch;
   std::vector<double> out;
   const auto length = [&](double seconds) { out.assign(size_t(std::lround(seconds * rate)), 0.0); };
-  if (name == "boop") { length(0.11); tone(out, rate, 0, 0.1, P, P * 0.8); }
+  if (name == "boop") { length(0.14); tone(out, rate, 0, 0.13, P, P * 0.8); }
   else if (name == "nom") { length(0.21); tone(out, rate, 0, 0.08, P, P * 0.88); tone(out, rate, 0.1, 0.09, P * 0.82, P * 0.7); }
   else if (name == "chirp") { length(0.24); tone(out, rate, 0, 0.13, P, P * 1.35, 0.7); tone(out, rate, 0.1, 0.13, P * 1.25, P * 1.6, 0.7); }
-  else if (name == "pop") { length(0.13); tone(out, rate, 0, 0.12, P * 0.8, P * 1.6, 2.5, 0.04); }
+  else if (name == "pop") { length(0.16); tone(out, rate, 0, 0.15, P * 0.8, P * 1.6, 2.5, 0.08); }
   else if (name == "flutter") {
-    length(0.17); tone(out, rate, 0, 0.16, P * 1.1, P, 1, 0.05);
+    length(0.21); tone(out, rate, 0, 0.2, P * 1.1, P, 1, 0.1);
     for (size_t i = 0; i < out.size(); ++i) out[i] *= 0.6 + 0.4 * std::sin(kTau * 28 * double(i) / rate);
   } else if (name == "mrrp") { length(0.34); tone(out, rate, 0, 0.32, P * 0.55, P * 0.8, 0.6, 0.2, 0.03); }
   else if (name == "sparkle") {

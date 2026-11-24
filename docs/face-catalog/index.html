@@ -49,6 +49,10 @@ header { display: grid; gap: 10px; }
 .vars { display: flex; flex-wrap: wrap; gap: 6px; }
 .vars span { font-size: 12.5px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
 .vars span.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.sounds { display: flex; flex-wrap: wrap; gap: 6px; }
+.sounds button { font: inherit; font-size: 12.5px; padding: 3px 10px; border-radius: 999px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.sounds button.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.heard { font-size: 13px; color: var(--muted); min-height: 1.6em; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .actions button, .seg button { font: inherit; font-size: 13px; padding: 5px 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
 .actions button.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
@@ -85,6 +89,8 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       <div class="head"><h2 id="pName">대기</h2><span class="badge" id="pBadge">명세</span></div>
       <p id="pNote" class="lede"></p>
       <div class="now" aria-live="polite">지금 변형: <b id="pNow">—</b></div>
+      <div class="heard" id="pHeard" aria-live="polite">큰 화면을 누르면 효과음이 나요. 아래 버튼으로 바로 들어볼 수도 있어요.</div>
+      <div class="sounds" id="pSounds" aria-label="효과음 들어보기"></div>
       <div class="vars" id="pVars"></div>
       <div class="actions">
         <button type="button" id="btnNext">다른 변형 보기</button>
@@ -354,12 +360,12 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   }
   const LOW = { sad: 1, sorry: 1 };
   // ---------- 효과음 합성 (display.cpp의 synthesize와 같음) ----------
-  // 음원 파일 없이 사인파·잡음으로 만듦. 기본 520 Hz(가장 높은 소리도 1 kHz 안팎)에 배음을 적게 넣고,
+  // 음원 파일 없이 사인파·잡음으로 만듦. 기본 600 Hz(가장 높은 소리도 1.1 kHz 안팎; 520 Hz는 노트북 스피커에서 잘 안 들림)에 배음을 조금 넣고,
   // 최소 12 ms에 걸쳐 커지게 해서 시작음이 '틱' 하지 않게 하고, 2.5 kHz 저역 통과로 날카로운 성분을 깎음.
   // 880 Hz 기준(최대 2.6 kHz)은 작은 스피커에서 귀에 거슬려서 낮춤. 최대 진폭 0.5로 맞춘 뒤 음량을 곱함.
   function synth(name, pitch, rate = 16000) {
-    const P = 520 * pitch, buf = n => new Float32Array(Math.round(n * rate));
-    const tone = (out, t0, dur, f0, f1, curve = 1, harm = 0.08, vib = 0) => {
+    const P = 600 * pitch, buf = n => new Float32Array(Math.round(n * rate));
+    const tone = (out, t0, dur, f0, f1, curve = 1, harm = 0.12, vib = 0) => {
       let ph = 0; const n0 = Math.round(t0 * rate), n = Math.round(dur * rate), rise = Math.max(0.08 * n, 0.012 * rate);
       for (let i = 0; i < n && n0 + i < out.length; i++) {
         const u = i / n, f = f0 + (f1 - f0) * Math.pow(u, curve) + vib * f0 * Math.sin(2 * Math.PI * 7 * i / rate);
@@ -370,12 +376,12 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     };
     let out;
     switch (name) {
-      case "boop": out = buf(0.11); tone(out, 0, 0.1, P, P * 0.8); break;                         // 톡
+      case "boop": out = buf(0.14); tone(out, 0, 0.13, P, P * 0.8); break;                         // 톡
       case "nom": out = buf(0.21); tone(out, 0, 0.08, P, P * 0.88); tone(out, 0.1, 0.09, P * 0.82, P * 0.7); break;  // 냠
       case "chirp": out = buf(0.24); tone(out, 0, 0.13, P, P * 1.35, 0.7); tone(out, 0.1, 0.13, P * 1.25, P * 1.6, 0.7); break;  // 짹(방긋)
-      case "pop": out = buf(0.13); tone(out, 0, 0.12, P * 0.8, P * 1.6, 2.5, 0.04); break;        // 뽁(깜짝)
+      case "pop": out = buf(0.16); tone(out, 0, 0.15, P * 0.8, P * 1.6, 2.5, 0.08); break;        // 뽁(깜짝)
       case "flutter":                                                                              // 파르르(귀 톡)
-        out = buf(0.17); tone(out, 0, 0.16, P * 1.1, P, 1, 0.05);
+        out = buf(0.21); tone(out, 0, 0.2, P * 1.1, P, 1, 0.1);
         for (let i = 0; i < out.length; i++) out[i] *= 0.6 + 0.4 * Math.sin(2 * Math.PI * 28 * i / rate);
         break;
       case "mrrp": out = buf(0.34); tone(out, 0, 0.32, P * 0.55, P * 0.8, 0.6, 0.2, 0.03); break;  // 므르릅(깸)
@@ -408,7 +414,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       audio = audio || new (window.AudioContext || window.webkitAudioContext)();
       const pcm = synth(cue.name, cue.pitch, audio.sampleRate); if (!pcm.length) return;
       const b = audio.createBuffer(1, pcm.length, audio.sampleRate); b.copyToChannel(pcm, 0);
-      const src = audio.createBufferSource(), g = audio.createGain(); g.gain.value = 0.45;
+      const src = audio.createBufferSource(), g = audio.createGain(); g.gain.value = 0.6;
       src.buffer = b; src.connect(g).connect(audio.destination); src.start();
     } catch (e) { /* 소리를 못 내도 화면은 그대로 */ }
   }
@@ -600,7 +606,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     }
     // 효과음은 대기(쓰다듬기 포함)에서만: 듣는 중·생각 중·말하는 중에는 사용자 목소리·TTS와 섞이지 않게 냄
     cue(name, pitch = 1, activity = this.activityName) {
-      if (activity !== "idle") return;
+      if (activity !== "idle") { this.mutedAt = this.t; return; }  // 페이지가 '이 상태에선 소리 없음'을 알려 줌
       if (this.sounds.length >= 2) this.sounds.shift();
       this.sounds.push({ name, pitch: pitch * rr(0.92, 1.08) });
     }
@@ -1057,6 +1063,22 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   stage.cv.addEventListener("pointermove", e => stage.dir.touch("move", ...toFace(e)));
   for (const type of ["pointerup", "pointercancel"]) stage.cv.addEventListener(type, e => stage.dir.touch("up", ...toFace(e)));
 
+  // ---------- 효과음 들어보기 ----------
+  const SOUNDS = [["boop", "삑", "눈·수염·빈 곳 톡"], ["nom", "냠", "입 톡"], ["flutter", "파르르", "화면 위 모서리(귀) 톡"],
+    ["chirp", "짹", "두 번 톡(방긋)"], ["pop", "뽁", "연타(깜짝)"], ["whoosh", "휙", "휙 밀기"], ["purr", "골골", "문지르기(쓰다듬기)·오래 누르기"],
+    ["mrrp", "므르릅", "심심함·졸기에서 깸"], ["sparkle", "반짝", "업무 성공"]];
+  let shownMutedAt;
+  function showHeard(name) {
+    const s = SOUNDS.find(x => x[0] === name); if (!s) return;
+    $("pHeard").textContent = (opt.sound ? "방금 소리: " : "효과음이 꺼져 있어요 — 들렸을 소리: ") + s[1] + " (" + s[2] + ")";
+    document.querySelectorAll("#pSounds button").forEach(b => b.classList.toggle("on", b.dataset.sound === name));
+  }
+  for (const [name, label, when] of SOUNDS) {
+    const b = document.createElement("button"); b.type = "button"; b.dataset.sound = name; b.textContent = label; b.title = when;
+    b.addEventListener("click", () => { playSound({ name, pitch: 1 }); showHeard(name); });
+    $("pSounds").appendChild(b);
+  }
+
   // ---------- 루프 ----------
   let prev = performance.now();
   function frame(now) {
@@ -1072,7 +1094,13 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       if (now - v.last < 1000 / fps - 2) continue;
       v.last = now; paint(v, P); paintEars(v);
       const cues = v.dir.takeSounds();
-      if (v === stage && opt.sound) cues.forEach(playSound);  // 작은 타일은 소리를 내지 않음
+      if (v === stage) {  // 작은 타일은 소리를 내지 않음
+        if (opt.sound) cues.forEach(playSound);
+        if (cues.length) showHeard(cues[cues.length - 1].name);
+        else if (stage.dir.mutedAt !== undefined && stage.dir.mutedAt !== shownMutedAt) {
+          shownMutedAt = stage.dir.mutedAt; $("pHeard").textContent = "이 상태(" + stage.face.name + ")에서는 대화를 방해하지 않도록 효과음을 내지 않아요. '대기'나 감정 타일에서 눌러 보세요.";
+        }
+      }
       if (v.cur) v.cur.textContent = "▸ " + v.dir.nowName();
     }
     $("pNow").textContent = stage.dir.nowName();
