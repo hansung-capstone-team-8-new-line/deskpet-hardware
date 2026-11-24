@@ -136,6 +136,9 @@ sudo systemctl restart deskpet-kiosk@<계정>       # 키오스크 모드일 때
 - `include/deskpet/` 아래 헤더가 바뀌면 그 헤더를 쓰는 소스가 모두 다시 컴파일되어 오래 걸립니다. `src/` 파일 하나만 바뀌면 그 파일과 링크만 합니다.
 - `bash tools/install-jetson.sh real`을 다시 실행해도 같은 `build-jetson` 폴더를 쓰므로 빌드는 바뀐 파일만 합니다. 다만 apt 패키지 확인과 설치 단계를 다시 거쳐서 느립니다. 의존성이 바뀌었을 때만 씁니다. 기존 `config.json`은 덮어쓰지 않습니다.
 - 빌드 중 메모리가 부족해 컴파일러가 죽으면 `-j 1`로 다시 실행합니다.
+- **파이프라인 실행기로 띄울 때는 다른 실행 파일을 씁니다.** `deskpet-pipeline`의 젯슨 실행기는 같은 소켓에 이미 떠 있는 데몬(서비스·키오스크의 `/usr/local/bin/deskpet-hardware`)이 있으면 그걸 그대로 재사용합니다. 없을 때만 형제 폴더 `deskpet-hardware`(또는 `DESKPET_HARDWARE_DIR`)의 `build/deskpet-hardware`를 빌드해 띄우고, 이때 설정은 저장소의 `config/jetson.json`입니다. 실행기는 `git pull`을 하지 않습니다.
+  - 그래서 코드를 받은 뒤 화면이 그대로라면 ① 그 폴더에서 `git log -1 --oneline`이 최신인지, ② 떠 있는 서비스·키오스크 데몬을 재시작했는지(재사용 경로), ③ 실행기 로그가 '기존 하드웨어 데몬에 연결합니다'인지 '하드웨어 데몬 빌드'인지 확인합니다.
+  - 서비스·키오스크를 쓰면 위의 `cmake --install`까지 해야 `/usr/local/bin`이 바뀝니다. 실행기가 직접 띄우는 경우는 `build/`(이 문서의 `build-jetson/`과 다른 폴더)가 바뀝니다.
 - 서비스를 재시작한 뒤 `journalctl --user -u deskpet-hardware -n 50`(키오스크는 `journalctl -u deskpet-kiosk@<계정> -n 50`)으로 시작 오류가 없는지 봅니다.
 
 ### 2026-11-22 표정 조정 (`feat/face-subtle-emotions`)
@@ -170,7 +173,7 @@ sudo systemctl restart deskpet-kiosk@<계정>       # 키오스크 모드일 때
 
 1. **바뀐 것:** 표정에 맞춰 귀가 스스로 움직입니다([도트 표정의 귀 반응](face-catalog.md#귀-반응)). `include/deskpet/display.hpp`·`types.hpp`도 바뀌어서 이번에는 대부분의 소스가 다시 컴파일됩니다(위 빌드 명령 그대로, 시간이 더 걸림).
 2. **설정:** 새 키 `servo.autoEars`(기본 `true`)입니다. 기존 `config.json`에 없어도 켜집니다. 끄려면 `"autoEars": false`를 넣습니다.
-3. **켜지는 조건:** 귀 보정(`calibrated: true`)이 끝났고, 파이프라인이나 `deskpetctl`이 데몬에 연결돼 있고, 화면이 표정을 그리고 있을 때만 움직입니다. 보정 전에는 PWM을 켜지 않습니다.
+3. **켜지는 조건:** 귀 보정(`calibrated: true`)이 끝났고, 파이프라인이나 `deskpetctl`이 데몬에 연결돼 있고, 화면이 표정을 그리고 있을 때만 움직입니다. 보정 전에는 PWM을 켜지 않습니다. 파이프라인 실행기가 데몬을 직접 띄우면 저장소의 `config/jetson.json`을 쓰므로, 그 파일의 `servo`(I2C 장치·보정 값·`calibrated`)도 채워져 있어야 합니다.
 4. **실물 확인:** 서비스를 멈추고 수동 실행한 상태에서 다른 터미널로 상태를 바꿔 가며 봅니다. `deskpetctl face`가 연결돼 있는 동안 귀가 움직입니다.
 
    ```sh
