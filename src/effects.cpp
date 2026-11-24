@@ -1,7 +1,6 @@
 #include "deskpet/backends.hpp"
 #include <algorithm>
 #include <cmath>
-#include <random>
 #include <vector>
 
 namespace deskpet {
@@ -49,15 +48,6 @@ Bytes synthesizeEffect(const std::string& name, float pitch, double volume, int 
       const double t = double(i) / rate, u = t / 1.1;
       const double envelope = std::min(1.0, u / 0.25) * std::min(1.0, (1 - u) / 0.35), am = 0.55 + 0.45 * std::sin(kTau * 24 * t);
       out[i] = envelope * am * (std::sin(kTau * 110 * t * pitch) + 0.6 * std::sin(kTau * 220 * t * pitch) + 0.3 * std::sin(kTau * 330 * t * pitch));
-    }
-  } else if (name == "whoosh") {
-    length(0.22);
-    thread_local std::mt19937 rng{std::random_device{}()};
-    std::uniform_real_distribution<double> noise(-1, 1);
-    double y = 0;
-    for (size_t i = 0; i < out.size(); ++i) {
-      const double u = double(i) / double(out.size()), k = 1 - std::exp(-kTau * (300 + 1500 * u) / rate);
-      y += k * (noise(rng) - y); out[i] = y * std::sin(3.141592653589793 * u);
     }
   } else return {};
   const double k = 1 - std::exp(-kTau * 2500 / rate);

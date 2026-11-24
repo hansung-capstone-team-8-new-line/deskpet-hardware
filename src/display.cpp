@@ -314,7 +314,6 @@ public:
       gaze_[0] = std::clamp(x + dx * 0.5f, 0.0f, 1024.0f); gaze_[1] = std::clamp(y + dy * 0.5f, 0.0f, 600.0f);
       gazeUntil_ = t_ + 0.9f; swipeAt_ = t_; swipeSide_ = dx < 0 ? -1.0f : 1.0f;
       kick(dx < 0 ? 0.5f : 0, dx < 0 ? 0 : 0.5f, 0.5f, Shape::Snap);  // the ear on that side pricks up
-      cue("whoosh");
       addWave(x, y, 0.8f, 300, 0.2f);
       return;
     }
