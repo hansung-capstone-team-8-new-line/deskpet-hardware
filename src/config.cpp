@@ -52,7 +52,8 @@ Config Config::load(const std::string& file) {
     c.leaseMs = j.value("leaseMs", 3000);
     const auto d = j.value("display", Json::object());
     c.headless = d.value("headless", false); c.fullscreen = d.value("fullscreen", false);
-    c.width = d.value("width", 1024); c.height = d.value("height", 600);
+    c.width = d.value("width", 1024); c.height = d.value("height", 600); c.screen = d.value("screen", 0);
+    if (c.screen < 0 || c.screen > 15) throw Error("CONFIG_ERROR", "display.screen must be 0..15");
     c.rotation = d.value("rotation", 0); c.font = d.value("font", ""); c.fontSize = d.value("fontSize", 36);
     const auto f = d.value("face", Json::object());
     c.dotSize = f.value("dotSize", 8); c.whiskers = f.value("whiskers", true);

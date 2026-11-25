@@ -40,7 +40,7 @@ struct Config {
   double playbackGain = 0.25;
   bool effects = true;        // short sound effects for touch and moments in idle (see docs/face-catalog.md)
   double effectsVolume = 0.5; // 0..1, before playbackGain
-  int width = 1024, height = 600, rotation = 0, fontSize = 36;
+  int width = 1024, height = 600, rotation = 0, fontSize = 36, screen = 0;
   int dotSize = 8; // Face dot pitch in px; text screens stay vector.
   bool whiskers = true, glow = true;
   std::string mouth = "always"; // none | speaking | always
