@@ -190,6 +190,15 @@ sudo systemctl restart deskpet-kiosk@<계정>       # 키오스크 모드일 때
    - [ ] 연결을 끊으면(`deskpetctl` 종료) 귀 출력이 꺼지는지
 5. **되돌리기:** `"autoEars": false`로 끄거나, `git switch main` 뒤 다시 빌드합니다.
 
+### 2026-11-24 화면 효과·효과음 (`feat/sound-and-effects`)
+
+1. **바뀐 것:** 하트·반짝이·땀방울·물음표·음표·놀람선·생각 점과 짧은 효과음이 추가됐습니다([화면 효과](face-catalog.md#화면-효과), [효과음](face-catalog.md#효과음)). 새 소스 `src/effects.cpp`가 생겨서 `cmake --build`가 스스로 다시 구성합니다. 헤더도 바뀌어 대부분 다시 컴파일됩니다.
+2. **설정:** `audio.effects`(기본 `true`), `audio.effectsVolume`(기본 0.5). 기존 `config.json`·`config/jetson.json`에 없어도 켜집니다. 끄려면 `"effects": false`.
+3. **실물 확인:** 수동 실행 상태에서 대기 화면을 톡·두 번 톡·연타·문지르기 해 봅니다.
+   - [ ] 소리가 너무 크거나 날카롭지 않은지(필요하면 `effectsVolume`을 낮춤)
+   - [ ] 효과음 뒤 바로 말해도 인식이 잘 되는지, 효과음이 '듣는 중'을 잘못 켜지 않는지
+   - [ ] 파이프라인이 말하기 시작하면 효과음이 바로 끊기는지
+
 ## 근거
 
 - [ReSpeaker Lite](https://wiki.seeedstudio.com/reSpeaker_lite/)

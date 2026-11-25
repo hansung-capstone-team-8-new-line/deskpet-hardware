@@ -29,6 +29,7 @@ void Config::validate() const {
   if (dotSize < 4 || dotSize > 16 || (mouth != "none" && mouth != "speaking" && mouth != "always"))
     throw Error("CONFIG_ERROR", "Face dotSize must be 4..16 and mouth none, speaking or always");
   if (lipSyncDelayMs < 0 || lipSyncDelayMs > 500) throw Error("CONFIG_ERROR", "Face lipSyncDelayMs must be 0..500");
+  if (!std::isfinite(effectsVolume) || effectsVolume < 0 || effectsVolume > 1) throw Error("CONFIG_ERROR", "audio.effectsVolume must be 0..1");
   if (address < 0x03 || address > 0x77 || frequency != 50 || stepUs < 1 || stepUs > 50 || leaseMs < 1000 || leaseMs > 30000)
     throw Error("CONFIG_ERROR", "Invalid servo or connection lease settings");
   for (auto e : {left, right}) {
@@ -59,6 +60,7 @@ Config Config::load(const std::string& file) {
     const auto a = j.value("audio", Json::object());
     c.captureDevice = a.value("captureDevice", ""); c.playbackDevice = a.value("playbackDevice", ""); c.wavInput = a.value("wavInput", "");
     c.playbackGain = a.value("playbackGain", 0.25);
+    c.effects = a.value("effects", true); c.effectsVolume = a.value("effectsVolume", 0.5);
     const auto s = j.value("servo", Json::object());
     c.i2cDevice = s.value("i2cDevice", ""); c.address = s.value("address", 64);
     c.oeMode = s.value("oeMode", "grounded");

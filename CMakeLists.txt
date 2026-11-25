@@ -12,7 +12,7 @@ option(DESKPET_LINUX "Build ALSA and I2C drivers" ${_linux_default})
 find_package(Threads REQUIRED)
 add_library(deskpet_core
   src/config.cpp src/protocol.cpp src/audio.cpp src/motion.cpp src/pca9685.cpp
-  src/display.cpp src/runtime.cpp src/server.cpp)
+  src/display.cpp src/runtime.cpp src/server.cpp src/effects.cpp)
 target_include_directories(deskpet_core PUBLIC include third_party)
 target_link_libraries(deskpet_core PUBLIC Threads::Threads)
 target_compile_options(deskpet_core PRIVATE -Wall -Wextra -Wpedantic)

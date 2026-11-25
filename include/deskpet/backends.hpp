@@ -36,4 +36,6 @@ std::unique_ptr<ServoBus> makeLinuxServo(const Config&);
 void checkCancelled(const std::atomic_bool& cancel);
 void waitUntil(Clock::time_point, const std::atomic_bool& cancel);
 unsigned pwmTicks(int pulseUs, int frequency = 50);
+// A short synthesized sound effect as 16-bit mono PCM (empty for an unknown name). See src/effects.cpp.
+Bytes synthesizeEffect(const std::string& name, float pitch, double volume, int rate = 16000);
 }

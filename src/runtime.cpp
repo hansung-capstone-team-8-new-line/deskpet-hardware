@@ -17,6 +17,12 @@ struct Runtime::Impl {
   // Automatic ears: active while a client is connected, the ears are calibrated and servo.autoEars is on.
   // A client's motion.disable pauses them for the session; a client's motion.set holds them for a moment.
   std::atomic_bool clientActive{false};
+  // Sound effects share the speaker with TTS and always yield to it. While one plays and for 300 ms after,
+  // capture frames are zero-filled (and marked) so the pipeline's VAD/STT never hears them.
+  std::deque<SoundCue> effects;
+  std::atomic_bool effectCancel{false}, effectPlaying{false};
+  std::atomic<int64_t> effectQuietUntilNs{0};
+  static int64_t monotonicNs() { return std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now().time_since_epoch()).count(); }
   struct Capture {
     Packet start; std::optional<Packet> stop; std::atomic_bool cancel{false};
   };
@@ -39,7 +45,7 @@ struct Runtime::Impl {
     motionThread = std::thread([this]{ servoLoop(); });
   }
   ~Impl() {
-    quitting = true; disconnect(); cv.notify_all();
+    quitting = true; effectCancel = true; disconnect(); cv.notify_all();
     inputThread.join(); outputThread.join(); motionThread.join();
   }
   void disconnect() {
@@ -70,8 +76,12 @@ struct Runtime::Impl {
           auto earliest = std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now().time_since_epoch()).count() - input->bufferNs();
           auto bytes = input->read(job->cancel);
           if (bytes.empty()) { reason = "eof"; break; }
+          const bool muted = effectPlaying || monotonicNs() < effectQuietUntilNs;
+          if (muted) std::fill(bytes.begin(), bytes.end(), uint8_t(0));  // our own sound effect, not the user
           display.micLevel(bytes);
-          auto p = event(job->start, "audio.frame", {{"sequence", sequence++}, {"captureEarliestMonotonicNs", earliest}, {"format", Format{}.json()}, {"simulated", config.mock}}, std::move(bytes));
+          Json fields{{"sequence", sequence++}, {"captureEarliestMonotonicNs", earliest}, {"format", Format{}.json()}, {"simulated", config.mock}};
+          if (muted) fields["effectMuted"] = true;
+          auto p = event(job->start, "audio.frame", std::move(fields), std::move(bytes));
           if (!emit(std::move(p))) throw Error("AUDIO_DISCONTINUITY", "Capture queue overflow; restart the stream and invalidate its STT session");
         }
       } catch (const Error& e) {
@@ -92,9 +102,12 @@ struct Runtime::Impl {
   void playbackLoop() {
     for (;;) {
       std::shared_ptr<Playback> job;
-      { std::unique_lock lock(mutex); cv.wait(lock, [&]{return quitting || playback;});
+      std::optional<SoundCue> effect;
+      { std::unique_lock lock(mutex); cv.wait(lock, [&]{return quitting || playback || !effects.empty();});
         if (quitting) return;
-        job = playback; }
+        if (playback) { effects.clear(); job = playback; }
+        else { effect = std::move(effects.front()); effects.pop_front(); } }
+      if (effect) { playEffect(*effect); continue; }
       bool acknowledged = false, wrote = false, started = false, completed = false;
       std::unique_ptr<AudioOutput> output;
       std::string code, message;
@@ -155,6 +168,34 @@ struct Runtime::Impl {
         else emit(failure(*stop, "AUDIO_STOP_UNCONFIRMED", "ALSA drop failed; keep STT gated"));
       }
     }
+  }
+  // Best effort: an effect never reports, and a speaker.begin cancels it at once.
+  void playEffect(const SoundCue& cue) {
+    const Bytes pcm = synthesizeEffect(cue.name, cue.pitch, config.effectsVolume);
+    if (pcm.empty()) return;
+    effectCancel = false; effectPlaying = true;
+    try {
+      auto output = makeOutput(config, Format{});
+      constexpr size_t kBlock = 640;  // 20 ms at 16 kHz mono
+      for (size_t i = 0; i < pcm.size() && !effectCancel; i += kBlock)
+        output->write(Bytes(pcm.begin() + long(i), pcm.begin() + long(std::min(pcm.size(), i + kBlock))), effectCancel);
+      if (!effectCancel) { output->finishInput(effectCancel); if (!output->started()) output->start(); output->drain(effectCancel); }
+      else output->drop();
+    } catch (const std::exception&) {}
+    effectQuietUntilNs = monotonicNs() + 300000000;
+    effectPlaying = false;
+  }
+  void queueEffect(SoundCue cue) {
+    if (!config.effects) return;
+    std::lock_guard lock(mutex);
+    if (playback) return;  // speech is playing
+    if (effects.size() >= 2) effects.pop_front();
+    effects.push_back(std::move(cue)); cv.notify_all();
+  }
+  bool tick() {
+    const bool open = display.tick(emit);
+    for (auto& cue : display.takeSounds()) queueEffect(std::move(cue));
+    return open;
   }
   void servoLoop() {
     std::unique_ptr<ServoBus> bus;
@@ -317,7 +358,9 @@ struct Runtime::Impl {
       } else if (op == "speaker.begin") {
         (void)requiredString(cmd.meta, "jobId"); (void)requiredString(cmd.meta, "requestId"); (void)requiredString(cmd.meta, "outputId");
         auto format = Format::from(cmd.meta.at("format"));
+        effectCancel = true;  // speech takes the speaker from any sound effect
         std::lock_guard lock(mutex);
+        effects.clear();
         if (playback) throw Error("BUSY", "A speaker job is already active");
         playback = std::make_shared<Playback>(); playback->begin = cmd; playback->format = format; cv.notify_all();
       } else if (op == "speaker.write" || op == "speaker.finish" || op == "speaker.stop") {
@@ -365,5 +408,5 @@ Runtime::Runtime(const Config& c, Emit e) : impl_(std::make_unique<Impl>(c, std:
 Runtime::~Runtime() = default;
 void Runtime::command(Packet p) { impl_->command(std::move(p)); }
 void Runtime::disconnect() { impl_->disconnect(); }
-bool Runtime::tick() { return impl_->display.tick(impl_->emit); }
+bool Runtime::tick() { return impl_->tick(); }
 }

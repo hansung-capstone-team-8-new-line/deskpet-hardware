@@ -54,6 +54,29 @@ float sdArc(float x, float y, float cx, float cy, float r, float a0, float a1, f
                   std::hypot(x - cx - r * std::cos(a1), y - cy - r * std::sin(a1))) - th;
 }
 constexpr float kDown0 = 0.35f, kDown1 = kPi - 0.35f;
+// Shapes for the screen effects, centred at (cx, cy) with size s in px.
+float sdHeart(float x, float y, float cx, float cy, float s) {  // point at the bottom
+  const float px = std::abs(x - cx) / s, py = (cy + 0.5f * s - y) / s;
+  if (py + px > 1) return (std::hypot(px - 0.25f, py - 0.75f) - std::sqrt(2.0f) / 4) * s;
+  const float m = 0.5f * std::max(px + py, 0.0f);
+  return std::min(std::hypot(px, py - 1), std::hypot(px - m, py - m)) * (px - py < 0 ? -1.0f : 1.0f) * s;
+}
+float sdStar4(float x, float y, float cx, float cy, float s) {  // four-point sparkle: two long thin diamonds
+  const float px = std::abs(x - cx), py = std::abs(y - cy), w = s, n = s * 0.22f, k = std::hypot(w, n);
+  return std::min((px * n + py * w - w * n) / k, (px * w + py * n - w * n) / k);
+}
+float sdTaper(float x, float y, float ax, float ay, float bx, float by, float t0, float t1);
+float sdDrop(float x, float y, float cx, float cy, float s) { return sdTaper(x, y, cx, cy - 1.3f * s, cx, cy, 0.12f * s, 0.55f * s); }
+float sdQuestion(float x, float y, float cx, float cy, float s) {
+  const float r = 0.32f * s, ay = cy - 0.3f * s, th = 0.085f * s, ex = cx + r * std::cos(0.9f), ey = ay + r * std::sin(0.9f);
+  return std::min({sdArc(x, y, cx, ay, r, -kPi + 0.45f, 0.9f, th), sdTaper(x, y, ex, ey, cx, cy + 0.22f * s, th, th),
+                   sdCircle(x, y, cx, cy + 0.5f * s, 0.1f * s)});
+}
+float sdNote(float x, float y, float cx, float cy, float s) {  // a quaver
+  const float hx = cx - 0.18f * s, hy = cy + 0.38f * s;
+  return std::min({std::hypot((x - hx) / 1.25f, y - hy) - 0.17f * s, sdTaper(x, y, cx, cy + 0.36f * s, cx, cy - 0.5f * s, 0.05f * s, 0.05f * s),
+                   sdTaper(x, y, cx, cy - 0.5f * s, cx + 0.3f * s, cy - 0.22f * s, 0.07f * s, 0.04f * s)});
+}
 
 enum Key { LookX, LookY, Scale, Tilt, Bob, EyeSize, LidTop, LidTopR, LidSad, LidHappy,
            MouthSmile, MouthOpen, MouthX, MouthWave, Whisk, Zz, EyeAsym,
@@ -281,7 +304,7 @@ public:
       travel_ += d;
       if (travel_ > 700) {  // rubbing back and forth reads as petting
         pettedUntil_ = t_ + 3;
-        if (!petting_) { petting_ = true; apply("idle", "petted", ""); addWave(512, 300, 1.2f, 620, 0.25f, kPetAura); }
+        if (!petting_) { petting_ = true; apply("idle", "petted", ""); addWave(512, 300, 1.2f, 620, 0.25f, kPetAura); purrAt_ = 0; }
       }
       return;
     }
@@ -299,24 +322,32 @@ public:
     taps_.erase(std::remove_if(taps_.begin(), taps_.end(), [&](float at) { return t_ - at > 1.2f; }), taps_.end());
     taps_.push_back(t_);
     if (taps_.size() >= 4) {  // startle wins over a beam
-      startleAt_ = t_; beamAt_ = nomAt_ = -9; blink(0); taps_.clear(); lastTapAt_ = -9; kick(0.8f, 0.8f, 0.6f, Shape::Snap); return;
+      startleAt_ = t_; beamAt_ = nomAt_ = -9; blink(0); taps_.clear(); lastTapAt_ = -9; kick(0.8f, 0.8f, 0.6f, Shape::Snap);
+      spawn(Fx::Shock, 512, 80, 0, 0, 0.55f, 1); cue("pop"); return;
     }
     if (t_ - lastTapAt_ < 0.35f && std::hypot(down_[0] - lastTap_[0], down_[1] - lastTap_[1]) < 80) {
       beamAt_ = t_; lastTapAt_ = -9; addWave(512, 300, 1.0f, 520, 0.25f);
-      if (!low()) kick(0.35f, -0.35f, 0.9f, Shape::Wiggle, 0, 2);  // a beam swishes the ears in opposite phase
+      if (!low()) {
+        kick(0.35f, -0.35f, 0.9f, Shape::Wiggle, 0, 2);  // a beam swishes the ears in opposite phase
+        for (const float sx : {-1.0f, 0.0f, 1.0f})
+          spawn(Fx::Heart, 512 + sx * range(140, 220), 330, sx * 30, -70, range(1.2f, 1.6f), range(44, 56), sx == 0 ? 0 : 0.12f);
+        spawn(Fx::Spark, 348 + range(-60, 60), 140, 0, -6, 0.8f, 30); spawn(Fx::Spark, 676 + range(-60, 60), 140, 0, -6, 0.8f, 30, 0.1f);
+        cue("chirp");
+      } else { spawn(Fx::Heart, 512 + range(-80, 80), 340, 0, -45, 1.6f, 38); cue("boop", 0.8f); }  // comforted: one small heart
       return;
     }
     lastTapAt_ = t_; lastTap_[0] = down_[0]; lastTap_[1] = down_[1];
     const float tx = down_[0], ty = down_[1], fromCentre = std::abs(tx - 512);
-    if (ty < 120 && fromCentre > 282) earTap(tx < 512 ? -1.0f : 1.0f);  // the top corners sit right under the ears
-    else if (std::abs(ty - 240) < 105 && (std::abs(tx - 348) < 85 || std::abs(tx - 676) < 85)) { blink(0); blink(0.22f); }
-    else if (fromCentre < 70 && std::abs(ty - 400) < 45) { nomAt_ = t_; const float f = 0.2f * lift(); kick(f, f, 0.3f); }
+    if (ty < 120 && fromCentre > 282) { earTap(tx < 512 ? -1.0f : 1.0f); cue("flutter"); }  // the top corners sit right under the ears
+    else if (std::abs(ty - 240) < 105 && (std::abs(tx - 348) < 85 || std::abs(tx - 676) < 85)) { blink(0); blink(0.22f); cue("boop", 1.15f); }
+    else if (fromCentre < 70 && std::abs(ty - 400) < 45) { nomAt_ = t_; const float f = 0.2f * lift(); kick(f, f, 0.3f); cue("nom", 0.85f); }
     else if (fromCentre > 210 && fromCentre < 430 && std::abs(ty - 400) < 60) {
       whiskAt_ = t_; whiskSide_ = tx < 512 ? -1.0f : 1.0f;
       const float f = 0.4f * lift(tx < 512 ? -1.0f : 1.0f);
       kick(tx < 512 ? f : 0, tx < 512 ? 0 : f, 0.28f);  // and the ear on that side flicks
+      cue("boop");
     }
-    else gazeUntil_ = t_ + 1.2f;
+    else { gazeUntil_ = t_ + 1.2f; cue("boop", 0.95f); }
   }
   // The face's own dot waves, newest last.
   struct Wave { float x, y, start, duration, radius, alpha; std::optional<Rgb> color; };
@@ -326,6 +357,11 @@ private:
     if (status == "succeeded" && status_ != "succeeded") {  // a one-off pulse on success
       burstAt_ = t_ + 0.15f; addWave(512, 300, 0.9f, 640, 0.35f, Rgb{255, 236, 170}, 0.15f);
       kick(0.45f, 0.45f, 0.4f, Shape::Flick, 0.15f); kick(0.2f, -0.2f, 0.7f, Shape::Wiggle, 0.5f, 2);  // ears prick, then swish
+      for (int i = 0; i < 6; ++i) {  // sparkles around the face
+        const float a = range(-kPi, 0), r = range(260, 360);
+        spawn(Fx::Spark, 512 + std::cos(a) * r * 1.3f, 300 + std::sin(a) * r * 0.75f, 0, -8, range(0.7f, 1.1f), range(28, 42), range(0, 0.35f));
+      }
+      cue("sparkle", 1, activity);
     }
     if (activity == "listening" && activityName_ != "listening") addWave(512, 300, 1.2f, 600, 0.18f);  // "I'm listening"
     activityName_ = activity; status_ = status;
@@ -334,7 +370,8 @@ private:
     mood_ = status == "failed" ? "sorry" : emotion == "sad" ? "sad" : status == "unknown" ? "unknown"
           : status == "succeeded" ? "proud" : emotion;
     activity_ = &activityFor(activity); moodTable_ = moodFor(mood_);
-    if (mood_ == "surprised") startleAt_ = t_ + 0.05f;  // surprise pops once on entry
+    if (mood_ == "surprised") { startleAt_ = t_ + 0.05f; spawn(Fx::Shock, 512, 80, 0, 0, 0.55f, 1); }  // surprise pops once on entry
+    sweatAt_ = t_ + 0.6f; questionAt_ = t_ + 0.3f; noteAt_ = t_ + range(1, 3);
     side_ = sign(); current_.reset(); last_ = nullptr;
     nextVariation_ = t_ + range(0.6f, 1.4f);
     blink(0);  // a state change starts with a blink, the way animators hide a cut
@@ -353,6 +390,7 @@ private:
     if (activityName_ == "idle" && alone > kBoredAfter) {
       wakeAt_ = t_; blink(0); addWave(512, 300, 1.0f, 520, 0.2f);
       kick(0.6f, 0.6f, 0.6f, Shape::Snap);  // waking from a doze, the ears shoot up
+      cue("mrrp");
     }
     interactedAt_ = t_;
   }
@@ -398,6 +436,7 @@ public:
       if (random() < 0.12f) { const float f = -0.1f * lift(); kick(f, f, 0.16f); }  // now and then the ears flinch with a blink
     }
     earLife(senses);
+    effects(dt);
     // The posture is kept softly inside ±0.85 so a quick gesture always has room to show.
     const auto [kickL, kickR] = kickOffset();
     const auto soft = [](float x) { return 0.85f * std::tanh(x / 0.85f); };
@@ -414,6 +453,13 @@ public:
   float blinkClosure() const { return closure_; }
   // Ear servo targets, -1 down .. +1 up (left, right).
   std::array<float, 2> ears() const { return ears_; }
+  // Screen-effect particles; kind: heart, sparkle, sweat drop, question mark, note, shock lines.
+  enum class Fx { Heart, Spark, Sweat, Question, Note, Shock };
+  struct Particle { Fx kind; float x, y, vx, vy, start, life, size, phase; };
+  const std::vector<Particle>& particles() const { return parts_; }
+  float thinking() const { return thinking_; }  // strength of the "..." dots while processing
+  float side() const { return side_; }
+  std::vector<SoundCue> takeSounds() { return std::exchange(sounds_, {}); }
   float zzPhase() const { return zzPhase_; }
   float time() const { return t_; }
   Rgb color() const { return {uint8_t(std::lround(color_[0])), uint8_t(std::lround(color_[1])), uint8_t(std::lround(color_[2]))}; }
@@ -496,6 +542,40 @@ private:
   // A flick shows as a lift on a lowered ear and as a dip on an ear that already stands high.
   float lift(float side) const { return pose_[side < 0 ? EarL : EarR] > 0.35f ? -1.0f : 1.0f; }
   float lift() const { return (pose_[EarL] + pose_[EarR]) / 2 > 0.35f ? -1.0f : (pose_[EarL] + pose_[EarR]) / 2 < -0.6f ? -1.0f : 1.0f; }
+  void spawn(Fx kind, float x, float y, float vx, float vy, float life, float size, float delay = 0) {
+    if (parts_.size() >= 16) parts_.erase(parts_.begin());
+    parts_.push_back({kind, x, y, vx, vy, t_ + delay, life, size, range(0, 6.28f)});
+  }
+  // Sound effects only in idle (petting included): never over the user's voice, thinking or speech.
+  void cue(const char* name, float pitch = 1) { cue(name, pitch, activityName_); }
+  void cue(const char* name, float pitch, const std::string& activity) {
+    if (activity != "idle") return;
+    if (sounds_.size() >= 2) sounds_.erase(sounds_.begin());
+    sounds_.push_back({name, pitch * range(0.92f, 1.08f)});
+  }
+  // Effects that come and go with the mood.
+  void effects(float dt) {
+    if (mood_ == "petted" && t_ >= heartAt_) {  // hearts rise beside the face while being petted
+      const float sx = sign(); spawn(Fx::Heart, 512 + sx * range(170, 330), range(250, 360), sx * 12, -60, range(1.4f, 1.8f), range(40, 56));
+      heartAt_ = t_ + range(0.45f, 0.8f);
+    }
+    if (petting_ && t_ >= purrAt_) { cue("purr"); purrAt_ = t_ + 1.3f; }
+    if (pressed_ && moved_ < 20 && t_ - downAt_ > 0.9f && t_ >= holdHeartAt_) {  // leaning in: a slow heart
+      if (holdHeartAt_ < downAt_) cue("purr", 0.9f);
+      spawn(Fx::Heart, 512 + range(-120, 120), 330, 0, -40, 1.8f, 44); holdHeartAt_ = t_ + 1.2f;
+    }
+    if (mood_ == "sorry" && t_ >= sweatAt_) {  // sheepish: a sweat drop by the head
+      spawn(Fx::Sweat, 512 + sign() * range(285, 330), 150, 0, 30, 1.6f, 34); sweatAt_ = t_ + range(6, 10);
+    }
+    if (mood_ == "unknown" && t_ >= questionAt_) {  // unsure: a question mark above the head
+      spawn(Fx::Question, 512 + sign() * range(300, 360), 115, 0, -12, 1.7f, 70); questionAt_ = t_ + range(5, 9);
+    }
+    if (mood_ == "happy" && t_ >= noteAt_) {  // happy: a note floats up
+      const float sx = sign(); spawn(Fx::Note, 512 + sx * range(300, 380), 250, sx * 10, -38, 1.9f, 56); noteAt_ = t_ + range(2.5f, 5);
+    }
+    thinking_ += ((activityName_ == "processing" ? 1.0f : 0.0f) - thinking_) * std::min(1.0f, dt * 4);
+    parts_.erase(std::remove_if(parts_.begin(), parts_.end(), [&](const Particle& p) { return t_ >= p.start + p.life; }), parts_.end());
+  }
   // Touching just under an ear: that ear shakes it off with a double flick, the other twitches in sympathy.
   void earTap(float side) {
     const auto one = [&](float a) { return side < 0 ? std::pair{a, 0.0f} : std::pair{0.0f, a}; };
@@ -581,6 +661,9 @@ private:
   bool begun_ = false;
   std::vector<Kick> kicks_;
   std::array<float, 2> ears_{0, 0};
+  std::vector<Particle> parts_;
+  std::vector<SoundCue> sounds_;
+  float thinking_ = 0, heartAt_ = 0, holdHeartAt_ = 0, sweatAt_ = 0, questionAt_ = 0, noteAt_ = 0, purrAt_ = 0;
   bool snap_ = true;
   std::string mood_, label_;
   const Activity* activity_ = nullptr;
@@ -701,6 +784,39 @@ Face buildFace(const Director& director, bool whiskers, const std::string& mouth
     L.push_back({w.color.value_or(col), w.alpha * (1 - age), x - r - 12, y - r - 12, x + r + 12, y + r + 12,
                  [=](float px, float py) { return std::abs(sdCircle(px, py, x, y, r)) - 9; }, nullptr});
   }
+  // Effect particles fade in over 15 % of their life and out over the last 40 %.
+  for (const auto& q : director.particles()) {
+    const float age = t - q.start;
+    if (age < 0) continue;
+    const float f = age / q.life, a = (f < 0.15f ? f / 0.15f : f > 0.6f ? (1 - f) / 0.4f : 1) * 0.9f;
+    float x = q.x + q.vx * age, y = q.y + q.vy * age, s = q.size;
+    using Fx = Director::Fx;
+    const Rgb c = q.kind == Fx::Heart ? Rgb{255, 140, 175} : q.kind == Fx::Spark ? Rgb{255, 236, 170} : q.kind == Fx::Sweat ? Rgb{150, 210, 255} : col;
+    if (q.kind == Fx::Heart) { x += 10 * std::sin(age * 3 + q.phase); s *= 0.85f + 0.15f * std::sin(age * 9 + q.phase); }
+    if (q.kind == Fx::Spark) s *= 0.5f + 0.5f * bump(f);
+    if (q.kind == Fx::Question) y += 4 * std::sin(age * 5);
+    if (q.kind == Fx::Shock) {  // three lines above the head
+      L.push_back({c, a * bump(f) / 0.9f, 360, 0, 664, 100, [](float px, float py) {
+        return std::min({sdTaper(px, py, 420, 78, 380, 20, 8, 4), sdTaper(px, py, 512, 62, 512, 4, 8, 4), sdTaper(px, py, 604, 78, 644, 20, 8, 4)}); }, nullptr});
+      continue;
+    }
+    const float r = s * 1.6f + 8;
+    std::function<float(float, float)> d;
+    switch (q.kind) {
+      case Fx::Heart: d = [=](float px, float py) { return sdHeart(px, py, x, y, s); }; break;
+      case Fx::Spark: d = [=](float px, float py) { return sdStar4(px, py, x, y, s); }; break;
+      case Fx::Sweat: d = [=](float px, float py) { return sdDrop(px, py, x, y, s); }; break;
+      case Fx::Question: d = [=](float px, float py) { return sdQuestion(px, py, x, y, s); }; break;
+      default: d = [=](float px, float py) { return sdNote(px, py, x, y, s); }; break;
+    }
+    L.push_back({c, a, x - r, y - r - s, x + r, y + r, d, nullptr});
+  }
+  // Thinking: three dots above the side it looks to, lighting up in turn.
+  if (const float k = director.thinking(); k > 0.03f) for (int i = 0; i < 3; ++i) {
+    const float side = director.side(), x = 512 + side * (250 + float(i) * 46), y = 80 - float(i) * 14;
+    const float pulse = 0.35f + 0.65f * std::max(0.0f, std::sin(t * 3.2f - float(i) * 0.7f));
+    L.push_back({col, k * pulse * 0.85f, x - 20, y - 20, x + 20, y + 20, [=](float px, float py) { return sdCircle(px, py, x, y, 14); }, nullptr});
+  }
   if (P[Zz] > 0.02f) for (int i = 0; i < 2; ++i) {
     const float q = std::clamp(director.zzPhase() * 1.3f - float(i) * 0.3f, 0.0f, 1.0f);
     const float x = 770 + q * 50 + float(i) * 28, y = 190 - q * 80 - float(i) * 30, h = 11 + float(i) * 4;
@@ -779,6 +895,7 @@ struct Display::Impl {
   // Ear targets published by the render thread for the servo thread.
   std::atomic<float> earLeft{0}, earRight{0};
   std::atomic_bool earsLive{false};
+  std::vector<SoundCue> sounds;  // asked for by the face, taken by the runtime on the same (main) thread
   uint64_t revision = 0;
   bool revisionSet = false, failNext = false;
   std::string error;
@@ -962,6 +1079,7 @@ struct Display::Impl {
       frameAt = now;
       const auto ears = director.ears();
       earLeft = ears[0]; earRight = ears[1]; earsLive = true;
+      for (auto& cue : director.takeSounds()) { if (sounds.size() >= 4) sounds.erase(sounds.begin()); sounds.push_back(std::move(cue)); }
       drawFace(buildFace(director, config.whiskers, config.mouth, view.value("activity", "idle") == "speaking"));
       if (font && !director.label().empty()) {
         int tw = 0; TTF_SizeUTF8(font, director.label().c_str(), &tw, nullptr);
@@ -1152,6 +1270,7 @@ void Display::speechEnd() {
   s.reset();
 }
 std::optional<float> Display::speechLevel(Clock::time_point now) const { return impl_->speechLevel(now); }
+std::vector<SoundCue> Display::takeSounds() { return std::exchange(impl_->sounds, {}); }
 std::optional<std::array<float, 2>> Display::ears() const {
   if (!impl_->earsLive) return std::nullopt;
   return std::array<float, 2>{impl_->earLeft.load(), impl_->earRight.load()};

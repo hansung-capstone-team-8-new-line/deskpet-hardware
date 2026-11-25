@@ -4,6 +4,8 @@
 #include <optional>
 
 namespace deskpet {
+// A sound effect the face asked for: a name from synthesizeEffect and a pitch multiplier.
+struct SoundCue { std::string name; float pitch = 1; };
 class Display {
   struct Impl;
   std::unique_ptr<Impl> impl_;
@@ -30,5 +32,7 @@ public:
   // Ear targets (left, right; -1 down .. +1 up) that follow the face, or nullopt until the face has been drawn
   // (headless runs and builds without SDL). Thread-safe; the servo thread reads them.
   std::optional<std::array<float, 2>> ears() const;
+  // Sound effects asked for since the last call (main thread; the runtime plays them).
+  std::vector<SoundCue> takeSounds();
 };
 }
