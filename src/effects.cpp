@@ -1,6 +1,7 @@
 #include "deskpet/backends.hpp"
 #include <algorithm>
 #include <cmath>
+#include <random>
 #include <vector>
 
 namespace deskpet {
@@ -42,6 +43,16 @@ Bytes synthesizeEffect(const std::string& name, float pitch, double volume, int 
   else if (name == "sparkle") {
     length(0.4); tone(out, rate, 0, 0.13, P * 1.25, P * 1.25); tone(out, rate, 0.09, 0.13, P * 1.575, P * 1.575);
     tone(out, rate, 0.18, 0.2, P * 1.875, P * 1.875);
+  } else if (name == "pat") { length(0.16); tone(out, rate, 0, 0.15, P * 0.75, P * 0.6); }
+  else if (name == "hmph") { length(0.26); tone(out, rate, 0, 0.08, P * 0.62, P * 0.58, 1, 0.2); tone(out, rate, 0.11, 0.13, P * 0.52, P * 0.42, 1, 0.2); }
+  else if (name == "achoo") {  // a short rising "eh" and a soft noise burst
+    length(0.3); tone(out, rate, 0, 0.09, P * 0.9, P * 1.1, 1, 0.2);
+    thread_local std::mt19937 rng{std::random_device{}()};
+    std::uniform_real_distribution<double> noise(-1, 1);
+    const double k = 1 - std::exp(-kTau * 1800 / rate);
+    const size_t n0 = size_t(0.08 * rate), n = size_t(0.18 * rate);
+    double y = 0;
+    for (size_t i = 0; i < n && n0 + i < out.size(); ++i) { y += k * (noise(rng) - y); out[n0 + i] += 0.8 * y * std::sin(3.141592653589793 * double(i) / double(n)); }
   } else if (name == "purr") {
     length(1.1);
     for (size_t i = 0; i < out.size(); ++i) {

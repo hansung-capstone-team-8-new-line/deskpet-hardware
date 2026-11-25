@@ -72,6 +72,10 @@ float sdQuestion(float x, float y, float cx, float cy, float s) {
   return std::min({sdArc(x, y, cx, ay, r, -kPi + 0.45f, 0.9f, th), sdTaper(x, y, ex, ey, cx, cy + 0.22f * s, th, th),
                    sdCircle(x, y, cx, cy + 0.5f * s, 0.1f * s)});
 }
+float sdPuff(float x, float y, float cx, float cy, float s, float dir) {  // a "hmph" puff: three small cloud lobes
+  return std::min({sdCircle(x, y, cx, cy, 0.45f * s), sdCircle(x, y, cx + dir * 0.42f * s, cy - 0.2f * s, 0.35f * s),
+                   sdCircle(x, y, cx + dir * 0.78f * s, cy + 0.05f * s, 0.27f * s)});
+}
 float sdNote(float x, float y, float cx, float cy, float s) {  // a quaver
   const float hx = cx - 0.18f * s, hy = cy + 0.38f * s;
   return std::min({std::hypot((x - hx) / 1.25f, y - hy) - 0.17f * s, sdTaper(x, y, cx, cy + 0.36f * s, cx, cy - 0.5f * s, 0.05f * s, 0.05f * s),
@@ -81,10 +85,11 @@ float sdNote(float x, float y, float cx, float cy, float s) {  // a quaver
 enum Key { LookX, LookY, Scale, Tilt, Bob, EyeSize, LidTop, LidTopR, LidSad, LidHappy,
            MouthSmile, MouthOpen, MouthX, MouthWave, Whisk, Zz, EyeAsym,
            EarL, EarR,  // ear servos: -1 down, 0 neutral, +1 up
+           Cross, Wink,  // eyes drawn toward the nose (px); one eye closed (+ right, - left)
            kKeys };
 using Pose = std::array<float, kKeys>;
 // The resting upper lid (0.13) is a slightly drowsy, relaxed eye; happy, sad and surprised open it fully.
-constexpr Pose kRest{0, 0, 1, 0, 0, 1, 0.13f, 0, 0, 0, 0.3f, 0, 0, 0, 0, 0, 0, 0, 0};
+constexpr Pose kRest{0, 0, 1, 0, 0, 1, 0.13f, 0, 0, 0, 0.3f, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 float stiffness(int k) {
   switch (k) {
     case MouthOpen: return 700;
@@ -293,16 +298,18 @@ public:
     wake();
     if (phase == "down") {
       pressed_ = true; downAt_ = t_; down_[0] = gaze_[0] = x; down_[1] = gaze_[1] = y; moved_ = travel_ = 0; travelStart_ = t_;
+      chinPress_ = std::abs(x - 512) < 90 && y > 445 && y < 530; chinStart_ = -9; lastTouchX_ = x;
       addWave(x, y, 0.6f, 170, 0.18f);
       return;
     }
     if (!pressed_) return;
     if (phase == "move") {
       const float d = std::hypot(x - gaze_[0], y - gaze_[1]);
-      gaze_[0] = x; gaze_[1] = y; moved_ += d;
+      gaze_[0] = x; gaze_[1] = y; moved_ += d; lastTouchX_ = x;
+      if (chinPress_ && moved_ > 20 && chinStart_ < 0) chinStart_ = t_;  // a chin scratch begins
       if (t_ - travelStart_ > 1.5f) { travel_ = 0; travelStart_ = t_; }
       travel_ += d;
-      if (travel_ > 700) {  // rubbing back and forth reads as petting
+      if (travel_ > 700 && !chinPress_) {  // rubbing back and forth reads as petting (a chin scratch stays a chin scratch)
         pettedUntil_ = t_ + 3;
         if (!petting_) { petting_ = true; apply("idle", "petted", ""); addWave(512, 300, 1.2f, 620, 0.25f, kPetAura); purrAt_ = 0; }
       }
@@ -318,12 +325,16 @@ public:
       return;
     }
     if (held >= 0.3f || moved_ >= 14) return;
-    // A tap.
+    // A tap. Poking again within 1.5 s annoys more; never during a conversation, less when sad.
+    const bool calm = activityName_ != "idle";
+    if (!calm) annoy_ = std::clamp(annoy_ + (t_ - lastPokeAt_ < 1.5f ? 0.09f : 0.02f) * (low() ? 0.3f : 1.0f), 0.0f, 1.0f);
+    lastPokeAt_ = t_;
+    if (sulking_) { act(Act::Glance, 0.7f, down_[0] < 512 ? -1.0f : 1.0f); annoy_ = std::min(1.0f, annoy_ + 0.03f); return; }  // a glance, then away again
     taps_.erase(std::remove_if(taps_.begin(), taps_.end(), [&](float at) { return t_ - at > 1.2f; }), taps_.end());
     taps_.push_back(t_);
     if (taps_.size() >= 4) {  // startle wins over a beam
       startleAt_ = t_; beamAt_ = nomAt_ = -9; blink(0); taps_.clear(); lastTapAt_ = -9; kick(0.8f, 0.8f, 0.6f, Shape::Snap);
-      spawn(Fx::Shock, 512, 80, 0, 0, 0.55f, 1); cue("pop"); return;
+      spawn(Fx::Shock, 512, 80, 0, 0, 0.55f, 1); cue("pop"); if (!calm) annoy_ = std::min(1.0f, annoy_ + 0.15f); return;
     }
     if (t_ - lastTapAt_ < 0.35f && std::hypot(down_[0] - lastTap_[0], down_[1] - lastTap_[1]) < 80) {
       beamAt_ = t_; lastTapAt_ = -9; addWave(512, 300, 1.0f, 520, 0.25f);
@@ -332,22 +343,59 @@ public:
         for (const float sx : {-1.0f, 0.0f, 1.0f})
           spawn(Fx::Heart, 512 + sx * range(140, 220), 330, sx * 30, -70, range(1.2f, 1.6f), range(44, 56), sx == 0 ? 0 : 0.12f);
         spawn(Fx::Spark, 348 + range(-60, 60), 140, 0, -6, 0.8f, 30); spawn(Fx::Spark, 676 + range(-60, 60), 140, 0, -6, 0.8f, 30, 0.1f);
+        if (affection_ > 0.5f) for (const float sx : {-1.0f, 1.0f}) spawn(Fx::Heart, 512 + sx * range(250, 330), 280, sx * 20, -60, 1.4f, 40, 0.25f);
+        affection_ = std::min(1.0f, affection_ + 0.05f); annoy_ = std::max(0.0f, annoy_ - 0.1f);
         cue("chirp");
       } else { spawn(Fx::Heart, 512 + range(-80, 80), 340, 0, -45, 1.6f, 38); cue("boop", 0.8f); }  // comforted: one small heart
       return;
     }
     lastTapAt_ = t_; lastTap_[0] = down_[0]; lastTap_[1] = down_[1];
-    const float tx = down_[0], ty = down_[1], fromCentre = std::abs(tx - 512);
-    if (ty < 120 && fromCentre > 282) { earTap(tx < 512 ? -1.0f : 1.0f); cue("flutter"); }  // the top corners sit right under the ears
-    else if (std::abs(ty - 240) < 105 && (std::abs(tx - 348) < 85 || std::abs(tx - 676) < 85)) { blink(0); blink(0.22f); cue("boop", 1.15f); }
-    else if (fromCentre < 70 && std::abs(ty - 400) < 45) { nomAt_ = t_; const float f = 0.2f * lift(); kick(f, f, 0.3f); cue("nom", 0.85f); }
-    else if (fromCentre > 210 && fromCentre < 430 && std::abs(ty - 400) < 60) {
-      whiskAt_ = t_; whiskSide_ = tx < 512 ? -1.0f : 1.0f;
-      const float f = 0.4f * lift(tx < 512 ? -1.0f : 1.0f);
-      kick(tx < 512 ? f : 0, tx < 512 ? 0 : f, 0.28f);  // and the ear on that side flicks
-      cue("boop");
+    const float tx = down_[0], ty = down_[1], fromCentre = std::abs(tx - 512), sx = tx < 512 ? -1.0f : 1.0f, aff = affection_;
+    const bool eye = std::abs(ty - 240) < 105 && (std::abs(tx - 348) < 85 || std::abs(tx - 676) < 85);
+    if (calm) {  // during a conversation keep it small: blink at the eyes, otherwise just look
+      if (eye) { blink(0); blink(0.22f); } else gazeUntil_ = t_ + 1.2f;
+      return;
     }
-    else { gazeUntil_ = t_ + 1.2f; cue("boop", 0.95f); }
+    if (ty < 120 && fromCentre > 282) {  // the top corners sit right under the ears: shake it off, sometimes the head too
+      earTap(sx); cue("flutter");
+      if (pick("ear", {{"tap", 1}, {"shake", 0.5f}}) == "shake") act(Act::Shake, 0.6f, sx);
+    } else if (ty < 120) {  // the crown: eyes ease shut, ears flatten, leaning into the hand
+      act(Act::Pat, 0.8f, sx); kick(-0.45f, -0.45f, 0.6f, Shape::Snap); cue("pat");
+      affection_ = std::min(1.0f, aff + 0.1f); annoy_ = std::max(0.0f, annoy_ - 0.06f);
+    } else if (tx < 60 || tx > 964 || ty > 560) {  // an edge: peek toward it
+      act(Act::Peek, 1.1f, tx < 60 ? -1.0f : tx > 964 ? 1.0f : 0.0f); cue("boop", 1.05f);
+    } else if (eye) {  // eyes: double blink, wink, squeeze or widen
+      const auto v = pick("eye", {{"blink", 1}, {"wink", 0.7f + 0.8f * aff}, {"squeeze", 0.5f + 0.5f * aff}, {"widen", 0.5f}});
+      if (v == "blink") { blink(0); blink(0.22f); }
+      else if (v == "wink") act(Act::Wink, 0.34f, std::abs(tx - 348) < 85 ? -1.0f : 1.0f);
+      else act(v == "squeeze" ? Act::Squeeze : Act::Widen, v == "squeeze" ? 0.45f : 0.5f, sx);
+      cue("boop", 1.15f);
+    } else if (fromCentre < 40 && ty > 350 && ty < 386) {  // the nose: eyes cross onto it, sometimes a sneeze
+      act(Act::Nose, 1.0f, sx);
+      const bool again = t_ - lastNoseAt_ < 3; lastNoseAt_ = t_;
+      if (again) annoy_ = std::min(1.0f, annoy_ + 0.06f);
+      if (random() < (again ? 0.5f : 0.2f)) sneeze(0.45f); else cue("boop", 1.3f);
+    } else if (fromCentre < 70 && ty >= 386 && ty < 445) {  // the mouth: nom, nom-nom or a mumble
+      const auto v = pick("mouth", {{"nom", 1}, {"nom2", 0.6f}, {"mumble", 0.6f}});
+      if (v == "mumble") { act(Act::Mumble, 0.6f, sx); cue("boop", 0.7f); }
+      else { nomAt_ = t_; if (v == "nom2") act(Act::Nom, 0.6f, sx, 0.3f); cue("nom", 0.85f); }
+      const float f = 0.2f * lift(); kick(f, f, 0.3f);
+    } else if (fromCentre < 90 && ty >= 445 && ty < 530) {  // the chin: lifts it with a little smile
+      act(Act::Chin, 0.7f, sx); cue("boop", 0.8f); affection_ = std::min(1.0f, aff + 0.04f);
+    } else if (fromCentre > 110 && fromCentre < 220 && ty > 300 && ty < 362) {  // a cheek: turns away from it
+      act(Act::Cheek, 0.9f, sx); blink(0); cue("boop", 0.9f); annoy_ = std::min(1.0f, annoy_ + 0.04f);
+    } else if (fromCentre > 210 && fromCentre < 430 && std::abs(ty - 400) < 60) {  // whiskers: twitch or sweep, now and then a tickled sneeze
+      const float f = 0.4f * lift(sx);
+      kick(sx < 0 ? f : 0, sx < 0 ? 0 : f, 0.28f);  // and the ear on that side flicks
+      if (pick("whisker", {{"twitch", 1}, {"sweep", 0.6f}}) == "sweep") act(Act::Sweep, 0.7f, sx);
+      else { whiskAt_ = t_; whiskSide_ = sx; }
+      if (random() < 0.12f) sneeze(0.4f); else cue("boop");
+    } else {  // anywhere else: look, look with a tilt, or come closer to see
+      gazeUntil_ = t_ + 1.2f;
+      const auto v = pick("gaze", {{"look", 1}, {"tiltLook", 0.6f}, {"approach", 0.4f + 0.6f * aff}});
+      if (v != "look") act(v == "tiltLook" ? Act::TiltLook : Act::Approach, v == "tiltLook" ? 1.2f : 1.0f, sx);
+      cue("boop", 0.95f);
+    }
   }
   // The face's own dot waves, newest last.
   struct Wave { float x, y, start, duration, radius, alpha; std::optional<Rgb> color; };
@@ -454,12 +502,22 @@ public:
   // Ear servo targets, -1 down .. +1 up (left, right).
   std::array<float, 2> ears() const { return ears_; }
   // Screen-effect particles; kind: heart, sparkle, sweat drop, question mark, note, shock lines.
-  enum class Fx { Heart, Spark, Sweat, Question, Note, Shock };
+  enum class Fx { Heart, Spark, Sweat, Question, Note, Shock, Puff, Spray };
   struct Particle { Fx kind; float x, y, vx, vy, start, life, size, phase; };
   const std::vector<Particle>& particles() const { return parts_; }
   float thinking() const { return thinking_; }  // strength of the "..." dots while processing
   float side() const { return side_; }
-  std::vector<SoundCue> takeSounds() { return std::exchange(sounds_, {}); }
+  std::vector<SoundCue> takeSounds() {
+    std::vector<SoundCue> due;
+    sounds_.erase(std::remove_if(sounds_.begin(), sounds_.end(), [&](const Pending& p) {
+      if (p.at > t_) return false;
+      due.push_back(p.cue);
+      return true;
+    }), sounds_.end());
+    return due;
+  }
+  float affection() const { return affection_; }
+  float annoyance() const { return annoy_; }
   float zzPhase() const { return zzPhase_; }
   float time() const { return t_; }
   Rgb color() const { return {uint8_t(std::lround(color_[0])), uint8_t(std::lround(color_[1])), uint8_t(std::lround(color_[2]))}; }
@@ -498,6 +556,51 @@ private:
       const float alone = t_ - interactedAt_, bored = smooth((alone - kBoredAfter) / 60), doze = smooth((alone - kDozeAfter) / 60);
       g[LidTop] += 0.15f * bored + 0.45f * doze; g[LookY] += 12 * bored; g[Bob] += doze * (4 + 6 * std::sin(t_ * 0.8f));
       addEars(g, -0.15f * bored - 0.45f * doze);
+    }
+    if (pressed_ && chinPress_ && chinStart_ >= 0) {  // a chin scratch: chin up, eyes closing, slowly melting
+      const float e = smooth((t_ - chinStart_) / 0.5f), melt = smooth((t_ - chinStart_ - 1.5f) / 1.0f);
+      g[LookY] -= 22 * e; g[Bob] -= 6 * e; g[LidHappy] += 0.45f * e + 0.25f * melt; g[MouthSmile] += 0.3f * e; addEars(g, -0.3f * e);
+    }
+    for (const auto& a : acts_) {
+      const float u = (t_ - a.at) / a.duration;
+      if (u < 0 || u >= 1) continue;
+      const float e = envelope(u, 0.15f, 0.7f), k = bump(u), s = a.side;
+      switch (a.name) {
+        case Act::Pat: g[LidHappy] += 0.65f * e; g[Bob] += 8 * k; g[MouthSmile] += 0.3f * e; g[Tilt] += s * 0.03f * k; break;
+        case Act::Nose: g[Cross] += 34 * e; g[LookY] -= 6 * e; g[EyeSize] += 0.04f * e; break;
+        case Act::Sneeze: {
+          const float jerk = u < 0.25f ? -12 * smooth(u / 0.25f) : 12 * bump((u - 0.25f) / 0.75f);
+          g[LidHappy] += 0.75f * envelope(u, 0.1f, 0.5f); g[Bob] += jerk; g[MouthOpen] += 0.5f * envelope(u, 0.15f, 0.4f); g[Whisk] -= 8 * k; break;
+        }
+        case Act::Cheek: g[LookX] -= s * 60 * e; g[Tilt] -= s * 0.06f * e; g[MouthWave] += 0.4f * e; break;
+        case Act::Peek:
+          if (s != 0) g[LookX] = s * 130 * e + g[LookX] * (1 - e); else g[LookY] += 60 * e;
+          g[Scale] -= 0.04f * e; addEars(g, 0.3f * e); break;
+        case Act::Wink: g[Wink] += s * 0.95f * k; g[MouthSmile] += 0.25f * k; break;
+        case Act::Squeeze: g[LidHappy] += 0.8f * k; break;
+        case Act::Widen: g[EyeSize] += 0.12f * k; addEars(g, 0.3f * k); break;
+        case Act::Mumble: g[MouthWave] += 0.7f * e; g[MouthOpen] += 0.12f * std::abs(std::sin(u * kPi * 6)) * e; break;
+        case Act::Nom: g[MouthOpen] += 0.6f * k; g[MouthSmile] += 0.3f * e; break;
+        case Act::Chin: g[LookY] -= 14 * e; g[MouthSmile] += 0.35f * e; g[LidHappy] += 0.3f * e; break;
+        case Act::Sweep: g[Whisk] += 14 * std::sin(u * kPi * 2) * (1 - u); g[Tilt] += s * 0.04f * k; break;
+        case Act::Shake: g[Tilt] += 0.07f * std::sin(u * kPi * 6) * (1 - u); break;
+        case Act::TiltLook: g[Tilt] += s * 0.07f * e; break;
+        case Act::Approach: g[Scale] += 0.06f * e; g[EyeSize] += 0.04f * e; break;
+        case Act::Glance: g[LookX] = g[LookX] * (1 - k) + s * 70 * k; break;
+      }
+    }
+    // Mood: warmed up it always smiles a little and leans closer; annoyed, its ears go back and the mouth droops.
+    g[MouthSmile] += 0.15f * affection_; if (pressed_) g[Scale] += 0.03f * affection_;
+    const float sour = std::clamp((annoy_ - 0.35f) / 0.25f, 0.0f, 1.0f);
+    addEars(g, -0.35f * sour); g[MouthSmile] -= 0.3f * sour;
+    if (sulking_) {  // turned away with the ears back; a glance (above) briefly looks round
+      const float e = smooth((t_ - sulkStart_) / 0.3f);
+      g[LookX] = g[LookX] * (1 - e) + sulkSide_ * 110 * e; g[Tilt] += sulkSide_ * 0.05f * e;
+      addEars(g, -0.45f * e); g[MouthSmile] -= 0.35f * e; g[EyeSize] -= 0.03f * e;
+      for (const auto& a : acts_) if (a.name == Act::Glance) {
+        const float u = (t_ - a.at) / a.duration;
+        if (u >= 0 && u < 1) g[LookX] = g[LookX] * (1 - bump(u)) + a.side * 70 * bump(u);
+      }
     }
     const float burst = (t_ - burstAt_) / 0.7f;
     if (burst >= 0 && burst < 1) { g[Bob] -= 12 * bump(burst); g[Scale] += 0.04f * bump(burst); }
@@ -548,10 +651,34 @@ private:
   }
   // Sound effects only in idle (petting included): never over the user's voice, thinking or speech.
   void cue(const char* name, float pitch = 1) { cue(name, pitch, activityName_); }
-  void cue(const char* name, float pitch, const std::string& activity) {
+  void cue(const char* name, float pitch, const std::string& activity, float delay = 0) {
     if (activity != "idle") return;
-    if (sounds_.size() >= 2) sounds_.erase(sounds_.begin());
-    sounds_.push_back({name, pitch * range(0.92f, 1.08f)});
+    if (sounds_.size() >= 3) sounds_.erase(sounds_.begin());
+    sounds_.push_back({{name, pitch * range(0.92f, 1.08f)}, t_ + delay});
+  }
+  // Touch reactions in flight; react() adds each by name. side: the side it reacts toward (-1 left, +1 right).
+  enum class Act { Pat, Nose, Sneeze, Cheek, Peek, Wink, Squeeze, Widen, Mumble, Nom, Chin, Sweep, Shake, TiltLook, Approach, Glance };
+  struct Action { Act name; float at, duration, side; };
+  void act(Act name, float duration, float side = 1, float delay = 0) {
+    if (acts_.size() >= 10) acts_.erase(acts_.begin());
+    acts_.push_back({name, t_ + delay, duration, side});
+  }
+  // Pick a reaction for a body part by weight, never the same one twice in a row.
+  std::string pick(const std::string& zone, std::vector<std::pair<std::string, float>> options) {
+    const auto last = lastPick_[zone];
+    if (options.size() > 1) options.erase(std::remove_if(options.begin(), options.end(), [&](const auto& o) { return o.first == last; }), options.end());
+    float total = 0; for (const auto& o : options) total += o.second;
+    float r = random() * total; std::string chosen = options.front().first;
+    for (const auto& o : options) { r -= o.second; if (r <= 0) { chosen = o.first; break; } }
+    return lastPick_[zone] = chosen;
+  }
+  // A sneeze: a moment later the eyes screw shut, the head jerks and a few droplets fly.
+  void sneeze(float delay) {
+    act(Act::Sneeze, 0.6f, 1, delay); cue("achoo", 1, activityName_, delay);
+    for (int i = 0; i < 5; ++i) {
+      const float a = range(-0.9f, 0.9f) - kPi / 2;
+      spawn(Fx::Spray, 512 + range(-20, 20), 380, std::cos(a) * range(60, 140), std::sin(a) * range(40, 110) + 60, 0.6f, 9, delay + 0.08f);
+    }
   }
   // Effects that come and go with the mood.
   void effects(float dt) {
@@ -559,7 +686,28 @@ private:
       const float sx = sign(); spawn(Fx::Heart, 512 + sx * range(170, 330), range(250, 360), sx * 12, -60, range(1.4f, 1.8f), range(40, 56));
       heartAt_ = t_ + range(0.45f, 0.8f);
     }
-    if (petting_ && t_ >= purrAt_) { cue("purr"); purrAt_ = t_ + 1.3f; }
+    const bool chin = pressed_ && chinPress_ && chinStart_ >= 0;
+    if ((petting_ || chin) && t_ >= purrAt_) { cue("purr", chin ? 0.9f : 1); purrAt_ = t_ + 1.3f - 0.4f * affection_; }  // purrs come sooner as it warms up
+    affection_ *= std::pow(0.5f, dt / 90); annoy_ *= std::pow(0.5f, dt / 12);
+    if (petting_ && pressed_) { affection_ += 0.25f * dt; annoy_ -= 0.4f * dt; }
+    if (chin) {
+      affection_ += 0.2f * dt; annoy_ -= 0.3f * dt;
+      if (t_ >= heartAt_) { spawn(Fx::Heart, 512 + sign() * range(90, 200), 430, 0, -55, 1.5f, 40); heartAt_ = t_ + range(0.7f, 1.1f); }
+    }
+    if (pressed_ && moved_ < 20 && t_ - downAt_ > 0.9f) affection_ += 0.12f * dt;
+    affection_ = std::clamp(affection_, 0.0f, 1.0f); annoy_ = std::clamp(annoy_, 0.0f, 1.0f);
+    // Sulking: past 0.6 annoyance it goes "hmph" and turns away for 2.5-4 s; petting soon makes up.
+    if (activityName_ == "idle" && !sulking_ && annoy_ > 0.6f && t_ >= sulkCooldown_) {
+      sulking_ = true; sulkStart_ = t_; sulkUntil_ = t_ + range(2.5f, 4); sulkSide_ = lastTouchX_ < 512 ? 1.0f : -1.0f;
+      spawn(Fx::Puff, 512 + sulkSide_ * 120, 410, sulkSide_ * 50, -12, 1.0f, 46); cue("hmph"); kick(-0.5f, -0.5f, 0.5f, Shape::Snap);
+    }
+    if (sulking_ && (t_ >= sulkUntil_ || annoy_ < 0.25f || activityName_ != "idle")) {  // over it: looks back with a blink
+      const bool forgiven = annoy_ < 0.25f && t_ < sulkUntil_;
+      sulking_ = false; sulkUntil_ = -9; sulkCooldown_ = t_ + 4; annoy_ *= 0.5f;
+      blink(0); act(Act::Glance, 0.6f, -sulkSide_);
+      if (forgiven) { spawn(Fx::Heart, 512, 330, 0, -50, 1.4f, 40); kick(0.4f, 0.4f, 0.4f); }
+    }
+    acts_.erase(std::remove_if(acts_.begin(), acts_.end(), [&](const Action& a) { return t_ >= a.at + a.duration; }), acts_.end());
     if (pressed_ && moved_ < 20 && t_ - downAt_ > 0.9f && t_ >= holdHeartAt_) {  // leaning in: a slow heart
       if (holdHeartAt_ < downAt_) cue("purr", 0.9f);
       spawn(Fx::Heart, 512 + range(-120, 120), 330, 0, -40, 1.8f, 44); holdHeartAt_ = t_ + 1.2f;
@@ -662,7 +810,14 @@ private:
   std::vector<Kick> kicks_;
   std::array<float, 2> ears_{0, 0};
   std::vector<Particle> parts_;
-  std::vector<SoundCue> sounds_;
+  struct Pending { SoundCue cue; float at; };
+  std::vector<Pending> sounds_;
+  // Touch memory: affection builds with gentle touch (half-life 90 s), annoyance with quick pokes (half-life 12 s).
+  float affection_ = 0, annoy_ = 0, lastPokeAt_ = -9, lastNoseAt_ = -9, lastTouchX_ = 512;
+  float sulkStart_ = 0, sulkUntil_ = -9, sulkSide_ = 1, sulkCooldown_ = 0, chinStart_ = -9;
+  bool sulking_ = false, chinPress_ = false;
+  std::vector<Action> acts_;
+  std::map<std::string, std::string> lastPick_;
   float thinking_ = 0, heartAt_ = 0, holdHeartAt_ = 0, sweatAt_ = 0, questionAt_ = 0, noteAt_ = 0, purrAt_ = 0;
   bool snap_ = true;
   std::string mood_, label_;
@@ -689,12 +844,13 @@ Face buildFace(const Director& director, bool whiskers, const std::string& mouth
     // and a cheek pushing up from below when smiling (LidHappy). Only a strong smile (LidHappy above ~0.56,
     // e.g. a beaming moment) turns it into a closed ^ arc.
     const float happy = std::clamp(P[LidHappy], 0.0f, 1.1f), arcK = smooth((happy - 0.56f) / 0.08f);
-    const float cx = (side < 0 ? 348.0f : 676.0f) + P[LookX], cy0 = 240 + P[LookY] - 6 * happy;
+    const float cx = (side < 0 ? 348.0f : 676.0f) + P[LookX] - side * P[Cross], cy0 = 240 + P[LookY] - 6 * happy;
+    const float closed = std::clamp(blink + std::max(0.0f, side * P[Wink]), 0.0f, 1.0f);  // a wink folds one eye
     const float breath = 1 + 0.012f * std::sin(t * 1.7f);  // the eyes breathe very slightly
     // A blink folds the rounded eye toward a point a third of the way up from its bottom rather than its
     // middle; the lids and cheek fold with it, so a drooping or smiling eye still closes cleanly.
     const float size = std::max(0.5f, P[EyeSize] * (1 + side * P[EyeAsym])) * breath, hw = 64 * size, full = 90 * size;
-    const float hh = std::max(4.0f, full * (1 - 0.94f * blink)), cy = cy0 + 0.3f * full * blink, r = std::min(hw, hh);
+    const float hh = std::max(4.0f, full * (1 - 0.94f * closed)), cy = cy0 + 0.3f * full * closed, r = std::min(hw, hh);
     const float lid = std::clamp(P[LidTop] + (side > 0 ? P[LidTopR] : 0), 0.0f, 0.92f), yl = cy - hh + 2 * hh * lid;
     // Sad lid: the inner corner stays put and the lid droops toward the outer corner (at 1: 28% of the eye height
     // at the outer edge, 11% in the middle, ~26 degrees). Cutting over half the eye made a teardrop that looked wrong.
@@ -791,7 +947,8 @@ Face buildFace(const Director& director, bool whiskers, const std::string& mouth
     const float f = age / q.life, a = (f < 0.15f ? f / 0.15f : f > 0.6f ? (1 - f) / 0.4f : 1) * 0.9f;
     float x = q.x + q.vx * age, y = q.y + q.vy * age, s = q.size;
     using Fx = Director::Fx;
-    const Rgb c = q.kind == Fx::Heart ? Rgb{255, 140, 175} : q.kind == Fx::Spark ? Rgb{255, 236, 170} : q.kind == Fx::Sweat ? Rgb{150, 210, 255} : col;
+    const Rgb c = q.kind == Fx::Heart ? Rgb{255, 140, 175} : q.kind == Fx::Spark ? Rgb{255, 236, 170} : q.kind == Fx::Sweat ? Rgb{150, 210, 255}
+                : q.kind == Fx::Puff ? Rgb{215, 228, 238} : q.kind == Fx::Spray ? Rgb{190, 225, 245} : col;
     if (q.kind == Fx::Heart) { x += 10 * std::sin(age * 3 + q.phase); s *= 0.85f + 0.15f * std::sin(age * 9 + q.phase); }
     if (q.kind == Fx::Spark) s *= 0.5f + 0.5f * bump(f);
     if (q.kind == Fx::Question) y += 4 * std::sin(age * 5);
@@ -807,6 +964,8 @@ Face buildFace(const Director& director, bool whiskers, const std::string& mouth
       case Fx::Spark: d = [=](float px, float py) { return sdStar4(px, py, x, y, s); }; break;
       case Fx::Sweat: d = [=](float px, float py) { return sdDrop(px, py, x, y, s); }; break;
       case Fx::Question: d = [=](float px, float py) { return sdQuestion(px, py, x, y, s); }; break;
+      case Fx::Puff: { const float ps = s * (0.8f + 0.4f * f), dir = q.vx < 0 ? -1.0f : 1.0f; d = [=](float px, float py) { return sdPuff(px, py, x, y, ps, dir); }; break; }
+      case Fx::Spray: d = [=](float px, float py) { return sdCircle(px, py, x, y, s); }; break;
       default: d = [=](float px, float py) { return sdNote(px, py, x, y, s); }; break;
     }
     L.push_back({c, a, x - r, y - r - s, x + r, y + r, d, nullptr});
